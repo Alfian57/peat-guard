@@ -1,24 +1,34 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
+## Development setup
 
-First, run the development server:
+Use Bun 1.3.1, install dependencies, and configure a PostgreSQL URL:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```sh
+bun install
+cp .env.example .env
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Set `DATABASE_URL` in `.env`, then generate Prisma Client and start Next.js:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sh
+bun run db:generate
+bun run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The `.env` file is ignored by Git. Do not commit database credentials. Prisma is initialized without domain models or migrations; add models to `prisma/schema.prisma` before creating migrations.
+
+## Project tools
+
+- `bun run lint` runs ESLint.
+- `bun run format` formats application files and project configuration.
+- `bun run format:check` checks formatting without changing files.
+- Husky runs `lint-staged` before commits, applying ESLint and Prettier to staged files.
+- `bun run db:validate` validates the Prisma schema.
+- `bun run db:generate` generates Prisma Client under `app/generated/prisma`.
+- `bun run build` generates Prisma Client before building Next.js; `DATABASE_URL` must be set in `.env` or the deployment environment.
+
+shadcn/ui configuration lives in `components.json`; add components with `bunx shadcn add <component>`.
 
 ## Learn More
 
