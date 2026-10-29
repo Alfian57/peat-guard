@@ -1,7 +1,13 @@
 import "dotenv/config";
 
 import { PrismaPg } from "@prisma/adapter-pg";
+import { hashPassword } from "better-auth/crypto";
 import { PrismaClient } from "../app/generated/prisma/client";
+import {
+  demoLoginIsEnabled,
+  demoPasswordForRole,
+  DEMO_USERS,
+} from "../lib/demo-login";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -83,6 +89,15 @@ const demoHotspots = [
 ] as const;
 
 async function seedDemoData() {
+  const demoPasswordHashes = demoLoginIsEnabled()
+    ? await Promise.all(
+        DEMO_USERS.map(async (user) => ({
+          user,
+          password: await hashPassword(demoPasswordForRole(user.role)),
+        })),
+      )
+    : [];
+
   await prisma.$transaction(async (transaction) => {
     await transaction.carbonParameterSet.upsert({
       where: { name: "FigCraft demo values (illustrative)" },
@@ -105,6 +120,46 @@ async function seedDemoData() {
         isDemoData: true,
       },
     });
+
+    for (const { user, password } of demoPasswordHashes) {
+      await transaction.user.upsert({
+        where: { id: user.id },
+        create: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          emailVerified: true,
+          role: user.role,
+          villageName: user.villageName,
+        },
+        update: {
+          name: user.name,
+          email: user.email,
+          emailVerified: true,
+          role: user.role,
+          villageName: user.villageName,
+        },
+      });
+
+      await transaction.account.upsert({
+        where: {
+          providerId_accountId: {
+            providerId: "credential",
+            accountId: user.id,
+          },
+        },
+        create: {
+          accountId: user.id,
+          providerId: "credential",
+          userId: user.id,
+          password,
+        },
+        update: {
+          password,
+          updatedAt: new Date(),
+        },
+      });
+    }
 
     for (const zone of demoZones) {
       const halfWidth = zone.widthDegrees / 2;

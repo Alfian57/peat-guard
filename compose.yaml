@@ -26,8 +26,9 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-peat_guard}?schema=public
       UPLOADS_DIR: /app/.data/uploads
-      BETTER_AUTH_URL: http://localhost:${WEB_PORT:-3000}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:${WEB_PORT:-3000}}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
+      ENABLE_DEMO_LOGIN: ${ENABLE_DEMO_LOGIN:-1}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       NASA_FIRMS_MAP_KEY: ${NASA_FIRMS_MAP_KEY:-}
       NEXT_PUBLIC_MAPTILER_KEY: ${NEXT_PUBLIC_MAPTILER_KEY:-}
