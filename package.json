@@ -9,10 +9,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "format": "prettier --write app components lib components.json package.json next.config.ts eslint.config.mjs tsconfig.json prisma.config.ts README.md",
-    "format:check": "prettier --check app components lib components.json package.json next.config.ts eslint.config.mjs tsconfig.json prisma.config.ts README.md",
+    "format": "prettier --write app components lib scripts components.json package.json next.config.ts eslint.config.mjs tsconfig.json prisma.config.ts compose.yaml README.md docs/engineering/database.md",
+    "format:check": "prettier --check app components lib scripts prisma/seed.ts components.json package.json next.config.ts eslint.config.mjs tsconfig.json prisma.config.ts compose.yaml README.md docs/engineering/database.md",
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:seed": "bun run prisma/seed.ts",
+    "worker": "bun run scripts/worker.ts",
     "prepare": "husky"
   },
   "dependencies": {

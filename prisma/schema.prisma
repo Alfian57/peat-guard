@@ -1,8 +1,214 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../app/generated/prisma"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum UserRole {
+  RELAWAN
+  POSKO
+  VERIFIKATOR
+}
+
+enum WaterPointType {
+  SEKAT_KANAL
+  EMBUNG
+  SUMBER_AIR
+}
+
+enum ReportCategory {
+  API_AKTIF
+  ASAP_GAMBUT
+  SEKAT_KANAL_KERING
+  AMAN_TERKENDALI
+}
+
+enum ReportUrgency {
+  KRITIS
+  WASPADA
+  RENDAH
+}
+
+enum HandlingStatus {
+  MENUNGGU_TINDAKAN
+  DALAM_PENANGANAN
+  SELESAI
+}
+
+enum AIAnalysisState {
+  PENDING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String   @db.VarChar(100)
+  email         String   @unique @db.VarChar(120)
+  emailVerified Boolean  @default(false) @map("email_verified")
+  image         String?  @db.Text
+  role          UserRole @default(RELAWAN)
+  villageName   String?  @map("village_name") @db.VarChar(100)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  fieldReports FieldReport[]
+  statusEvents ReportStatusEvent[]
+  auditEvents  AuditEvent[]
+
+  @@map("users")
+}
+
+model CarbonParameterSet {
+  id                  String   @id @default(uuid()) @db.Uuid
+  name                String   @unique @db.VarChar(120)
+  biomassFactor       Decimal  @map("biomass_factor") @db.Decimal(8, 2)
+  emissionFactor      Decimal  @map("emission_factor") @db.Decimal(8, 4)
+  co2ConversionFactor Decimal  @default(3.67) @map("co2_conversion_factor") @db.Decimal(6, 3)
+  incentivePerTonIdr  Decimal  @default(15000) @map("incentive_per_ton_idr") @db.Decimal(14, 2)
+  isActive            Boolean  @default(false) @map("is_active")
+  isDemoData          Boolean  @default(false) @map("is_demo_data")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  forestZones ForestZone[]
+
+  @@unique([isActive], where: { isActive: true }, map: "carbon_parameter_sets_one_active_key")
+  @@map("carbon_parameter_sets")
+}
+
+model ForestZone {
+  id                   String                                @id @default(uuid()) @db.Uuid
+  slug                 String                                @unique @db.VarChar(120)
+  zoneName             String                                @map("zone_name") @db.VarChar(150)
+  villageName          String?                               @map("village_name") @db.VarChar(100)
+  peatDepthMeters      Decimal                               @default(1.5) @map("peat_depth_meters") @db.Decimal(4, 2)
+  areaHectares         Decimal                               @default(0) @map("area_hectares") @db.Decimal(12, 2)
+  boundary             Unsupported("geometry(Polygon,4326)")
+  carbonParameterSetId String                                @map("carbon_parameter_set_id") @db.Uuid
+  isApproved           Boolean                               @default(false) @map("is_approved")
+  isDemoData           Boolean                               @default(false) @map("is_demo_data")
+  createdAt            DateTime                              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime                              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  carbonParameterSet CarbonParameterSet @relation(fields: [carbonParameterSetId], references: [id], onDelete: Restrict)
+  waterPoints        WaterPoint[]
+  fieldReports       FieldReport[]
+
+  @@index([villageName])
+  @@map("forest_zones")
+}
+
+model WaterPoint {
+  id         String                              @id @default(uuid()) @db.Uuid
+  zoneId     String?                             @map("zone_id") @db.Uuid
+  name       String                              @db.VarChar(150)
+  type       WaterPointType
+  latitude   Float                               @db.DoublePrecision
+  longitude  Float                               @db.DoublePrecision
+  location   Unsupported("geometry(Point,4326)")
+  isDemoData Boolean                             @default(false) @map("is_demo_data")
+  createdAt  DateTime                            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime                            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  zone ForestZone? @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+
+  @@index([zoneId])
+  @@map("water_points")
+}
+
+model SatelliteHotspot {
+  id               String                              @id @default(uuid()) @db.Uuid
+  source           String                              @db.VarChar(30)
+  externalId       String                              @map("external_id") @db.VarChar(120)
+  latitude         Float                               @db.DoublePrecision
+  longitude        Float                               @db.DoublePrecision
+  location         Unsupported("geometry(Point,4326)")
+  brightnessKelvin Decimal?                            @map("brightness_kelvin") @db.Decimal(6, 2)
+  confidence       String?                             @db.VarChar(20)
+  acquiredAt       DateTime                            @map("acquired_at") @db.Timestamptz(6)
+  fetchedAt        DateTime                            @default(now()) @map("fetched_at") @db.Timestamptz(6)
+  isDemoData       Boolean                             @default(false) @map("is_demo_data")
+
+  @@unique([source, externalId])
+  @@index([acquiredAt])
+  @@map("satellite_hotspots")
+}
+
+model FieldReport {
+  id                      String                              @id @default(uuid()) @db.Uuid
+  clientReportId          String                              @map("client_report_id") @db.Uuid
+  reporterId              String                              @map("reporter_id") @db.Uuid
+  zoneId                  String?                             @map("zone_id") @db.Uuid
+  latitude                Float                               @db.DoublePrecision
+  longitude               Float                               @db.DoublePrecision
+  location                Unsupported("geometry(Point,4326)")
+  imagePath               String                              @map("image_path") @db.Text
+  fieldNotes              String?                             @map("field_notes") @db.Text
+  capturedAt              DateTime                            @map("captured_at") @db.Timestamptz(6)
+  syncedAt                DateTime                            @default(now()) @map("synced_at") @db.Timestamptz(6)
+  aiConsent               Boolean                             @default(false) @map("ai_consent")
+  aiState                 AIAnalysisState?                    @default(SKIPPED) @map("ai_state")
+  aiCategory              ReportCategory?                     @map("ai_category")
+  aiUrgency               ReportUrgency?                      @map("ai_urgency")
+  aiConfidence            Decimal?                            @map("ai_confidence") @db.Decimal(4, 3)
+  aiSummary               String?                             @map("ai_summary") @db.Text
+  aiVisualIndicators      Json?                               @map("ai_visual_indicators")
+  aiFalsePositiveCheck    String?                             @map("ai_false_positive_check") @db.Text
+  aiActionRecommendations Json?                               @map("ai_action_recommendations")
+  aiAnalyzedAt            DateTime?                           @map("ai_analyzed_at") @db.Timestamptz(6)
+  handlingStatus          HandlingStatus                      @default(MENUNGGU_TINDAKAN) @map("handling_status")
+  nearestWaterDistanceM   Decimal?                            @map("nearest_water_distance_m") @db.Decimal(12, 2)
+  isDemoSample            Boolean                             @default(false) @map("is_demo_sample")
+  createdAt               DateTime                            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime                            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  reporter     User                @relation(fields: [reporterId], references: [id], onDelete: Restrict)
+  zone         ForestZone?         @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  statusEvents ReportStatusEvent[]
+  auditEvents  AuditEvent[]
+
+  @@unique([reporterId, clientReportId])
+  @@index([handlingStatus, createdAt])
+  @@index([aiUrgency, createdAt])
+  @@index([zoneId, createdAt])
+  @@map("field_reports")
+}
+
+model ReportStatusEvent {
+  id             String          @id @default(uuid()) @db.Uuid
+  reportId       String          @map("report_id") @db.Uuid
+  changedById    String          @map("changed_by_id") @db.Uuid
+  previousStatus HandlingStatus? @map("previous_status")
+  nextStatus     HandlingStatus  @map("next_status")
+  note           String?         @db.Text
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  report    FieldReport @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  changedBy User        @relation(fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([reportId, createdAt])
+  @@map("report_status_events")
+}
+
+model AuditEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  reportId      String?  @map("report_id") @db.Uuid
+  actorId       String?  @map("actor_id") @db.Uuid
+  aggregateType String   @map("aggregate_type") @db.VarChar(60)
+  aggregateId   String   @map("aggregate_id") @db.Uuid
+  eventType     String   @map("event_type") @db.VarChar(80)
+  payload       Json?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  report FieldReport? @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  actor  User?        @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([aggregateType, aggregateId, createdAt])
+  @@index([reportId, createdAt])
+  @@map("audit_events")
 }

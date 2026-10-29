@@ -1,22 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PEATGUARD
 
-## Development setup
+PEATGUARD is a WebGIS and offline-first field reporting application for peatland fire prevention and carbon impact tracking.
 
-Use Bun 1.3.1, install dependencies, and configure a PostgreSQL URL:
+## Local development
+
+Use Bun 1.3.1 and Docker Compose. Compose starts a development web service and an isolated PostgreSQL 17 database with PostGIS 3.7. It does not use an existing host database container or volume.
 
 ```sh
-bun install
 cp .env.example .env
+docker compose -p peatguard-main up --build
 ```
 
-Set `DATABASE_URL` in `.env`, then generate Prisma Client and start Next.js:
+The web service generates Prisma Client, applies checked-in migrations, seeds clearly marked illustrative data, and starts Next.js. Open the configured `WEB_PORT` (default `3000`). The local Postgres credentials in `.env.example` (`postgres` / `postgres`) are development defaults only; do not reuse them in a deployed environment.
+
+Each checkout has its own Compose project and named volumes. Compose derives a project name from the directory by default; use an explicit unique `-p` name when running multiple clones. Ports must also be unique per clone. For example:
+
+| Checkout           | Compose project     | `DB_PORT` | `WEB_PORT` |
+| ------------------ | ------------------- | --------: | ---------: |
+| Main checkout      | `peatguard-main`    |      5432 |       3000 |
+| Field work clone   | `peatguard-field`   |      5541 |       3001 |
+| Command work clone | `peatguard-command` |      5542 |       3002 |
+
+Set both port variables in that clone's `.env`. If you run Prisma commands directly on the host, update `DATABASE_URL` to match `DB_PORT`. Inside Compose, the web and worker services use the private service hostname `postgres` and port `5432`; they do not use the host URL.
+
+Provider keys are optional for database setup. Set `DEEPSEEK_API_KEY`, `NASA_FIRMS_MAP_KEY`, and `NEXT_PUBLIC_MAPTILER_KEY` in the ignored `.env` when needed. The MapTiler key is public by design; DeepSeek and NASA credentials must remain server-side. Uploads persist in the Compose-scoped `uploads` volume at `/app/.data/uploads`.
+
+The background worker is available with the `worker` profile. It currently starts an idle runner; the FIRMS feature adds scheduled work to it.
 
 ```sh
-bun run db:generate
-bun run dev
+docker compose -p peatguard-main --profile worker up --build
 ```
 
-The `.env` file is ignored by Git. Do not commit database credentials. Prisma is initialized without domain models or migrations; add models to `prisma/schema.prisma` before creating migrations.
+`docker compose down` stops this Compose project and keeps its data. `docker compose down --volumes` permanently deletes that project's database, Node modules, Next cache, and uploaded files. Use it only when you intentionally want to reset that specific local project.
+
+## Database commands
+
+When Compose is running, run project commands in the web container:
+
+```sh
+docker compose -p peatguard-main exec web bun run db:validate
+docker compose -p peatguard-main exec web bun run db:generate
+docker compose -p peatguard-main exec web bun run db:seed
+```
+
+For a local schema change, use Prisma Migrate against the development database:
+
+```sh
+docker compose -p peatguard-main exec web bunx prisma migrate dev --name describe_change
+```
+
+Do not reset or delete a shared database to create migrations. The PostGIS extension, spatial indexes, and database triggers are part of the checked-in migration history. See [database contracts and operations](docs/engineering/database.md) before changing spatial fields, report idempotency, or audit events.
 
 ## Project tools
 
@@ -26,21 +59,11 @@ The `.env` file is ignored by Git. Do not commit database credentials. Prisma is
 - Husky runs `lint-staged` before commits, applying ESLint and Prettier to staged files.
 - `bun run db:validate` validates the Prisma schema.
 - `bun run db:generate` generates Prisma Client under `app/generated/prisma`.
-- `bun run build` generates Prisma Client before building Next.js; `DATABASE_URL` must be set in `.env` or the deployment environment.
+- `bun run db:migrate:dev` creates and applies a development migration.
+- `bun run db:migrate:deploy` applies checked-in migrations without resetting data.
+- `bun run db:seed` inserts illustrative local demo data idempotently.
+- `bun run worker` starts the background worker runner.
 
-shadcn/ui configuration lives in `components.json`; add components with `bunx shadcn add <component>`.
+## Environment variables
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`.env.example` contains safe local defaults and empty integration key placeholders. `.env` and local upload data are ignored by Git. Never commit API keys, database passwords, or uploaded field evidence.
