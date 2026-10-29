@@ -23,6 +23,13 @@ Each checkout has its own Compose project and named volumes. Compose derives a p
 
 Set both port variables in that clone's `.env`. If you run Prisma commands directly on the host, update `DATABASE_URL` to match `DB_PORT`. Inside Compose, the web and worker services use the private service hostname `postgres` and port `5432`; they do not use the host URL.
 
+Use the same `-p` project name for every Compose command against a checkout. The commands below use `peatguard-main`; use `peatguard-field` or `peatguard-command` for the matching clone. For example:
+
+```sh
+docker compose -p peatguard-field up --build
+docker compose -p peatguard-command up --build
+```
+
 Provider keys are optional for database setup. Set `DEEPSEEK_API_KEY`, `NASA_FIRMS_MAP_KEY`, and `NEXT_PUBLIC_MAPTILER_KEY` in the ignored `.env` when needed. The MapTiler key is public by design; DeepSeek and NASA credentials must remain server-side. Uploads persist in the Compose-scoped `uploads` volume at `/app/.data/uploads`.
 
 The background worker is available with the `worker` profile. It currently starts an idle runner; the FIRMS feature adds scheduled work to it.
@@ -31,7 +38,7 @@ The background worker is available with the `worker` profile. It currently start
 docker compose -p peatguard-main --profile worker up --build
 ```
 
-`docker compose down` stops this Compose project and keeps its data. `docker compose down --volumes` permanently deletes that project's database, Node modules, Next cache, and uploaded files. Use it only when you intentionally want to reset that specific local project.
+`docker compose -p peatguard-main down` stops the main Compose project and keeps its data. `docker compose -p peatguard-main down --volumes` permanently deletes that project's database, Node modules, Next cache, and uploaded files. Use the project name for the checkout you intend to stop or reset; use `--volumes` only when you intentionally want to delete that local project's data.
 
 ## Database commands
 
