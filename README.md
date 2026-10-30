@@ -11,15 +11,20 @@ cp .env.example .env
 docker compose -p peatguard-main up --build
 ```
 
+Before starting Compose, set `BETTER_AUTH_SECRET` in `.env` using a generated
+value from `openssl rand -base64 32`. See the [authentication setup guide](docs/authentication.md)
+for local demo login and production configuration details.
+
 The web service generates Prisma Client, applies checked-in migrations, seeds clearly marked illustrative data, and starts Next.js. Open the configured `WEB_PORT` (default `3000`). The local Postgres credentials in `.env.example` (`postgres` / `postgres`) are development defaults only; do not reuse them in a deployed environment.
 
 Each checkout has its own Compose project and named volumes. Compose derives a project name from the directory by default; use an explicit unique `-p` name when running multiple clones. Ports must also be unique per clone. For example:
 
-| Checkout           | Compose project     | `DB_PORT` | `WEB_PORT` |
-| ------------------ | ------------------- | --------: | ---------: |
-| Main checkout      | `peatguard-main`    |      5432 |       3000 |
-| Field work clone   | `peatguard-field`   |      5541 |       3001 |
-| Command work clone | `peatguard-command` |      5542 |       3002 |
+| Checkout            | Compose project     | `DB_PORT` | `WEB_PORT` |
+| ------------------- | ------------------- | --------: | ---------: |
+| Main checkout       | `peatguard-main`    |      5432 |       3000 |
+| Field work clone    | `peatguard-field`   |      5541 |       3001 |
+| Command work clone  | `peatguard-command` |      5542 |       3002 |
+| Public WebGIS clone | `peatguard-public`  |      5543 |       3003 |
 
 Set both port variables in that clone's `.env`. If you run Prisma commands directly on the host, update `DATABASE_URL` to match `DB_PORT`. Inside Compose, the web and worker services use the private service hostname `postgres` and port `5432`; they do not use the host URL.
 
@@ -28,9 +33,12 @@ Use the same `-p` project name for every Compose command against a checkout. The
 ```sh
 docker compose -p peatguard-field up --build
 docker compose -p peatguard-command up --build
+docker compose -p peatguard-public up --build
 ```
 
 Provider keys are optional for database setup. Set `DEEPSEEK_API_KEY`, `NASA_FIRMS_MAP_KEY`, and `NEXT_PUBLIC_MAPTILER_KEY` in the ignored `.env` when needed. The MapTiler key is public by design; DeepSeek and NASA credentials must remain server-side. Uploads persist in the Compose-scoped `uploads` volume at `/app/.data/uploads`.
+
+The public landing page uses `NEXT_PUBLIC_MAPTILER_KEY` for its interactive map. Without a MapTiler key, the landing page shows a configuration message and keeps its public data summaries available. The public endpoints are read-only and send `Cache-Control: no-store`; their response fields and privacy limits are documented in [public API contracts](docs/engineering/contracts.md#public-read-only-endpoints).
 
 The background worker is available with the `worker` profile. It currently starts an idle runner; the FIRMS feature adds scheduled work to it.
 
