@@ -1,7 +1,5 @@
 import { getPublicMetrics } from "@/lib/public/data";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   try {
     const metrics = await getPublicMetrics();
