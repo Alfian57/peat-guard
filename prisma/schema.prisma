@@ -198,9 +198,11 @@ model FieldReport {
   zoneId                  String?                             @map("zone_id") @db.Uuid
   latitude                Float                               @db.DoublePrecision
   longitude               Float                               @db.DoublePrecision
+  accuracyMeters          Float?                              @map("accuracy_meters") @db.DoublePrecision
   location                Unsupported("geometry(Point,4326)")
   imagePath               String                              @map("image_path") @db.Text
   fieldNotes              String?                             @map("field_notes") @db.Text
+  tags                    String[]                            @default([]) @db.VarChar(60)
   capturedAt              DateTime                            @map("captured_at") @db.Timestamptz(6)
   syncedAt                DateTime                            @default(now()) @map("synced_at") @db.Timestamptz(6)
   aiConsent               Boolean                             @default(false) @map("ai_consent")

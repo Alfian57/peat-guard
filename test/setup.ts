@@ -1,5 +1,7 @@
-import { afterEach } from "bun:test";
+import { afterEach, mock } from "bun:test";
 import { Window } from "happy-dom";
+
+mock.module("server-only", () => ({}));
 
 const happyWindow = new Window({ url: "http://localhost/" });
 
