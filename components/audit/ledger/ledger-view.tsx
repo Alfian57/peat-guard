@@ -1,0 +1,166 @@
+import Link from "next/link";
+import { Download, FileJson, FileSpreadsheet, Info } from "lucide-react";
+
+import type {
+  ApprovedZoneValues,
+  LedgerFilters,
+  MrvLedger,
+} from "@/lib/server/mrv/contracts";
+
+import { AuditFilterError } from "../audit-states";
+import { formatCount } from "../audit-formatters";
+import { getLedgerExportHref } from "./ledger-format";
+import { LedgerFilterForm } from "./ledger-filter-form";
+import { LedgerPagination } from "./ledger-pagination";
+import { LedgerRow } from "./ledger-row";
+
+type LedgerViewProps = {
+  filterError: string | null;
+  filters: LedgerFilters;
+  from: string;
+  ledger: MrvLedger;
+  to: string;
+  zones: ApprovedZoneValues[];
+};
+
+export function LedgerView({
+  filterError,
+  filters,
+  from,
+  ledger,
+  to,
+  zones,
+}: LedgerViewProps) {
+  return (
+    <main
+      className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
+      id="audit-content"
+    >
+      <header className="flex flex-wrap items-end justify-between gap-5">
+        <div>
+          <p className="text-sm font-semibold tracking-wide text-peat-green uppercase">
+            Audit karbon · bukti lapangan
+          </p>
+          <h1 className="mt-1 font-heading text-4xl leading-tight font-bold text-peat-forest sm:text-5xl">
+            Buku besar audit MRV
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+            Telusuri waktu, lokasi, bukti, triase, dan riwayat penanganan
+            laporan.
+          </p>
+        </div>
+        <div className="audit-hide-on-print flex flex-wrap gap-2">
+          <Link
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold text-peat-green hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            href={getLedgerExportHref(filters, "csv")}
+          >
+            <FileSpreadsheet aria-hidden="true" size={17} />
+            Ekspor CSV
+          </Link>
+          <Link
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-peat-green px-4 text-sm font-semibold text-white hover:bg-peat-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            href={getLedgerExportHref(filters, "json")}
+          >
+            <FileJson aria-hidden="true" size={17} />
+            Ekspor JSON
+          </Link>
+        </div>
+      </header>
+
+      {filterError ? <AuditFilterError message={filterError} /> : null}
+      <LedgerFilterForm
+        aiState={filters.aiState}
+        evidence={filters.evidence}
+        from={from}
+        to={to}
+        zoneId={filters.zoneId}
+        zones={zones}
+      />
+
+      <section
+        aria-label="Riwayat bukti audit MRV"
+        className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-[#eef3e8] px-4 py-4 sm:px-5">
+          <div className="flex items-center gap-2 text-sm font-semibold text-peat-forest">
+            <Download
+              aria-hidden="true"
+              className="text-peat-green"
+              size={17}
+            />
+            {formatCount(ledger.total)} catatan audit
+          </div>
+          <span className="text-xs text-muted-foreground">
+            {ledger.pageSize} catatan per halaman
+          </span>
+        </div>
+        {ledger.rows.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1200px] border-collapse text-left">
+              <caption className="sr-only">
+                Log laporan lapangan, bukti GPS/foto, triase AI, dan konteks
+                zona karbon
+              </caption>
+              <thead className="bg-peat-paper/70 text-xs font-semibold text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 text-left" scope="col">
+                    Audit ID
+                  </th>
+                  <th className="px-4 py-3 text-left" scope="col">
+                    Waktu lapangan
+                  </th>
+                  <th className="px-4 py-3 text-left" scope="col">
+                    Lokasi & GPS
+                  </th>
+                  <th className="px-4 py-3 text-left" scope="col">
+                    Bukti
+                  </th>
+                  <th className="px-4 py-3 text-left" scope="col">
+                    Klasifikasi AI
+                  </th>
+                  <th className="px-4 py-3 text-left" scope="col">
+                    Penanganan
+                  </th>
+                  <th className="px-4 py-3 text-left" scope="col">
+                    Emisi zona
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {ledger.rows.map((row) => (
+                  <LedgerRow key={row.reportId} row={row} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="px-5 py-12 text-center">
+            <p className="font-heading text-2xl font-bold text-peat-forest">
+              Tidak ada catatan yang cocok
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Ubah filter wilayah, tanggal, atau kelengkapan bukti.
+            </p>
+          </div>
+        )}
+        <LedgerPagination
+          filters={filters}
+          page={ledger.page}
+          pageSize={ledger.pageSize}
+          total={ledger.total}
+        />
+      </section>
+
+      <p className="flex items-start gap-2 px-1 text-xs leading-5 text-muted-foreground">
+        <Info
+          aria-hidden="true"
+          className="mt-0.5 shrink-0 text-peat-green"
+          size={15}
+        />
+        Estimasi emisi zona ditampilkan sebagai konteks; laporan patroli tidak
+        dijumlahkan menjadi tambahan emisi yang dicegah. Koordinat tercatat
+        belum diverifikasi secara independen.
+      </p>
+    </main>
+  );
+}
