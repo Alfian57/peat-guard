@@ -20,7 +20,7 @@ import {
 } from "@/components/maps/map-message-state";
 import { addMapInteractions } from "@/components/maps/map-interactions";
 import { addMapLayers } from "@/components/maps/map-layers";
-import type { MapPoint, MapZone } from "@/lib/maps/types";
+import type { MapPoint, MapViewport, MapZone } from "@/lib/maps/types";
 
 const DEFAULT_CENTER: [number, number] = [113.9, -2.01];
 
@@ -35,6 +35,8 @@ export type MapCanvasProps = {
   className?: string;
   interactive?: boolean;
   onMapClick?: (coordinates: [longitude: number, latitude: number]) => void;
+  draftEditing?: boolean;
+  onViewportChange?: (viewport: MapViewport) => void;
   onPointSelect?: (point: MapPoint) => void;
   onZoneSelect?: (zone: MapZone) => void;
 };
@@ -45,12 +47,16 @@ export default function MapCanvas({
   className,
   interactive = true,
   onMapClick,
+  draftEditing = false,
+  onViewportChange,
   onPointSelect,
   onZoneSelect,
 }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const onMapClickRef = useRef(onMapClick);
+  const draftEditingRef = useRef(draftEditing);
+  const onViewportChangeRef = useRef(onViewportChange);
   const onPointSelectRef = useRef(onPointSelect);
   const onZoneSelectRef = useRef(onZoneSelect);
   const latestDataRef = useRef<MapData>({ zones, points });
@@ -62,9 +68,11 @@ export default function MapCanvas({
 
   useEffect(() => {
     onMapClickRef.current = onMapClick;
+    draftEditingRef.current = draftEditing;
+    onViewportChangeRef.current = onViewportChange;
     onPointSelectRef.current = onPointSelect;
     onZoneSelectRef.current = onZoneSelect;
-  }, [onMapClick, onPointSelect, onZoneSelect]);
+  }, [draftEditing, onMapClick, onPointSelect, onViewportChange, onZoneSelect]);
 
   useEffect(() => {
     latestDataRef.current = { zones, points };
@@ -95,6 +103,17 @@ export default function MapCanvas({
     mapRef.current = map;
     map.addControl(new NavigationControl({ showCompass: false }), "top-right");
 
+    const publishViewport = () => {
+      const bounds = map.getBounds();
+      onViewportChangeRef.current?.({
+        west: bounds.getWest(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        north: bounds.getNorth(),
+      });
+    };
+    map.on("moveend", publishViewport);
+
     map.once("load", () => {
       if (disposed) {
         return;
@@ -111,7 +130,10 @@ export default function MapCanvas({
         hasFitBoundsRef.current = true;
       }
 
+      publishViewport();
+
       addMapInteractions(map, {
+        isDraftEditing: () => draftEditingRef.current,
         onMapClick: (coordinates) => onMapClickRef.current?.(coordinates),
         onPointSelect: (point) => onPointSelectRef.current?.(point),
         onZoneSelect: (zone) => onZoneSelectRef.current?.(zone),

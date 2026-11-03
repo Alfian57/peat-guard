@@ -19,6 +19,7 @@ const INTERACTIVE_LAYERS = [
 ];
 
 type MapInteractionHandlers = {
+  isDraftEditing?: () => boolean;
   onMapClick?: (coordinates: [longitude: number, latitude: number]) => void;
   onPointSelect?: (point: MapPoint) => void;
   onZoneSelect?: (zone: MapZone) => void;
@@ -28,7 +29,13 @@ export function addMapInteractions(
   map: MapLibreMap,
   handlers: MapInteractionHandlers,
 ) {
+  const isDraftEditing = handlers.isDraftEditing ?? (() => false);
+
   map.on("click", "peatguard-clusters", async (event) => {
+    if (isDraftEditing()) {
+      return;
+    }
+
     const feature = event.features?.[0];
     const clusterId = feature?.properties?.cluster_id;
     const pointSource = map.getSource(POINTS_SOURCE_ID) as
@@ -42,6 +49,10 @@ export function addMapInteractions(
       const expansionZoom =
         await pointSource.getClusterExpansionZoom(clusterId);
 
+      if (isDraftEditing()) {
+        return;
+      }
+
       if (feature.geometry.type === "Point") {
         map.easeTo({
           center: feature.geometry.coordinates as [number, number],
@@ -54,6 +65,10 @@ export function addMapInteractions(
   });
 
   map.on("click", "peatguard-points", (event) => {
+    if (isDraftEditing()) {
+      return;
+    }
+
     const feature = event.features?.[0] as PointFeature | undefined;
 
     if (!feature) {
@@ -80,6 +95,10 @@ export function addMapInteractions(
   });
 
   map.on("click", "peatguard-zone-fill", (event) => {
+    if (isDraftEditing()) {
+      return;
+    }
+
     const feature = event.features?.[0] as ZoneFeature | undefined;
 
     if (!feature) {
@@ -116,7 +135,7 @@ export function addMapInteractions(
     "peatguard-zone-fill",
   ]) {
     map.on("mouseenter", layerId, () => {
-      map.getCanvas().style.cursor = "pointer";
+      map.getCanvas().style.cursor = isDraftEditing() ? "crosshair" : "pointer";
     });
     map.on("mouseleave", layerId, () => {
       map.getCanvas().style.cursor = "";
@@ -124,6 +143,11 @@ export function addMapInteractions(
   }
 
   map.on("click", (event: MapMouseEvent) => {
+    if (isDraftEditing()) {
+      handlers.onMapClick?.([event.lngLat.lng, event.lngLat.lat]);
+      return;
+    }
+
     const features = map.queryRenderedFeatures(event.point, {
       layers: INTERACTIVE_LAYERS,
     });
