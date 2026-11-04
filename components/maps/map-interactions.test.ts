@@ -7,6 +7,7 @@ type RegisteredHandler = (event: MapMouseEvent) => void;
 
 function createMapMock(renderedFeatures: unknown[] = []) {
   const handlers = new Map<string, RegisteredHandler>();
+  const requestedLayers: string[][] = [];
   const map = {
     on: (
       event: string,
@@ -22,10 +23,16 @@ function createMapMock(renderedFeatures: unknown[] = []) {
       }
     },
     getCanvas: () => ({ style: { cursor: "" } }),
-    queryRenderedFeatures: () => renderedFeatures,
+    queryRenderedFeatures: (
+      _point: unknown,
+      options?: { layers?: string[] },
+    ) => {
+      requestedLayers.push(options?.layers ?? []);
+      return renderedFeatures;
+    },
   } as unknown as MapLibreMap;
 
-  return { handlers, map };
+  return { handlers, map, requestedLayers };
 }
 
 function clickEvent(): MapMouseEvent {
@@ -72,5 +79,17 @@ describe("map draft editing interactions", () => {
     handlers.get("click:map")?.(clickEvent());
 
     expect(coordinates).toEqual([]);
+  });
+
+  test("supports unclustered markers without registering a missing cluster layer", () => {
+    const { handlers, map, requestedLayers } = createMapMock();
+
+    addMapInteractions(map, {}, false);
+    handlers.get("click:map")?.(clickEvent());
+
+    expect(handlers.has("click:peatguard-clusters")).toBe(false);
+    expect(requestedLayers).toEqual([
+      ["peatguard-zone-fill", "peatguard-points"],
+    ]);
   });
 });

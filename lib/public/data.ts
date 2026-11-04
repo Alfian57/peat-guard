@@ -1,15 +1,29 @@
 import "server-only";
 
+import { Prisma } from "@/app/generated/prisma/client";
+import { DEMO_HOTSPOT_SOURCE, FIRMS_SOURCES } from "@/lib/firms-sources";
 import { prisma } from "@/lib/prisma";
-import type { MapPoint, MapZone } from "@/lib/maps/types";
+import type { Polygon } from "geojson";
 import type { PublicMapData, PublicMetrics } from "@/lib/public/contracts";
+import type { PublicMapQuery } from "@/lib/public/query";
+import { MAX_PUBLIC_ZONE_LIMIT } from "@/lib/public/query";
+import { getFirmsSyncIntervalMinutes } from "@/lib/server/firms/config";
 
 type ZoneRow = {
-  id: string;
   name: string;
   areaHectares: number;
   isDemoData: boolean;
   geometryJson: string;
+};
+
+type HotspotRow = {
+  source: string;
+  latitude: number;
+  longitude: number;
+  brightnessKelvin: number | null;
+  confidence: string | null;
+  acquiredAt: Date;
+  isDemoData: boolean;
 };
 
 type MetricsRow = {
@@ -20,65 +34,221 @@ type MetricsRow = {
   containsIllustrativeData: boolean;
 };
 
-async function getApprovedZones(): Promise<MapZone[]> {
-  const rows = await prisma.$queryRaw<ZoneRow[]>`
-    SELECT
-      id::text AS id,
-      zone_name AS name,
-      area_hectares::double precision AS "areaHectares",
-      is_demo_data AS "isDemoData",
-      ST_AsGeoJSON(boundary) AS "geometryJson"
-    FROM forest_zones
-    WHERE is_approved = TRUE
-    ORDER BY zone_name ASC
-    LIMIT 100
-  `;
+export function buildPublicZoneQuery(query: PublicMapQuery): Prisma.Sql {
+  const { west, south, east, north } = query.viewport;
+  const zoneLimit = Math.min(query.limit, MAX_PUBLIC_ZONE_LIMIT);
 
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    areaHectares: row.areaHectares,
-    isDemoData: row.isDemoData,
-    geometry: JSON.parse(row.geometryJson) as MapZone["geometry"],
-  }));
+  return Prisma.sql`
+    SELECT
+      zone.zone_name AS name,
+      zone.area_hectares::double precision AS "areaHectares",
+      zone.is_demo_data AS "isDemoData",
+      ST_AsGeoJSON(zone.boundary) AS "geometryJson"
+    FROM forest_zones AS zone
+    WHERE zone.is_approved = TRUE
+      AND ST_Intersects(
+        zone.boundary,
+        ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)
+      )
+    ORDER BY zone.zone_name ASC
+    LIMIT ${zoneLimit + 1}
+  `;
 }
 
-async function getPublicHotspots(): Promise<MapPoint[]> {
-  const hotspots = await prisma.satelliteHotspot.findMany({
-    orderBy: { acquiredAt: "desc" },
-    take: 500,
-    select: {
-      id: true,
-      source: true,
-      latitude: true,
-      longitude: true,
-      brightnessKelvin: true,
-      confidence: true,
-      acquiredAt: true,
-      isDemoData: true,
-    },
+export function buildPublicHotspotQuery(
+  query: PublicMapQuery,
+  checkedAt: Date,
+): Prisma.Sql {
+  const sourceFilter = buildSourceFilter(query);
+  const confidenceFilter = buildConfidenceFilter(query.confidence);
+  const periodFilter = buildPeriodFilter(query.period, checkedAt);
+  const { west, south, east, north } = query.viewport;
+
+  return Prisma.sql`
+    SELECT
+      hotspot.source,
+      hotspot.latitude,
+      hotspot.longitude,
+      hotspot.brightness_kelvin::double precision AS "brightnessKelvin",
+      hotspot.confidence,
+      hotspot.acquired_at AS "acquiredAt",
+      hotspot.is_demo_data AS "isDemoData"
+    FROM satellite_hotspots AS hotspot
+    WHERE ${sourceFilter}
+      AND ${confidenceFilter}
+      AND ${periodFilter}
+      AND ST_Intersects(
+        hotspot.location,
+        ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)
+      )
+    ORDER BY hotspot.acquired_at DESC
+    LIMIT ${query.limit + 1}
+  `;
+}
+
+function buildSourceFilter(query: PublicMapQuery): Prisma.Sql {
+  if (query.source === "demo") {
+    return Prisma.sql`
+      hotspot.is_demo_data = TRUE
+      AND hotspot.source = ${DEMO_HOTSPOT_SOURCE}
+    `;
+  }
+
+  if (query.source !== "all") {
+    return Prisma.sql`
+      hotspot.is_demo_data = FALSE
+      AND hotspot.source = ${query.source}
+    `;
+  }
+
+  return Prisma.sql`
+    (
+      (hotspot.is_demo_data = TRUE AND hotspot.source = ${DEMO_HOTSPOT_SOURCE})
+      OR (
+        hotspot.is_demo_data = FALSE
+        AND hotspot.source IN (${Prisma.join([...FIRMS_SOURCES])})
+      )
+    )
+  `;
+}
+
+function buildConfidenceFilter(
+  confidence: PublicMapQuery["confidence"],
+): Prisma.Sql {
+  if (confidence === "all") {
+    return Prisma.sql`TRUE`;
+  }
+
+  if (confidence === "unknown") {
+    return Prisma.sql`(hotspot.confidence IS NULL OR BTRIM(hotspot.confidence) = '')`;
+  }
+
+  if (confidence === "low") {
+    return Prisma.sql`LOWER(hotspot.confidence) = 'low'`;
+  }
+
+  if (confidence === "nominal") {
+    return Prisma.sql`LOWER(hotspot.confidence) = 'nominal'`;
+  }
+
+  if (confidence === "high") {
+    return Prisma.sql`LOWER(hotspot.confidence) = 'high'`;
+  }
+
+  if (confidence === "numeric") {
+    return Prisma.sql`
+      CASE
+        WHEN hotspot.confidence ~ '^[0-9]{1,3}$'
+        THEN hotspot.confidence::integer BETWEEN 0 AND 100
+        ELSE FALSE
+      END
+    `;
+  }
+
+  return Prisma.sql`FALSE`;
+}
+
+function buildPeriodFilter(
+  period: PublicMapQuery["period"],
+  checkedAt: Date,
+): Prisma.Sql {
+  if (period === "all") {
+    return Prisma.sql`TRUE`;
+  }
+
+  const hoursByPeriod = {
+    "24h": 24,
+    "7d": 7 * 24,
+    "30d": 30 * 24,
+  } as const;
+  const from = new Date(
+    checkedAt.getTime() - hoursByPeriod[period] * 60 * 60_000,
+  );
+
+  return Prisma.sql`hotspot.acquired_at >= ${from}`;
+}
+
+export async function getPublicMapData(
+  query: PublicMapQuery,
+): Promise<PublicMapData> {
+  const checkedAt = new Date();
+  const [zoneRows, hotspotRows, lastSuccessfulSync] = await Promise.all([
+    prisma.$queryRaw<ZoneRow[]>(buildPublicZoneQuery(query)),
+    prisma.$queryRaw<HotspotRow[]>(buildPublicHotspotQuery(query, checkedAt)),
+    prisma.auditEvent.findFirst({
+      where: {
+        aggregateType: "NASA_FIRMS_SYNC",
+        eventType: "FIRMS_SYNC_SUCCEEDED",
+      },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    }),
+  ]);
+  const expectedIntervalMinutes = getFirmsSyncIntervalMinutes();
+  const freshness = getPublicFreshness({
+    configured: Boolean(process.env.NASA_FIRMS_MAP_KEY?.trim()),
+    checkedAt,
+    expectedIntervalMinutes,
+    lastSuccessfulAt: lastSuccessfulSync?.createdAt ?? null,
   });
 
-  return hotspots.map((hotspot) => ({
-    id: hotspot.id,
-    coordinates: [hotspot.longitude, hotspot.latitude],
-    kind: "hotspot",
-    label: hotspot.isDemoData ? "Titik panas contoh" : "NASA FIRMS hotspot",
-    description: [
-      hotspot.isDemoData ? "Ilustrasi sintetis" : "NASA FIRMS",
-      hotspot.confidence ? `Keyakinan ${hotspot.confidence}` : null,
-      hotspot.brightnessKelvin ? `${Number(hotspot.brightnessKelvin)} K` : null,
-      hotspot.acquiredAt.toLocaleString("id-ID", {
-        dateStyle: "medium",
-        timeStyle: "short",
-        timeZone: "Asia/Jakarta",
-      }),
-    ]
-      .filter(Boolean)
-      .join(" · "),
-    source: hotspot.source,
-    isDemoData: hotspot.isDemoData,
-  }));
+  return {
+    generatedAt: checkedAt.toISOString(),
+    viewport: query.viewport,
+    period: query.period,
+    source: query.source,
+    confidence: query.confidence,
+    zones: zoneRows
+      .slice(0, Math.min(query.limit, MAX_PUBLIC_ZONE_LIMIT))
+      .map((row) => ({
+        name: row.name,
+        areaHectares: row.areaHectares,
+        geometry: JSON.parse(row.geometryJson) as Polygon,
+        isDemoData: row.isDemoData,
+      })),
+    hotspots: hotspotRows.slice(0, query.limit).map((row) => ({
+      coordinates: [row.longitude, row.latitude],
+      source: row.source as PublicMapData["hotspots"][number]["source"],
+      confidence: row.confidence,
+      brightnessKelvin: row.brightnessKelvin,
+      acquiredAt: row.acquiredAt.toISOString(),
+      isDemoData: row.isDemoData,
+    })),
+    truncated: {
+      zones: zoneRows.length > Math.min(query.limit, MAX_PUBLIC_ZONE_LIMIT),
+      hotspots: hotspotRows.length > query.limit,
+    },
+    freshness,
+  };
+}
+
+function getPublicFreshness(args: {
+  configured: boolean;
+  checkedAt: Date;
+  expectedIntervalMinutes: number;
+  lastSuccessfulAt: Date | null;
+}): PublicMapData["freshness"] {
+  const { configured, checkedAt, expectedIntervalMinutes, lastSuccessfulAt } =
+    args;
+  const staleAfterMs = (expectedIntervalMinutes + 5) * 60_000;
+  const isStale =
+    lastSuccessfulAt !== null &&
+    checkedAt.getTime() - lastSuccessfulAt.getTime() > staleAfterMs;
+
+  return {
+    provider: "NASA FIRMS",
+    configured,
+    checkedAt: checkedAt.toISOString(),
+    lastSuccessfulAt: lastSuccessfulAt?.toISOString() ?? null,
+    expectedIntervalMinutes,
+    status: !configured
+      ? "not_configured"
+      : lastSuccessfulAt === null
+        ? "unavailable"
+        : isStale
+          ? "stale"
+          : "fresh",
+  };
 }
 
 async function getApprovedZoneMetrics(): Promise<PublicMetrics> {
@@ -113,8 +283,10 @@ async function getApprovedZoneMetrics(): Promise<PublicMetrics> {
         ON parameters.id = zone.carbon_parameter_set_id
       WHERE zone.is_approved = TRUE
     `,
-    prisma.satelliteHotspot.count(),
-    prisma.satelliteHotspot.count({ where: { isDemoData: true } }),
+    prisma.satelliteHotspot.count({ where: publicHotspotWhere }),
+    prisma.satelliteHotspot.count({
+      where: { ...publicHotspotWhere, isDemoData: true },
+    }),
   ]);
 
   const row = rows[0];
@@ -130,14 +302,12 @@ async function getApprovedZoneMetrics(): Promise<PublicMetrics> {
   };
 }
 
-export async function getPublicMapData(): Promise<PublicMapData> {
-  const [zones, hotspots] = await Promise.all([
-    getApprovedZones(),
-    getPublicHotspots(),
-  ]);
-
-  return { zones, hotspots };
-}
+const publicHotspotWhere = {
+  OR: [
+    { isDemoData: true, source: DEMO_HOTSPOT_SOURCE },
+    { isDemoData: false, source: { in: [...FIRMS_SOURCES] } },
+  ],
+} as const;
 
 export async function getPublicMetrics(): Promise<PublicMetrics> {
   return getApprovedZoneMetrics();

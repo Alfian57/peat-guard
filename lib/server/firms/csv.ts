@@ -1,12 +1,8 @@
 import { createHash } from "node:crypto";
 
-export const FIRMS_SOURCES = [
-  "VIIRS_SNPP_NRT",
-  "VIIRS_NOAA20_NRT",
-  "VIIRS_NOAA21_NRT",
-] as const;
+import type { FirmsSource } from "@/lib/firms-sources";
 
-export type FirmsSource = (typeof FIRMS_SOURCES)[number];
+export { FIRMS_SOURCES, type FirmsSource } from "@/lib/firms-sources";
 
 export type FirmsHotspot = {
   source: FirmsSource;

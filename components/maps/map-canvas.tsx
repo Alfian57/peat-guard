@@ -34,6 +34,10 @@ export type MapCanvasProps = {
   points: MapPoint[];
   className?: string;
   interactive?: boolean;
+  clusterPoints?: boolean;
+  autoFit?: boolean;
+  initialCenter?: [longitude: number, latitude: number];
+  initialZoom?: number;
   onMapClick?: (coordinates: [longitude: number, latitude: number]) => void;
   draftEditing?: boolean;
   onViewportChange?: (viewport: MapViewport) => void;
@@ -46,6 +50,10 @@ export default function MapCanvas({
   points,
   className,
   interactive = true,
+  clusterPoints = true,
+  autoFit = true,
+  initialCenter = DEFAULT_CENTER,
+  initialZoom = 8,
   onMapClick,
   draftEditing = false,
   onViewportChange,
@@ -60,6 +68,10 @@ export default function MapCanvas({
   const onPointSelectRef = useRef(onPointSelect);
   const onZoneSelectRef = useRef(onZoneSelect);
   const latestDataRef = useRef<MapData>({ zones, points });
+  const clusterPointsRef = useRef(clusterPoints);
+  const autoFitRef = useRef(autoFit);
+  const initialCenterRef = useRef(initialCenter);
+  const initialZoomRef = useRef(initialZoom);
   const loadedRef = useRef(false);
   const hasFitBoundsRef = useRef(false);
   const [mapIsReady, setMapIsReady] = useState(false);
@@ -72,7 +84,21 @@ export default function MapCanvas({
     onViewportChangeRef.current = onViewportChange;
     onPointSelectRef.current = onPointSelect;
     onZoneSelectRef.current = onZoneSelect;
-  }, [draftEditing, onMapClick, onPointSelect, onViewportChange, onZoneSelect]);
+    clusterPointsRef.current = clusterPoints;
+    autoFitRef.current = autoFit;
+    initialCenterRef.current = initialCenter;
+    initialZoomRef.current = initialZoom;
+  }, [
+    autoFit,
+    clusterPoints,
+    draftEditing,
+    initialCenter,
+    initialZoom,
+    onMapClick,
+    onPointSelect,
+    onViewportChange,
+    onZoneSelect,
+  ]);
 
   useEffect(() => {
     latestDataRef.current = { zones, points };
@@ -92,8 +118,8 @@ export default function MapCanvas({
       style:
         "https://api.maptiler.com/maps/streets-v2/style.json?key=" +
         encodeURIComponent(mapTilerKey),
-      center: DEFAULT_CENTER,
-      zoom: 8,
+      center: initialCenterRef.current,
+      zoom: initialZoomRef.current,
       cooperativeGestures: true,
       interactive,
       maxZoom: 17,
@@ -115,15 +141,22 @@ export default function MapCanvas({
     map.on("moveend", publishViewport);
 
     map.once("load", () => {
-      if (disposed) {
+      if (disposed || loadedRef.current) {
         return;
       }
 
       setMapError(false);
       const currentData = latestDataRef.current;
-      addMapLayers(map, currentData.zones, currentData.points);
+      addMapLayers(
+        map,
+        currentData.zones,
+        currentData.points,
+        clusterPointsRef.current,
+      );
 
-      const bounds = fitBoundsForData(currentData.zones, currentData.points);
+      const bounds = autoFitRef.current
+        ? fitBoundsForData(currentData.zones, currentData.points)
+        : null;
 
       if (bounds) {
         map.fitBounds(bounds, { padding: 44, maxZoom: 12, duration: 0 });
@@ -132,12 +165,16 @@ export default function MapCanvas({
 
       publishViewport();
 
-      addMapInteractions(map, {
-        isDraftEditing: () => draftEditingRef.current,
-        onMapClick: (coordinates) => onMapClickRef.current?.(coordinates),
-        onPointSelect: (point) => onPointSelectRef.current?.(point),
-        onZoneSelect: (zone) => onZoneSelectRef.current?.(zone),
-      });
+      addMapInteractions(
+        map,
+        {
+          isDraftEditing: () => draftEditingRef.current,
+          onMapClick: (coordinates) => onMapClickRef.current?.(coordinates),
+          onPointSelect: (point) => onPointSelectRef.current?.(point),
+          onZoneSelect: (zone) => onZoneSelectRef.current?.(zone),
+        },
+        clusterPointsRef.current,
+      );
 
       loadedRef.current = true;
       setMapIsReady(true);
@@ -160,7 +197,7 @@ export default function MapCanvas({
       mapRef.current = null;
       setMapIsReady(false);
     };
-  }, [interactive, mapTilerKey]);
+  }, [clusterPoints, interactive, mapTilerKey]);
 
   useEffect(() => {
     if (!mapIsReady || !mapRef.current) {
@@ -175,7 +212,7 @@ export default function MapCanvas({
     zoneSource?.setData(toZoneCollection(zones));
     pointSource?.setData(toPointCollection(points));
 
-    if (!hasFitBoundsRef.current) {
+    if (autoFitRef.current && !hasFitBoundsRef.current) {
       const bounds = fitBoundsForData(zones, points);
 
       if (bounds) {

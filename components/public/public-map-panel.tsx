@@ -5,14 +5,14 @@ import {
   MapLoadingState,
 } from "@/components/maps/map-canvas-loader";
 import type { PublicLoadState } from "@/components/public/public-types";
-import type { PublicMapData } from "@/lib/public/contracts";
+import type { PublicMapViewData } from "@/lib/public/client-contracts";
 
 export function PublicMapPanel({
   mapData,
   state,
   onRetry,
 }: {
-  mapData: PublicMapData | null;
+  mapData: PublicMapViewData | null;
   state: PublicLoadState;
   onRetry: () => void;
 }) {
@@ -62,6 +62,7 @@ export function PublicMapPanel({
       ) : (
         <MapCanvasLoader
           className="h-[420px] overflow-hidden rounded-2xl border border-peat-forest/10 shadow-sm sm:h-[520px]"
+          clusterPoints={false}
           points={mapData?.hotspots ?? []}
           zones={mapData?.zones ?? []}
         />
@@ -69,7 +70,7 @@ export function PublicMapPanel({
 
       {isEmpty ? (
         <p className="mt-3 rounded-xl bg-white px-4 py-3 text-sm leading-6 text-peat-forest/75">
-          Belum ada zona yang disetujui atau catatan hotspot untuk ditampilkan.
+          Belum ada zona yang disetujui atau hotspot satelit untuk ditampilkan.
           Peta akan terisi saat data publik tersedia.
         </p>
       ) : null}
@@ -93,14 +94,22 @@ export function PublicMapPanel({
             />
             Hotspot satelit
           </li>
-          {mapData.hotspots.some((point) => point.isDemoData) ||
-          mapData.zones.some((zone) => zone.isDemoData) ? (
+          {mapData.zones.some((zone) => zone.isDemoData) ? (
             <li className="inline-flex items-center gap-2">
               <span
                 aria-hidden="true"
-                className="size-3 rounded-full bg-peat-sun"
+                className="size-3 rounded-sm border border-peat-sun bg-peat-sun"
               />
-              Data ilustrasi sintetis
+              Zona ilustrasi sintetis
+            </li>
+          ) : null}
+          {mapData.hotspots.some((point) => point.isDemoData) ? (
+            <li className="inline-flex items-center gap-2">
+              <span
+                aria-hidden="true"
+                className="size-3 rounded-full border-2 border-[#dc5a1b] bg-peat-sun"
+              />
+              Hotspot ilustrasi sintetis
             </li>
           ) : null}
         </ul>

@@ -50,3 +50,29 @@ test("keeps unrated reports neutral in point data and the MapLibre style", () =>
   expect(urgencyMatch.at(-1)).toBe(UNRATED_REPORT_URGENCY_COLOR);
   expect(urgencyMatch.at(-1)).not.toBe("#047857");
 });
+
+test("can disable point clustering for transparent public hotspot markers", () => {
+  const reportPoint = toCommandReportMapPoint({
+    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    latitude: -1.25,
+    longitude: 114.75,
+    capturedAt: "2026-11-15T02:00:00.000Z",
+    aiUrgency: null,
+    aiCategory: null,
+    handlingStatus: "MENUNGGU_TINDAKAN",
+    isDemoSample: false,
+  });
+  const sources: Array<{ cluster?: boolean }> = [];
+  const layers: Array<{ id?: string }> = [];
+  const map = {
+    addSource: (_id: string, source: { cluster?: boolean }) =>
+      sources.push(source),
+    addLayer: (layer: { id?: string }) => layers.push(layer),
+  } as unknown as MapLibreMap;
+
+  addMapLayers(map, [], [reportPoint], false);
+
+  expect(sources[1]?.cluster).toBe(false);
+  expect(layers.some((layer) => layer.id === "peatguard-clusters")).toBe(false);
+  expect(layers.some((layer) => layer.id === "peatguard-points")).toBe(true);
+});

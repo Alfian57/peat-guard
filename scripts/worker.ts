@@ -1,4 +1,5 @@
 import { runFirmsSyncJob } from "@/scripts/jobs/firms-sync";
+import { getFirmsSyncIntervalMinutes } from "@/lib/server/firms/config";
 
 const shutdownSignals = ["SIGINT", "SIGTERM"] as const;
 const hasFirmsKey = Boolean(process.env.NASA_FIRMS_MAP_KEY?.trim());
@@ -9,7 +10,7 @@ if (!hasFirmsKey) {
   );
   await waitForShutdown();
 } else {
-  const syncIntervalMinutes = readSyncIntervalMinutes();
+  const syncIntervalMinutes = getFirmsSyncIntervalMinutes();
   let syncRunning = false;
 
   const runIfIdle = async () => {
@@ -41,24 +42,6 @@ if (!hasFirmsKey) {
 }
 
 console.info("PEATGUARD background worker stopped.");
-
-function readSyncIntervalMinutes(): number {
-  const rawValue = process.env.NASA_FIRMS_SYNC_INTERVAL_MINUTES?.trim();
-
-  if (!rawValue) {
-    return 30;
-  }
-
-  const minutes = Number(rawValue);
-
-  if (!Number.isInteger(minutes) || minutes < 5 || minutes > 1_440) {
-    throw new Error(
-      "NASA_FIRMS_SYNC_INTERVAL_MINUTES must be an integer between 5 and 1440.",
-    );
-  }
-
-  return minutes;
-}
 
 function waitForShutdown(): Promise<void> {
   return new Promise((resolve) => {

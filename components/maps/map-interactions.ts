@@ -12,12 +12,6 @@ import {
 } from "@/components/maps/map-data";
 import type { MapPoint, MapZone } from "@/lib/maps/types";
 
-const INTERACTIVE_LAYERS = [
-  "peatguard-zone-fill",
-  "peatguard-clusters",
-  "peatguard-points",
-];
-
 type MapInteractionHandlers = {
   isDraftEditing?: () => boolean;
   onMapClick?: (coordinates: [longitude: number, latitude: number]) => void;
@@ -28,41 +22,49 @@ type MapInteractionHandlers = {
 export function addMapInteractions(
   map: MapLibreMap,
   handlers: MapInteractionHandlers,
+  clustersEnabled = true,
 ) {
   const isDraftEditing = handlers.isDraftEditing ?? (() => false);
+  const interactiveLayers = [
+    "peatguard-zone-fill",
+    ...(clustersEnabled ? ["peatguard-clusters"] : []),
+    "peatguard-points",
+  ];
 
-  map.on("click", "peatguard-clusters", async (event) => {
-    if (isDraftEditing()) {
-      return;
-    }
-
-    const feature = event.features?.[0];
-    const clusterId = feature?.properties?.cluster_id;
-    const pointSource = map.getSource(POINTS_SOURCE_ID) as
-      GeoJSONSource | undefined;
-
-    if (!feature || typeof clusterId !== "number" || !pointSource) {
-      return;
-    }
-
-    try {
-      const expansionZoom =
-        await pointSource.getClusterExpansionZoom(clusterId);
-
+  if (clustersEnabled) {
+    map.on("click", "peatguard-clusters", async (event) => {
       if (isDraftEditing()) {
         return;
       }
 
-      if (feature.geometry.type === "Point") {
-        map.easeTo({
-          center: feature.geometry.coordinates as [number, number],
-          zoom: expansionZoom,
-        });
+      const feature = event.features?.[0];
+      const clusterId = feature?.properties?.cluster_id;
+      const pointSource = map.getSource(POINTS_SOURCE_ID) as
+        GeoJSONSource | undefined;
+
+      if (!feature || typeof clusterId !== "number" || !pointSource) {
+        return;
       }
-    } catch {
-      // The map can be removed while the cluster expansion request is pending.
-    }
-  });
+
+      try {
+        const expansionZoom =
+          await pointSource.getClusterExpansionZoom(clusterId);
+
+        if (isDraftEditing()) {
+          return;
+        }
+
+        if (feature.geometry.type === "Point") {
+          map.easeTo({
+            center: feature.geometry.coordinates as [number, number],
+            zoom: expansionZoom,
+          });
+        }
+      } catch {
+        // The map can be removed while the cluster expansion request is pending.
+      }
+    });
+  }
 
   map.on("click", "peatguard-points", (event) => {
     if (isDraftEditing()) {
@@ -130,7 +132,7 @@ export function addMapInteractions(
   });
 
   for (const layerId of [
-    "peatguard-clusters",
+    ...(clustersEnabled ? ["peatguard-clusters"] : []),
     "peatguard-points",
     "peatguard-zone-fill",
   ]) {
@@ -149,7 +151,7 @@ export function addMapInteractions(
     }
 
     const features = map.queryRenderedFeatures(event.point, {
-      layers: INTERACTIVE_LAYERS,
+      layers: interactiveLayers,
     });
 
     if (features.length === 0) {

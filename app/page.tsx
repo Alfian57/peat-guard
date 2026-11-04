@@ -2,7 +2,6 @@ import { HowItWorks } from "@/components/public/how-it-works";
 import { PublicFooter } from "@/components/public/public-footer";
 import { PublicHero } from "@/components/public/public-hero";
 import { PublicMonitor } from "@/components/public/public-monitor";
-import { SiteHeader } from "@/components/public/site-header";
 
 export default function Home() {
   return (
@@ -13,7 +12,6 @@ export default function Home() {
       >
         Lewati ke konten utama
       </a>
-      <SiteHeader />
       <main id="main-content">
         <PublicHero />
         <PublicMonitor />

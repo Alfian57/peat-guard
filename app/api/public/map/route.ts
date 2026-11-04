@@ -1,21 +1,4 @@
 import { getPublicMapData } from "@/lib/public/data";
+import { createPublicMapHandler } from "@/lib/public/http";
 
-export async function GET() {
-  try {
-    const data = await getPublicMapData();
-
-    return Response.json(data, {
-      headers: {
-        "Cache-Control": "no-store",
-      },
-    });
-  } catch {
-    return Response.json(
-      { error: "Data peta belum dapat dimuat." },
-      {
-        status: 503,
-        headers: { "Cache-Control": "no-store" },
-      },
-    );
-  }
-}
+export const GET = createPublicMapHandler(getPublicMapData);

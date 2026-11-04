@@ -23,6 +23,7 @@ export function addMapLayers(
   map: MapLibreMap,
   zones: MapZone[],
   points: MapPoint[],
+  clusterPoints = true,
 ) {
   map.addSource(ZONES_SOURCE_ID, {
     type: "geojson",
@@ -31,7 +32,7 @@ export function addMapLayers(
   map.addSource(POINTS_SOURCE_ID, {
     type: "geojson",
     data: toPointCollection(points),
-    cluster: true,
+    cluster: clusterPoints,
     clusterMaxZoom: 13,
     clusterRadius: 42,
   });
@@ -64,30 +65,32 @@ export function addMapLayers(
       "line-width": 2,
     },
   });
-  map.addLayer({
-    id: "peatguard-clusters",
-    type: "circle",
-    source: POINTS_SOURCE_ID,
-    filter: ["has", "point_count"],
-    paint: {
-      "circle-color": "#f6b84a",
-      "circle-radius": ["step", ["get", "point_count"], 15, 10, 19, 40, 23],
-      "circle-stroke-color": "#1f4d3d",
-      "circle-stroke-width": 2,
-    },
-  });
-  map.addLayer({
-    id: "peatguard-cluster-count",
-    type: "symbol",
-    source: POINTS_SOURCE_ID,
-    filter: ["has", "point_count"],
-    layout: {
-      "text-field": ["get", "point_count_abbreviated"],
-      "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
-      "text-size": 12,
-    },
-    paint: { "text-color": "#1f4d3d" },
-  });
+  if (clusterPoints) {
+    map.addLayer({
+      id: "peatguard-clusters",
+      type: "circle",
+      source: POINTS_SOURCE_ID,
+      filter: ["has", "point_count"],
+      paint: {
+        "circle-color": "#f6b84a",
+        "circle-radius": ["step", ["get", "point_count"], 15, 10, 19, 40, 23],
+        "circle-stroke-color": "#1f4d3d",
+        "circle-stroke-width": 2,
+      },
+    });
+    map.addLayer({
+      id: "peatguard-cluster-count",
+      type: "symbol",
+      source: POINTS_SOURCE_ID,
+      filter: ["has", "point_count"],
+      layout: {
+        "text-field": ["get", "point_count_abbreviated"],
+        "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+        "text-size": 12,
+      },
+      paint: { "text-color": "#1f4d3d" },
+    });
+  }
   map.addLayer({
     id: "peatguard-points",
     type: "circle",

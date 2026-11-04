@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MapPinned } from "lucide-react";
 
@@ -7,21 +8,26 @@ import { CarbonImpactCard } from "@/components/public/carbon-impact-card";
 import { MetricsGrid } from "@/components/public/metrics-grid";
 import { PublicMapPanel } from "@/components/public/public-map-panel";
 import type { PublicLoadState } from "@/components/public/public-types";
-import type { PublicMapData, PublicMetrics } from "@/lib/public/contracts";
+import {
+  parsePublicMapData,
+  parsePublicMetrics,
+  type PublicMapViewData,
+} from "@/lib/public/client-contracts";
+import type { PublicMetrics } from "@/lib/public/contracts";
 
-async function fetchJson<T>(url: string, signal: AbortSignal): Promise<T> {
+async function fetchJson(url: string, signal: AbortSignal): Promise<unknown> {
   const response = await fetch(url, { cache: "no-store", signal });
 
   if (!response.ok) {
     throw new Error("Public data request failed.");
   }
 
-  return (await response.json()) as T;
+  return response.json();
 }
 
 export function PublicMonitor() {
   const [retryKey, setRetryKey] = useState(0);
-  const [mapData, setMapData] = useState<PublicMapData | null>(null);
+  const [mapData, setMapData] = useState<PublicMapViewData | null>(null);
   const [metrics, setMetrics] = useState<PublicMetrics | null>(null);
   const [mapState, setMapState] = useState<PublicLoadState>("loading");
   const [metricsState, setMetricsState] = useState<PublicLoadState>("loading");
@@ -29,9 +35,9 @@ export function PublicMonitor() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetchJson<PublicMapData>("/api/public/map", controller.signal)
+    fetchJson("/api/public/map?period=30d", controller.signal)
       .then((data) => {
-        setMapData(data);
+        setMapData(parsePublicMapData(data));
         setMapState("ready");
       })
       .catch(() => {
@@ -40,7 +46,8 @@ export function PublicMonitor() {
         }
       });
 
-    fetchJson<PublicMetrics>("/api/public/metrics", controller.signal)
+    fetchJson("/api/public/metrics", controller.signal)
+      .then(parsePublicMetrics)
       .then((data) => {
         setMetrics(data);
         setMetricsState("ready");
@@ -86,13 +93,13 @@ export function PublicMonitor() {
               peta publik.
             </p>
           </div>
-          <a
+          <Link
             className="inline-flex min-h-11 shrink-0 items-center gap-2 self-start rounded-full border border-peat-forest/20 px-4 text-sm font-semibold text-peat-forest transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-peat-green sm:self-auto"
-            href="#peta-publik"
+            href="/peta"
           >
             <MapPinned aria-hidden="true" size={17} />
             Buka peta publik
-          </a>
+          </Link>
         </div>
 
         <MetricsGrid
