@@ -1,7 +1,7 @@
 "use client";
 
 import { ClipboardList, CloudUpload, Plus, ShieldCheck } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ownerStatusMessage, useFieldShell } from "./field-app-shell";
 import { ReportCard } from "./report-card";
 import { listQueuedReports } from "@/lib/client/offline/report-store";
@@ -12,6 +12,18 @@ import type { QueuedFieldReport } from "@/lib/client/offline/types";
 export function FieldHome() {
   const { ownerId, ownerStatus, queueCount, setNotice, isConnected } =
     useFieldShell();
+  const activeOwnerIdentityRef = useRef<{ ownerId: string | null } | null>(
+    null,
+  );
+  useLayoutEffect(() => {
+    const identity = { ownerId };
+    activeOwnerIdentityRef.current = identity;
+    return () => {
+      if (activeOwnerIdentityRef.current === identity) {
+        activeOwnerIdentityRef.current = null;
+      }
+    };
+  }, [ownerId]);
   const [reportSnapshot, setReportSnapshot] = useState<{
     ownerId: string | null;
     reports: QueuedFieldReport[];
@@ -23,29 +35,27 @@ export function FieldHome() {
     ownerId && (reportSnapshot.ownerId !== ownerId || !reportSnapshot.loaded),
   );
 
-  const loadReports = useCallback(async () => {
-    if (!ownerId) {
-      setReportSnapshot({ ownerId: null, reports: [], loaded: true });
-      return;
-    }
-    try {
-      setReportSnapshot({
-        ownerId,
-        reports: await listQueuedReports(ownerId),
-        loaded: true,
-      });
-    } catch {
-      setReportSnapshot({ ownerId, reports: [], loaded: true });
-      setNotice(
-        "Laporan lokal tidak dapat dibuka. Periksa ruang penyimpanan browser.",
-      );
-    }
-  }, [ownerId, setNotice]);
-
   useEffect(() => {
-    const timerId = window.setTimeout(() => void loadReports(), 0);
-    return () => window.clearTimeout(timerId);
-  }, [loadReports, queueCount]);
+    if (!ownerId) return;
+    const identity = activeOwnerIdentityRef.current;
+    if (!identity || identity.ownerId !== ownerId) return;
+    let isActive = true;
+    void listQueuedReports(ownerId)
+      .then((reports) => {
+        if (!isActive || activeOwnerIdentityRef.current !== identity) return;
+        setReportSnapshot({ ownerId, reports, loaded: true });
+      })
+      .catch(() => {
+        if (!isActive || activeOwnerIdentityRef.current !== identity) return;
+        setReportSnapshot({ ownerId, reports: [], loaded: true });
+        setNotice(
+          "Laporan lokal tidak dapat dibuka. Periksa ruang penyimpanan browser.",
+        );
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [ownerId, queueCount, setNotice]);
 
   const pendingReports = reports.filter(
     (report) => report.syncState !== "synced",

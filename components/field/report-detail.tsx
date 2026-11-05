@@ -5,6 +5,9 @@ import { ArrowLeft, MapPin, Pencil, RefreshCw, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ownerStatusMessage, useFieldShell } from "./field-app-shell";
 import { useOwnedReport } from "./use-owned-report";
+import { useServerReport } from "./use-server-report";
+import { ServerReportDetail } from "./server-report-detail";
+import { resolveReportDetailSource } from "@/lib/client/offline/server-report-client";
 import type { QueuedFieldReport } from "@/lib/client/offline/types";
 
 function usePhotoUrl(photo: Blob | undefined) {
@@ -29,15 +32,36 @@ function reportStatus(report: QueuedFieldReport): string {
   return "Tersimpan di perangkat · menunggu sinkronisasi";
 }
 
-export function ReportDetail({ reportId }: { reportId: string }) {
-  const { isSyncing, refreshQueue, syncNow } = useFieldShell();
-  const { ownerId, ownerStatus, report, isLoading, loadReport } =
-    useOwnedReport(reportId);
+export function ReportDetail({
+  reportId,
+  serverReportId,
+}: {
+  reportId: string | null;
+  serverReportId: string | null;
+}) {
+  const {
+    isConnected,
+    isSyncing,
+    refreshQueue,
+    syncNow,
+    ownerId,
+    ownerStatus,
+  } = useFieldShell();
+  const localReport = useOwnedReport(reportId);
+  const activeServerReportId =
+    serverReportId ?? localReport.report?.serverReportId ?? null;
+  const remoteReport = useServerReport(activeServerReportId);
+  const detailSource = resolveReportDetailSource({
+    isConnected,
+    serverReport: remoteReport.report,
+    localReport: localReport.report,
+  });
+  const report = detailSource.kind === "local" ? detailSource.report : null;
   const photoUrl = usePhotoUrl(report?.photo);
 
   async function retrySync() {
     await syncNow();
-    await loadReport();
+    await localReport.loadReport();
     await refreshQueue();
   }
 
@@ -56,10 +80,33 @@ export function ReportDetail({ reportId }: { reportId: string }) {
         >
           <ArrowLeft aria-hidden="true" size={17} /> Kembali ke beranda
         </a>
+        {serverReportId && isConnected ? (
+          <button
+            type="button"
+            onClick={() => void remoteReport.loadReport()}
+            disabled={remoteReport.status === "loading"}
+            className="mt-2 flex min-h-11 items-center gap-2 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green disabled:opacity-60"
+          >
+            <RefreshCw
+              aria-hidden="true"
+              className={
+                remoteReport.status === "loading"
+                  ? "animate-spin motion-reduce:animate-none"
+                  : ""
+              }
+              size={17}
+            />
+            Coba muat ulang
+          </button>
+        ) : null}
       </div>
     );
   }
-  if (isLoading)
+  if (
+    !report &&
+    detailSource.kind === "unavailable" &&
+    (localReport.isLoading || remoteReport.status === "loading")
+  )
     return (
       <div
         className="mx-auto max-w-xl px-4 pt-8 text-sm text-muted-foreground"
@@ -68,11 +115,26 @@ export function ReportDetail({ reportId }: { reportId: string }) {
         Membuka laporan…
       </div>
     );
+  if (detailSource.kind === "server") {
+    return (
+      <ServerReportDetail
+        report={detailSource.report}
+        onRefresh={() => void remoteReport.loadReport()}
+        isRefreshing={remoteReport.status === "loading"}
+      />
+    );
+  }
   if (!report) {
     return (
       <div className="mx-auto max-w-xl px-4 pt-8">
-        <p className="rounded-xl border border-border bg-white p-4 text-sm">
-          Laporan tidak ditemukan atau tidak dapat diakses oleh akun ini.
+        <p
+          className="rounded-xl border border-border bg-white p-4 text-sm"
+          role="status"
+        >
+          {remoteReport.error ??
+            (!isConnected
+              ? "Detail laporan server perlu koneksi. Tidak ada salinan lokal pada perangkat ini."
+              : "Laporan tidak ditemukan atau tidak dapat diakses oleh akun ini.")}
         </p>
         <a
           href="/field/home"
@@ -109,6 +171,28 @@ export function ReportDetail({ reportId }: { reportId: string }) {
           </span>
         ) : null}
       </div>
+      {report.syncState === "synced" &&
+      report.serverReportId &&
+      (!isConnected || remoteReport.error) ? (
+        <div
+          className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+          role="status"
+        >
+          {isConnected
+            ? "Detail server tidak tersedia. Salinan pada perangkat ini tetap dapat dibuka."
+            : "Offline. Detail triase server memerlukan koneksi; salinan pada perangkat ini tetap dapat dibuka."}
+          {isConnected ? (
+            <button
+              type="button"
+              onClick={() => void remoteReport.loadReport()}
+              disabled={remoteReport.status === "loading"}
+              className="mt-2 block min-h-11 font-semibold underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green disabled:opacity-60"
+            >
+              Coba muat ulang detail
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <div className="relative mt-4 aspect-[4/3] overflow-hidden rounded-2xl bg-secondary">
         {photoUrl ? (
           <Image

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { reportReadScope, type ReportActor } from "@/lib/server/reports/access";
 import { ReportNotFoundError } from "@/lib/server/reports/http";
 import type { ReportListFilters } from "@/lib/server/reports/list-input";
+import { reportPhotoMetadata } from "@/lib/server/reports/photo-metadata";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -36,6 +37,7 @@ const reportDetailSelect = {
   handlingStatus: true,
   nearestWaterDistanceM: true,
   isDemoSample: true,
+  imagePath: true,
   createdAt: true,
   updatedAt: true,
   statusEvents: {
@@ -95,7 +97,7 @@ export async function getPrivateReportList(
 
   return {
     reports: reports.map((report) => {
-      const hasPhoto = report.imagePath.length > 0;
+      const photo = reportPhotoMetadata(report.id, report.imagePath);
       return {
         id: report.id,
         zoneId: report.zoneId,
@@ -109,8 +111,7 @@ export async function getPrivateReportList(
         aiCategory: report.aiCategory,
         aiUrgency: report.aiUrgency,
         isDemoSample: report.isDemoSample,
-        hasPhoto,
-        photoHref: hasPhoto ? `/api/reports/${report.id}/photo` : null,
+        ...photo,
       };
     }),
     page: filters.page,
@@ -130,6 +131,7 @@ export async function getPrivateReportDetail(
 
   if (!report) throw new ReportNotFoundError();
 
+  const photo = reportPhotoMetadata(report.id, report.imagePath);
   return {
     id: report.id,
     clientReportId: report.clientReportId,
@@ -158,9 +160,9 @@ export async function getPrivateReportDetail(
         ? null
         : Number(report.nearestWaterDistanceM),
     isDemoSample: report.isDemoSample,
+    ...photo,
     createdAt: report.createdAt,
     updatedAt: report.updatedAt,
-    photoHref: `/api/reports/${report.id}/photo`,
     statusEvents: report.statusEvents,
   };
 }

@@ -1,13 +1,13 @@
 "use client";
 
 import { CloudUpload, RefreshCw } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ownerStatusMessage, useFieldShell } from "./field-app-shell";
-import { ReportCard } from "./report-card";
-import { listQueuedReports } from "@/lib/client/offline/report-store";
-import type { QueuedFieldReport } from "@/lib/client/offline/types";
-
-/* eslint-disable @next/next/no-html-link-for-pages -- Full navigations let the service worker serve cached field shells offline. */
+import { FieldOutboxSection } from "./field-outbox-section";
+import { ServerReportHistorySection } from "./server-report-history-section";
+import { useFieldReportHistory } from "./use-field-report-history";
+import { splitReportHistory } from "@/lib/client/offline/server-report-client";
+import { removeQueuedReport } from "@/lib/client/offline/report-store";
 
 export function FieldQueue() {
   const {
@@ -15,68 +15,74 @@ export function FieldQueue() {
     isSyncing,
     ownerId,
     ownerStatus,
-    queueCount,
     refreshQueue,
     setNotice,
     syncNow,
   } = useFieldShell();
-  const [reportSnapshot, setReportSnapshot] = useState<{
-    ownerId: string | null;
-    reports: QueuedFieldReport[];
-    loaded: boolean;
-  }>({ ownerId: null, reports: [], loaded: false });
-  const reports =
-    reportSnapshot.ownerId === ownerId ? reportSnapshot.reports : [];
-  const isLoading = Boolean(
-    ownerId && (reportSnapshot.ownerId !== ownerId || !reportSnapshot.loaded),
+  const history = useFieldReportHistory();
+  const [deleteReportId, setDeleteReportId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteDialogRef = useRef<HTMLDialogElement>(null);
+  const pendingReport = history.localReports.find(
+    (report) => report.clientReportId === deleteReportId,
   );
-
-  const loadReports = useCallback(async () => {
-    if (!ownerId) {
-      setReportSnapshot({ ownerId: null, reports: [], loaded: true });
-      return;
-    }
-    try {
-      setReportSnapshot({
-        ownerId,
-        reports: await listQueuedReports(ownerId),
-        loaded: true,
-      });
-    } catch {
-      setReportSnapshot({ ownerId, reports: [], loaded: true });
-      setNotice(
-        "Antrean lokal tidak dapat dibuka. Laporan tetap tersimpan, muat ulang halaman untuk mencoba lagi.",
-      );
-    }
-  }, [ownerId, setNotice]);
+  const reportHistory = splitReportHistory(
+    history.serverReports,
+    history.localReports,
+  );
+  const waitingCount = reportHistory.outboxReports.length;
+  const sentCount =
+    history.serverStatus === "loaded"
+      ? history.serverTotal
+      : history.localReports.filter((report) => report.syncState === "synced")
+          .length;
 
   useEffect(() => {
-    const timerId = window.setTimeout(() => void loadReports(), 0);
-    return () => window.clearTimeout(timerId);
-  }, [loadReports, queueCount]);
+    const dialog = deleteDialogRef.current;
+    if (!dialog) return;
+    if (deleteReportId && !dialog.open) dialog.showModal();
+    if (!deleteReportId && dialog.open) dialog.close();
+  }, [deleteReportId]);
 
   async function syncAll() {
     await syncNow();
-    await loadReports();
+    await history.refreshAll();
     await refreshQueue();
   }
 
-  const waitingCount = reports.filter(
-    (report) => report.syncState !== "synced",
-  ).length;
-  const sentCount = reports.length - waitingCount;
+  async function confirmDeleteDraft() {
+    if (!ownerId || !pendingReport || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      const removed = await removeQueuedReport(
+        pendingReport.clientReportId,
+        ownerId,
+      );
+      setDeleteReportId(null);
+      setNotice(
+        removed
+          ? "Draf lokal dihapus dari perangkat. Laporan yang sudah terkirim tidak dapat dihapus di sini."
+          : "Draf sedang disinkronkan atau sudah terkirim, jadi tidak dihapus.",
+      );
+      await history.refreshAll();
+    } catch {
+      setNotice("Draf belum dapat dihapus. Coba lagi dari antrean.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
     <div className="mx-auto w-full max-w-xl px-4 pt-5">
       <p className="text-sm text-muted-foreground">
-        Penyimpanan pada perangkat ini
+        Penyimpanan pada perangkat dan laporan di posko
       </p>
       <h1 className="mt-1 font-heading text-4xl leading-none font-bold text-peat-forest">
         Antrean laporan
       </h1>
       <p className="mt-2 text-sm leading-5 text-muted-foreground">
-        Laporan menunggu aman di perangkat dan dapat dikirim ulang saat jaringan
-        kembali.
+        Draf menunggu aman di perangkat. Laporan yang sudah diterima posko
+        tersedia di riwayat server saat online.
       </p>
       {!ownerId ? (
         <p
@@ -132,70 +138,94 @@ export function FieldQueue() {
         </button>
         {!isConnected ? (
           <p className="mt-2 text-center text-xs text-muted-foreground">
-            Buka simulasi offline untuk berlatih; sinkronisasi akan berjalan
-            saat simulasi dimatikan dan koneksi tersedia.
+            Draf tetap dapat dibuka dan dihapus offline. Sinkronisasi berjalan
+            saat koneksi tersedia.
           </p>
         ) : null}
       </section>
 
       <div className="mt-5 flex items-center justify-between gap-3">
         <h2 className="font-heading text-2xl font-bold text-peat-forest">
-          Semua laporan
+          Laporan lapangan
         </h2>
         <button
           type="button"
-          onClick={() => void loadReports()}
-          disabled={isLoading}
-          className="min-h-11 rounded-lg px-3 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-peat-green"
+          onClick={() => void history.refreshAll()}
+          disabled={history.isLoadingLocal}
+          className="min-h-11 rounded-lg px-3 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-peat-green disabled:opacity-60"
         >
           Muat ulang
         </button>
       </div>
-      {isLoading ? (
-        <div
-          className="mt-3 rounded-xl border border-border bg-white p-4 text-sm text-muted-foreground"
-          role="status"
-        >
-          Membuka antrean…
-        </div>
-      ) : reports.length ? (
-        <div className="mt-3 space-y-3">
-          {reports.map((report) => (
-            <div key={report.clientReportId}>
-              <ReportCard report={report} />
-              {report.syncError ? (
-                <p className="px-2 pt-2 text-xs text-destructive" role="status">
-                  {report.syncError}
-                </p>
-              ) : null}
-              {report.aiState === "skipped" ? (
-                <p className="px-2 pt-1 text-xs text-muted-foreground">
-                  Analisis AI dilewati sesuai pilihan relawan.
-                </p>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <section className="mt-3 rounded-2xl border border-dashed border-peat-green/40 bg-white p-5 text-center">
-          <h3 className="font-semibold text-peat-forest">
-            Antrean masih kosong
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Laporan patroli yang dibuat akan muncul di sini.
-          </p>
-          <a
-            href="/field/reports/create"
-            className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-peat-green px-4 text-sm font-semibold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-forest"
-          >
-            Buat laporan
-          </a>
-        </section>
-      )}
+
+      <FieldOutboxSection
+        isLoading={history.isLoadingLocal}
+        reports={history.localReports}
+        onDelete={setDeleteReportId}
+      />
+      <ServerReportHistorySection
+        hasOwner={Boolean(ownerId)}
+        isConnected={isConnected}
+        localReports={history.localReports}
+        onPageChange={history.navigateServerPage}
+        onRefresh={history.refreshServerHistory}
+        page={history.serverPage}
+        pageSize={history.serverPageSize}
+        reports={history.serverReports}
+        status={history.serverStatus}
+        total={history.serverTotal}
+        error={history.serverError}
+      />
+
       <p className="mt-5 rounded-xl bg-secondary/70 px-4 py-3 text-xs leading-5 text-secondary-foreground">
-        Antrean tersimpan di browser perangkat ini. Foto laporan tidak
-        dimasukkan ke cache service worker.
+        Antrean tersimpan di browser perangkat ini. Riwayat server hanya dimuat
+        untuk akun relawan aktif; API dan foto privat tidak disimpan service
+        worker.
       </p>
+
+      <dialog
+        ref={deleteDialogRef}
+        aria-labelledby="delete-draft-title"
+        aria-describedby="delete-draft-description"
+        onCancel={(event) => {
+          event.preventDefault();
+          setDeleteReportId(null);
+        }}
+        className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-border bg-white p-5 shadow-xl backdrop:bg-black/40"
+      >
+        <h2
+          id="delete-draft-title"
+          className="font-heading text-2xl font-bold text-peat-forest"
+        >
+          Hapus draf lokal?
+        </h2>
+        <p
+          id="delete-draft-description"
+          className="mt-2 text-sm leading-6 text-muted-foreground"
+        >
+          Foto dan data draf ini akan dihapus dari perangkat. Laporan yang sudah
+          terkirim ke posko tidak dapat dihapus dari sini.
+        </p>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            autoFocus
+            disabled={isDeleting}
+            onClick={() => setDeleteReportId(null)}
+            className="min-h-11 rounded-xl border border-border px-4 text-sm font-semibold text-peat-forest focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green disabled:opacity-60"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            disabled={isDeleting || !pendingReport}
+            onClick={() => void confirmDeleteDraft()}
+            className="min-h-11 rounded-xl bg-destructive px-4 text-sm font-semibold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-forest disabled:opacity-60"
+          >
+            {isDeleting ? "Menghapus…" : "Hapus draf"}
+          </button>
+        </div>
+      </dialog>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { QueuedFieldReport } from "@/lib/client/offline/types";
 
@@ -37,48 +38,68 @@ function formatCapturedAt(value: string): string {
   }).format(new Date(value));
 }
 
-export function ReportCard({ report }: { report: QueuedFieldReport }) {
+export function ReportCard({
+  report,
+  onDelete,
+}: {
+  report: QueuedFieldReport;
+  onDelete?: () => void;
+}) {
   const imageUrl = useBlobUrl(report.photo);
 
   return (
-    <a
-      href={`/field/report?reportId=${encodeURIComponent(report.clientReportId)}`}
-      className="flex min-h-[112px] items-center gap-3 rounded-2xl border border-border bg-white p-3 transition hover:border-peat-green/50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
-    >
-      <span className="relative size-[72px] shrink-0 overflow-hidden rounded-xl bg-secondary">
-        {imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt={
-              report.isDemoSample
-                ? "Foto sampel demo laporan"
-                : "Foto laporan patroli"
-            }
-            width={72}
-            height={72}
-            unoptimized
-            className="size-full object-cover"
-          />
-        ) : null}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex flex-wrap items-center gap-2">
-          <span className="truncate font-semibold text-peat-forest">
-            {report.tags[0] ?? "Temuan patroli"}
+    <article className="rounded-2xl border border-border bg-white p-3">
+      <div className="flex min-h-[88px] items-center gap-3">
+        <a
+          href={`/field/report?reportId=${encodeURIComponent(report.clientReportId)}`}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl transition hover:border-peat-green/50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
+        >
+          <span className="relative size-[72px] shrink-0 overflow-hidden rounded-xl bg-secondary">
+            {imageUrl ? (
+              <Image
+                src={imageUrl}
+                alt={
+                  report.isDemoSample
+                    ? "Foto sampel demo laporan"
+                    : "Foto laporan patroli"
+                }
+                width={72}
+                height={72}
+                unoptimized
+                className="size-full object-cover"
+              />
+            ) : null}
           </span>
-          {report.isDemoSample ? (
-            <span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-900">
-              Sampel demo
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="truncate font-semibold text-peat-forest">
+                {report.tags[0] ?? "Temuan patroli"}
+              </span>
+              {report.isDemoSample ? (
+                <span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-900">
+                  Sampel demo
+                </span>
+              ) : null}
             </span>
-          ) : null}
-        </span>
-        <span className="mt-1 block text-xs text-muted-foreground">
-          {formatCapturedAt(report.capturedAt)} · {syncLabel(report)}
-        </span>
-        <span className="mt-1 block font-mono text-[11px] text-muted-foreground">
-          {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}
-        </span>
-      </span>
-    </a>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              {formatCapturedAt(report.capturedAt)} · {syncLabel(report)}
+            </span>
+            <span className="mt-1 block font-mono text-[11px] text-muted-foreground">
+              {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}
+            </span>
+          </span>
+        </a>
+        {onDelete ? (
+          <button
+            type="button"
+            onClick={onDelete}
+            aria-label="Hapus draf laporan"
+            className="grid size-11 shrink-0 place-items-center rounded-xl text-destructive focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
+          >
+            <Trash2 aria-hidden="true" size={18} />
+          </button>
+        ) : null}
+      </div>
+    </article>
   );
 }

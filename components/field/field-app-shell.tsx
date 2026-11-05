@@ -7,7 +7,9 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
@@ -239,6 +241,17 @@ export function FieldAppShell({
               : sessionError
                 ? "unavailable"
                 : "signed-out";
+  const activeOwnerIdRef = useRef(ownerId);
+  const isMountedRef = useRef(false);
+  useLayoutEffect(() => {
+    activeOwnerIdRef.current = ownerId;
+  }, [ownerId]);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   const [queueSnapshot, setQueueSnapshot] = useState<{
     ownerId: string | null;
     count: number;
@@ -300,18 +313,28 @@ export function FieldAppShell({
   ]);
 
   const refreshQueue = useCallback(async () => {
-    if (!ownerId) {
-      setQueueSnapshot({ ownerId: null, count: 0 });
-      return [];
-    }
+    if (!ownerId) return [];
+    const requestedOwnerId = ownerId;
     try {
-      const reports = await listQueuedReports(ownerId);
+      const reports = await listQueuedReports(requestedOwnerId);
+      if (
+        !isMountedRef.current ||
+        activeOwnerIdRef.current !== requestedOwnerId
+      ) {
+        return [];
+      }
       setQueueSnapshot({
-        ownerId,
+        ownerId: requestedOwnerId,
         count: reports.filter((report) => report.syncState !== "synced").length,
       });
       return reports;
     } catch {
+      if (
+        !isMountedRef.current ||
+        activeOwnerIdRef.current !== requestedOwnerId
+      ) {
+        return [];
+      }
       setNotice(
         "Penyimpanan laporan offline tidak dapat dibuka di perangkat ini.",
       );

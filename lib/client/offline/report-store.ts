@@ -5,6 +5,16 @@ const DATABASE_NAME = "peat-guard-field";
 const DATABASE_VERSION = 2;
 const REPORTS_STORE = "reports";
 
+export function isRemovableLocalDraft(
+  report: Pick<QueuedFieldReport, "syncState" | "serverReportId">,
+): boolean {
+  return (
+    report.syncState !== "synced" &&
+    report.syncState !== "syncing" &&
+    report.serverReportId === null
+  );
+}
+
 function openReportDatabase(): Promise<IDBDatabase> {
   if (typeof indexedDB === "undefined") {
     return Promise.reject(
@@ -142,21 +152,26 @@ export async function saveQueuedReport(
 export async function removeQueuedReport(
   clientReportId: string,
   ownerId: string,
-): Promise<void> {
-  if (!ownerId.trim()) return;
+): Promise<boolean> {
+  if (!ownerId.trim()) return false;
   const database = await openReportDatabase();
   try {
-    await new Promise<void>((resolve, reject) => {
+    return await new Promise<boolean>((resolve, reject) => {
       const transaction = database.transaction(REPORTS_STORE, "readwrite");
       const store = transaction.objectStore(REPORTS_STORE);
       const request = store.get(clientReportId);
+      let removed = false;
       request.onsuccess = () => {
         const report = request.result as QueuedFieldReport | undefined;
-        if (reportBelongsToOwner(report, ownerId)) {
+        if (
+          reportBelongsToOwner(report, ownerId) &&
+          isRemovableLocalDraft(report)
+        ) {
           store.delete(clientReportId);
+          removed = true;
         }
       };
-      transaction.oncomplete = () => resolve();
+      transaction.oncomplete = () => resolve(removed);
       transaction.onerror = () =>
         reject(
           transaction.error ?? new Error("Tidak dapat menghapus draf laporan."),
