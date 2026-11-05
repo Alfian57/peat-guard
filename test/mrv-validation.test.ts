@@ -54,6 +54,28 @@ describe("MRV query validation", () => {
     ).toBe(false);
   });
 
+  test("treats empty optional form fields as absent filters", () => {
+    expect(
+      parseLedgerFilters(new URLSearchParams("zoneId=&aiState=&from=&to=")),
+    ).toEqual({
+      ok: true,
+      value: {
+        aiState: null,
+        evidence: "all",
+        page: 1,
+        pageSize: 25,
+        range: null,
+        zoneId: null,
+      },
+    });
+    expect(
+      parseDashboardFilters(new URLSearchParams("from=&to=&zoneId=")),
+    ).toEqual({ ok: true, value: { range: null } });
+    expect(
+      parseLedgerFilters(new URLSearchParams("from=&to=2026-11-15")).ok,
+    ).toBe(false);
+  });
+
   test("validates page, pageSize, and AI state filters", () => {
     expect(
       parseLedgerFilters(new URLSearchParams("page=0&pageSize=25")).ok,

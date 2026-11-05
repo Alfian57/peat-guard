@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { MapPin, ShieldAlert } from "lucide-react";
 
 import type { MrvLedgerRow } from "@/lib/server/mrv/contracts";
@@ -8,6 +7,7 @@ import {
   formatDateTime,
   formatDecimal,
 } from "../audit-formatters";
+import { LedgerPhotoViewer } from "./ledger-photo-viewer";
 
 const aiCategoryLabels: Record<string, string> = {
   API_AKTIF: "Api aktif",
@@ -69,34 +69,6 @@ function AiTriage({ row }: { row: MrvLedgerRow }) {
         Triase: {aiStateLabels[row.aiTriage.state ?? ""] ?? "Belum tersedia"}
       </p>
     </div>
-  );
-}
-
-function PhotoEvidence({ row }: { row: MrvLedgerRow }) {
-  if (!row.hasPhoto || !row.photoHref) {
-    return (
-      <span className="text-xs text-muted-foreground">Foto belum tersedia</span>
-    );
-  }
-
-  return (
-    <a
-      aria-label={`Buka foto bukti laporan ${row.reportId.slice(0, 8)}`}
-      className="group inline-flex flex-col items-start gap-1 rounded-lg text-xs font-semibold text-peat-green underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
-      href={row.photoHref}
-      rel="noreferrer"
-      target="_blank"
-    >
-      <Image
-        alt=""
-        className="size-16 rounded-lg border border-border object-cover transition group-hover:brightness-95"
-        height={64}
-        src={row.photoHref}
-        unoptimized
-        width={64}
-      />
-      Lihat bukti
-    </a>
   );
 }
 
@@ -202,7 +174,22 @@ export function LedgerRow({ row }: { row: MrvLedgerRow }) {
         </p>
       </td>
       <td className="min-w-28 px-4 py-4">
-        <PhotoEvidence row={row} />
+        <LedgerPhotoViewer
+          capturedAtLabel={formatDateTime(row.capturedAt)}
+          row={{
+            capturedAt: row.capturedAt,
+            coordinates: {
+              accuracyMeters: row.coordinates.accuracyMeters,
+              latitude: row.coordinates.latitude,
+              longitude: row.coordinates.longitude,
+            },
+            evidenceStatus: row.evidenceStatus,
+            hasPhoto: row.hasPhoto,
+            photoHref: row.photoHref,
+            reportId: row.reportId,
+            villageName: row.villageName,
+          }}
+        />
         <p className="mt-2 text-xs text-muted-foreground">
           Bukti:{" "}
           {row.evidenceStatus === "complete" ? "lengkap" : "belum lengkap"}

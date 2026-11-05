@@ -65,19 +65,22 @@ function parseDateRange(
     return toValue;
   }
 
-  if (fromValue.value === null && toValue.value === null) {
+  const fromText = fromValue.value === "" ? null : fromValue.value;
+  const toText = toValue.value === "" ? null : toValue.value;
+
+  if (fromText === null && toText === null) {
     return { ok: true, value: null };
   }
 
-  if (fromValue.value === null || toValue.value === null) {
+  if (fromText === null || toText === null) {
     return {
       error: "Parameters from and to must be provided together.",
       ok: false,
     };
   }
 
-  const from = parseCalendarDate(fromValue.value);
-  const to = parseCalendarDate(toValue.value);
+  const from = parseCalendarDate(fromText);
+  const to = parseCalendarDate(toText);
 
   if (!from || !to) {
     return {
@@ -90,15 +93,15 @@ function parseDateRange(
     return { error: "The from date must not be after the to date.", ok: false };
   }
 
-  const toExclusiveDate = nextCalendarDate(toValue.value);
+  const toExclusiveDate = nextCalendarDate(toText);
   const toExclusive = new Date(`${toExclusiveDate}T00:00:00.000+07:00`);
 
   return {
     ok: true,
     value: {
       from,
-      fromDate: fromValue.value,
-      toDate: toValue.value,
+      fromDate: fromText,
+      toDate: toText,
       toExclusive,
     },
   };
@@ -114,15 +117,17 @@ function parseOptionalUuid(
     return value;
   }
 
-  if (value.value === null) {
+  const uuid = value.value === "" ? null : value.value;
+
+  if (uuid === null) {
     return { ok: true, value: null };
   }
 
-  if (!UUID_PATTERN.test(value.value)) {
+  if (!UUID_PATTERN.test(uuid)) {
     return { error: `Parameter ${key} must be a UUID.`, ok: false };
   }
 
-  return { ok: true, value: value.value.toLowerCase() };
+  return { ok: true, value: uuid.toLowerCase() };
 }
 
 function parsePositiveInteger(
@@ -188,7 +193,9 @@ function parseSharedFilters(searchParams: URLSearchParams): ValidationResult<{
     return evidence;
   }
 
-  if (aiState.value !== null && !isAiState(aiState.value)) {
+  const aiStateValue = aiState.value === "" ? null : aiState.value;
+
+  if (aiStateValue !== null && !isAiState(aiStateValue)) {
     return {
       error: `Parameter aiState must be one of ${AI_STATES.join(", ")}.`,
       ok: false,
@@ -206,8 +213,8 @@ function parseSharedFilters(searchParams: URLSearchParams): ValidationResult<{
 
   if (
     evidenceValue === "complete" &&
-    aiState.value !== null &&
-    aiState.value !== "COMPLETED"
+    aiStateValue !== null &&
+    aiStateValue !== "COMPLETED"
   ) {
     return {
       error: "evidence=complete cannot be combined with another AI state.",
@@ -218,7 +225,7 @@ function parseSharedFilters(searchParams: URLSearchParams): ValidationResult<{
   return {
     ok: true,
     value: {
-      aiState: aiState.value,
+      aiState: aiStateValue,
       evidence: evidenceValue,
       range: range.value,
       zoneId: zoneId.value,

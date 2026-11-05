@@ -1,5 +1,8 @@
 import { mock, test, expect } from "bun:test";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+import { parseLedgerFilters } from "@/lib/server/mrv/validation";
 
 mock.module("next/link", () => ({
   default: ({
@@ -71,7 +74,37 @@ const ledger = {
   total: 30,
 };
 
-test("ledger shows factual GPS evidence, private photo link, filters, and pagination", () => {
+function getLedgerFormSearchParams(form: HTMLFormElement): URLSearchParams {
+  const params = new URLSearchParams();
+
+  for (const [key, value] of new window.FormData(form).entries()) {
+    if (typeof value === "string") params.append(key, value);
+  }
+
+  return params;
+}
+
+function submitLedgerFilterForm(form: HTMLFormElement): URLSearchParams {
+  let submittedParams: URLSearchParams | null = null;
+
+  form.addEventListener(
+    "submit",
+    (event) => {
+      event.preventDefault();
+      submittedParams = getLedgerFormSearchParams(form);
+    },
+    { once: true },
+  );
+  fireEvent.submit(form);
+
+  if (!submittedParams) {
+    throw new Error("Ledger filter form did not submit.");
+  }
+
+  return submittedParams;
+}
+
+test("ledger shows factual GPS evidence, private photo viewer, filters, and pagination", () => {
   render(
     <LedgerView
       filterError={null}
@@ -83,18 +116,17 @@ test("ledger shows factual GPS evidence, private photo link, filters, and pagina
     />,
   );
 
-  expect(screen.getByLabelText("Wilayah zona")).toBeTruthy();
-  expect(screen.getByLabelText("Kelengkapan bukti")).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Filter buku besar" }),
+  ).toBeTruthy();
   expect(
     screen.getByText("Koordinat tercatat · belum diverifikasi"),
   ).toBeTruthy();
   expect(screen.getByText("Akurasi perangkat: 17,5 m")).toBeTruthy();
   expect(
-    screen.getByRole("link", { name: "Buka foto bukti laporan 61000000" }),
+    screen.getByRole("button", { name: "Lihat foto bukti laporan 61000000" }),
   ).toBeTruthy();
-  expect(
-    screen.getByRole("link", { name: "Ekspor CSV" }).getAttribute("href"),
-  ).toContain("format=csv");
+  expect(screen.getByRole("button", { name: "Ekspor data" })).toBeTruthy();
   expect(
     screen
       .getByRole("link", { name: "Halaman berikutnya" })
@@ -103,6 +135,211 @@ test("ledger shows factual GPS evidence, private photo link, filters, and pagina
   expect(
     screen.getByText(/Estimasi emisi zona ditampilkan sebagai konteks/),
   ).toBeTruthy();
+});
+
+test("filter dialog applies supported filters and restores focus on Escape", async () => {
+  const user = userEvent.setup();
+
+  render(
+    <LedgerView
+      filterError={null}
+      filters={filters}
+      from=""
+      ledger={ledger}
+      to=""
+      zones={[]}
+    />,
+  );
+
+  const trigger = screen.getByRole("button", { name: "Filter buku besar" });
+  await user.click(trigger);
+
+  const dialog = screen.getByRole("dialog", { name: "Filter buku besar MRV" });
+  const evidenceFilter = screen.getByLabelText("Status kelengkapan bukti");
+  const aiFilter = screen.getByLabelText("Status triase AI");
+
+  expect(document.activeElement).toBe(screen.getByLabelText("Wilayah zona"));
+  expect(dialog.textContent).toContain("bukan keputusan verifikator");
+  await user.selectOptions(evidenceFilter, "complete");
+  expect(aiFilter.hasAttribute("disabled")).toBe(true);
+  expect(evidenceFilter.closest("form")?.getAttribute("action")).toBe(
+    "/audit/ledger",
+  );
+
+  screen.getByRole("button", { name: "Tutup filter" }).focus();
+  await user.keyboard("{Shift>}{Tab}{/Shift}");
+  expect(document.activeElement).toBe(
+    screen.getByRole("link", { name: "Atur ulang" }),
+  );
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(document.activeElement).toBe(trigger);
+});
+
+test("filter form submits parsable defaults, evidence-only, and AI-only filters", async () => {
+  const user = userEvent.setup();
+
+  render(
+    <LedgerView
+      filterError={null}
+      filters={filters}
+      from=""
+      ledger={ledger}
+      to=""
+      zones={[]}
+    />,
+  );
+
+  await user.click(screen.getByRole("button", { name: "Filter buku besar" }));
+  const form = screen
+    .getByRole("button", { name: "Terapkan filter" })
+    .closest("form");
+
+  if (!form) throw new Error("Ledger filter form was not rendered.");
+
+  const defaultParams = submitLedgerFilterForm(form);
+  expect(defaultParams.toString()).toBe("evidence=all");
+  expect(parseLedgerFilters(defaultParams).ok).toBe(true);
+
+  await user.selectOptions(
+    screen.getByLabelText("Status kelengkapan bukti"),
+    "complete",
+  );
+  const evidenceParams = submitLedgerFilterForm(form);
+  expect(evidenceParams.toString()).toBe("evidence=complete");
+  expect(parseLedgerFilters(evidenceParams).ok).toBe(true);
+
+  await user.selectOptions(
+    screen.getByLabelText("Status kelengkapan bukti"),
+    "all",
+  );
+  await user.selectOptions(screen.getByLabelText("Status triase AI"), "FAILED");
+  const aiParams = submitLedgerFilterForm(form);
+  expect(aiParams.toString()).toBe("evidence=all&aiState=FAILED");
+  expect(parseLedgerFilters(aiParams).ok).toBe(true);
+});
+
+test("export dialog summarizes scope and blocks results above the endpoint cap", async () => {
+  const user = userEvent.setup();
+
+  render(
+    <LedgerView
+      filterError={null}
+      filters={{
+        ...filters,
+        evidence: "complete",
+        range: {
+          from: new Date("2026-11-01T00:00:00.000Z"),
+          fromDate: "2026-11-01",
+          toDate: "2026-11-15",
+          toExclusive: new Date("2026-11-16T00:00:00.000Z"),
+        },
+      }}
+      from="2026-11-01"
+      ledger={ledger}
+      to="2026-11-15"
+      zones={[]}
+    />,
+  );
+
+  await user.click(screen.getByRole("button", { name: "Ekspor data" }));
+  expect(
+    screen.getByRole("dialog", { name: "Ekspor buku besar MRV" }),
+  ).toBeTruthy();
+  expect(screen.getByText("30 baris")).toBeTruthy();
+  expect(screen.getByText("2026-11-01 – 2026-11-15")).toBeTruthy();
+  expect(
+    screen.getByRole("link", { name: "Unduh CSV" }).getAttribute("href"),
+  ).toContain("format=csv");
+  expect(
+    screen.getByRole("link", { name: "Unduh JSON" }).getAttribute("href"),
+  ).toContain("evidence=complete");
+  expect(
+    screen.getByRole("link", { name: "Unduh CSV" }).getAttribute("href"),
+  ).toContain("from=2026-11-01");
+  expect(
+    screen.getByRole("link", { name: "Unduh CSV" }).getAttribute("href"),
+  ).toContain("to=2026-11-15");
+});
+
+test("export dialog explains the 5,000-row cap and hides unavailable downloads", async () => {
+  const user = userEvent.setup();
+
+  render(
+    <LedgerView
+      filterError={null}
+      filters={filters}
+      from=""
+      ledger={{ ...ledger, total: 5001 }}
+      to=""
+      zones={[]}
+    />,
+  );
+
+  await user.click(screen.getByRole("button", { name: "Ekspor data" }));
+  expect(screen.getByRole("alert").textContent).toContain("5.000 baris");
+  expect(screen.queryByRole("link", { name: "Unduh CSV" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "Unduh JSON" })).toBeNull();
+});
+
+test("photo viewer uses the private same-origin endpoint and restores focus", async () => {
+  const user = userEvent.setup();
+
+  render(
+    <LedgerView
+      filterError={null}
+      filters={filters}
+      from=""
+      ledger={ledger}
+      to=""
+      zones={[]}
+    />,
+  );
+
+  const trigger = screen.getByRole("button", {
+    name: "Lihat foto bukti laporan 61000000",
+  });
+  await user.click(trigger);
+
+  const dialog = screen.getByRole("dialog", {
+    name: "Foto bukti laporan 61000000",
+  });
+  expect(
+    screen
+      .getByRole("img", { name: "Foto bukti laporan 61000000" })
+      .getAttribute("data-source"),
+  ).toBe("/api/reports/61000000-0000-4000-8000-000000000001/photo");
+  expect(dialog.textContent).toContain("belum diverifikasi secara independen");
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: "Tutup foto bukti" }),
+  );
+
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(document.activeElement).toBe(trigger);
+});
+
+test("photo viewer refuses URLs outside the private report-photo route", () => {
+  const unsafeLedger = {
+    ...ledger,
+    rows: [{ ...ledger.rows[0], photoHref: "https://example.com/photo.webp" }],
+  };
+
+  render(
+    <LedgerView
+      filterError={null}
+      filters={filters}
+      from=""
+      ledger={unsafeLedger}
+      to=""
+      zones={[]}
+    />,
+  );
+
+  expect(screen.getByText("Foto belum tersedia")).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: /Lihat foto bukti laporan/ }),
+  ).toBeNull();
 });
 
 test("ledger shows a clear empty state and preserves filter errors", () => {

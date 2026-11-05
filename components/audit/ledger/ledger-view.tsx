@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { Download, FileJson, FileSpreadsheet, Info } from "lucide-react";
+import { Info } from "lucide-react";
 
 import type {
   ApprovedZoneValues,
@@ -9,7 +8,7 @@ import type {
 
 import { AuditFilterError } from "../audit-states";
 import { formatCount } from "../audit-formatters";
-import { getLedgerExportHref } from "./ledger-format";
+import { LedgerExportDialog } from "./ledger-export-dialog";
 import { LedgerFilterForm } from "./ledger-filter-form";
 import { LedgerPagination } from "./ledger-pagination";
 import { LedgerRow } from "./ledger-row";
@@ -31,6 +30,9 @@ export function LedgerView({
   to,
   zones,
 }: LedgerViewProps) {
+  const selectedZoneName =
+    zones.find((zone) => zone.zoneId === filters.zoneId)?.zoneName ?? null;
+
   return (
     <main
       className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
@@ -49,22 +51,11 @@ export function LedgerView({
             laporan.
           </p>
         </div>
-        <div className="audit-hide-on-print flex flex-wrap gap-2">
-          <Link
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold text-peat-green hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            href={getLedgerExportHref(filters, "csv")}
-          >
-            <FileSpreadsheet aria-hidden="true" size={17} />
-            Ekspor CSV
-          </Link>
-          <Link
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-peat-green px-4 text-sm font-semibold text-white hover:bg-peat-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            href={getLedgerExportHref(filters, "json")}
-          >
-            <FileJson aria-hidden="true" size={17} />
-            Ekspor JSON
-          </Link>
-        </div>
+        <LedgerExportDialog
+          filters={filters}
+          total={ledger.total}
+          zoneName={selectedZoneName}
+        />
       </header>
 
       {filterError ? <AuditFilterError message={filterError} /> : null}
@@ -72,6 +63,7 @@ export function LedgerView({
         aiState={filters.aiState}
         evidence={filters.evidence}
         from={from}
+        key={`${filters.zoneId ?? ""}:${filters.evidence}:${filters.aiState ?? ""}:${from}:${to}`}
         to={to}
         zoneId={filters.zoneId}
         zones={zones}
@@ -83,11 +75,6 @@ export function LedgerView({
       >
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-[#eef3e8] px-4 py-4 sm:px-5">
           <div className="flex items-center gap-2 text-sm font-semibold text-peat-forest">
-            <Download
-              aria-hidden="true"
-              className="text-peat-green"
-              size={17}
-            />
             {formatCount(ledger.total)} catatan audit
           </div>
           <span className="text-xs text-muted-foreground">
