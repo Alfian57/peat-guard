@@ -9,11 +9,38 @@ const REPORT_CATEGORIES = [
 
 const REPORT_URGENCIES = ["KRITIS", "WASPADA", "RENDAH"] as const;
 
+const REPORT_ASSESSMENT_SCHEMA = {
+  type: "object",
+  properties: {
+    category: { type: "string", enum: REPORT_CATEGORIES },
+    urgency: { type: "string", enum: REPORT_URGENCIES },
+    confidence_score: { type: "number", minimum: 0, maximum: 1 },
+    visual_indicators: {
+      type: "array",
+      items: { type: "string" },
+    },
+    false_positive_check: { type: "string" },
+    action_recommendations: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+  required: [
+    "category",
+    "urgency",
+    "confidence_score",
+    "visual_indicators",
+    "false_positive_check",
+    "action_recommendations",
+  ],
+  additionalProperties: false,
+} as const;
+
 export type DeepSeekAssessment = {
   category: (typeof REPORT_CATEGORIES)[number];
   urgency: (typeof REPORT_URGENCIES)[number];
   confidence: number;
-  summary: string;
+  summary: string | null;
   visualIndicators: string[];
   falsePositiveCheck: string;
   actionRecommendations: string[];
@@ -89,11 +116,10 @@ export function parseDeepSeekAssessment(value: unknown): DeepSeekAssessment {
   const keys = [
     "category",
     "urgency",
-    "confidence",
-    "summary",
-    "visualIndicators",
-    "falsePositiveCheck",
-    "actionRecommendations",
+    "confidence_score",
+    "visual_indicators",
+    "false_positive_check",
+    "action_recommendations",
   ] as const;
 
   if (!isRecord(value) || !hasExactKeys(value, keys)) {
@@ -102,9 +128,9 @@ export function parseDeepSeekAssessment(value: unknown): DeepSeekAssessment {
     );
   }
 
-  const visualIndicators = parseTextArray(value.visualIndicators, 8, 160);
+  const visualIndicators = parseTextArray(value.visual_indicators, 8, 160);
   const actionRecommendations = parseTextArray(
-    value.actionRecommendations,
+    value.action_recommendations,
     3,
     240,
   );
@@ -112,13 +138,12 @@ export function parseDeepSeekAssessment(value: unknown): DeepSeekAssessment {
   if (
     !isReportCategory(value.category) ||
     !isReportUrgency(value.urgency) ||
-    typeof value.confidence !== "number" ||
-    !Number.isFinite(value.confidence) ||
-    value.confidence < 0 ||
-    value.confidence > 1 ||
-    !isBoundedText(value.summary, 500) ||
+    typeof value.confidence_score !== "number" ||
+    !Number.isFinite(value.confidence_score) ||
+    value.confidence_score < 0 ||
+    value.confidence_score > 1 ||
     !visualIndicators ||
-    !isBoundedText(value.falsePositiveCheck, 500) ||
+    !isBoundedText(value.false_positive_check, 500) ||
     !actionRecommendations
   ) {
     throw new DeepSeekAnalysisError(
@@ -129,38 +154,62 @@ export function parseDeepSeekAssessment(value: unknown): DeepSeekAssessment {
   return {
     category: value.category,
     urgency: value.urgency,
-    confidence: value.confidence,
-    summary: value.summary.trim(),
+    confidence: value.confidence_score,
+    summary: null,
     visualIndicators,
-    falsePositiveCheck: value.falsePositiveCheck.trim(),
+    falsePositiveCheck: value.false_positive_check.trim(),
     actionRecommendations,
   };
 }
 
-function readAssistantContent(value: unknown): string {
-  if (!isRecord(value) || !Array.isArray(value.choices)) {
+function readResponsesOutput(value: unknown): string {
+  if (!isRecord(value) || !Array.isArray(value.output)) {
     throw new DeepSeekAnalysisError(
       "The report photo analysis returned no result.",
     );
   }
 
-  const choices: unknown[] = value.choices;
-  const firstChoice = choices[0];
-  if (!isRecord(firstChoice) || !isRecord(firstChoice.message)) {
+  if (value.status !== "completed") {
+    if (
+      value.status === "incomplete" &&
+      isRecord(value.incomplete_details) &&
+      value.incomplete_details.reason === "content_filter"
+    ) {
+      throw new DeepSeekAnalysisError("The report photo analysis was refused.");
+    }
     throw new DeepSeekAnalysisError(
-      "The report photo analysis returned no result.",
+      "The report photo analysis did not complete.",
     );
   }
 
-  if (
-    typeof firstChoice.message.refusal === "string" &&
-    firstChoice.message.refusal.trim().length > 0
-  ) {
-    throw new DeepSeekAnalysisError("The report photo analysis was refused.");
+  const messages: unknown[] = value.output;
+  const outputText: string[] = [];
+  for (const item of messages) {
+    if (!isRecord(item) || item.type !== "message") continue;
+    if (typeof item.refusal === "string" && item.refusal.trim().length > 0) {
+      throw new DeepSeekAnalysisError("The report photo analysis was refused.");
+    }
+
+    if (!Array.isArray(item.content)) continue;
+    for (const part of item.content) {
+      if (!isRecord(part)) continue;
+      if (
+        part.type === "refusal" &&
+        typeof part.refusal === "string" &&
+        part.refusal.trim().length > 0
+      ) {
+        throw new DeepSeekAnalysisError(
+          "The report photo analysis was refused.",
+        );
+      }
+      if (part.type === "output_text" && typeof part.text === "string") {
+        outputText.push(part.text);
+      }
+    }
   }
 
-  const content = firstChoice.message.content;
-  if (typeof content !== "string" || content.trim().length === 0) {
+  const content = outputText.join("").trim();
+  if (content.length === 0) {
     throw new DeepSeekAnalysisError(
       "The report photo analysis returned no text.",
     );
@@ -188,7 +237,7 @@ export async function analyzeNormalizedReportPhoto(
 
   let response: Response;
   try {
-    response = await fetchImpl("https://api.deepseek.com/chat/completions", {
+    response = await fetchImpl("https://api.deepseek.com/responses", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -196,31 +245,35 @@ export async function analyzeNormalizedReportPhoto(
       },
       body: JSON.stringify({
         model: "deepseek-flash",
-        messages: [
-          {
-            role: "system",
-            content:
-              "Kamu membantu triase laporan kebakaran gambut di Indonesia. Analisis hanya hal yang terlihat pada foto. Jangan mengklaim lokasi, korban, atau kejadian yang tidak terlihat. Keluarkan satu objek JSON valid tanpa markdown. Gunakan category API_AKTIF, ASAP_GAMBUT, SEKAT_KANAL_KERING, atau AMAN_TERKENDALI; urgency KRITIS, WASPADA, atau RENDAH; confidence angka 0 sampai 1; summary string maksimal 500 karakter; visualIndicators array maksimal 8 string; falsePositiveCheck string; actionRecommendations array maksimal 3 string.",
-          },
+        instructions:
+          "Kamu membantu triase awal laporan kebakaran gambut di Indonesia. Analisis hanya hal yang terlihat pada foto; jangan mengklaim lokasi, korban, atau kejadian yang tidak terlihat. Untuk field false_positive_check, nilai secara eksplisit apakah asap yang terlihat mungkin kabut, awan rendah, bayangan awan, uap, debu, atau sumber asap non-kebakaran; jika foto tidak cukup jelas, nyatakan ketidakpastian dan sarankan verifikasi petugas. Jangan menyimpulkan kebakaran hanya dari langit mendung atau kabut. Berikan maksimal 3 rekomendasi tindakan spesifik dan aman dalam action_recommendations. Hasil adalah saran triase awal untuk ditinjau petugas, bukan keputusan final.",
+        input: [
           {
             role: "user",
             content: [
               {
-                type: "text",
-                text: "Berikan saran triase awal berdasarkan foto ini. Hasil AI adalah saran untuk ditinjau petugas, bukan keputusan final.",
+                type: "input_text",
+                text: "Tinjau indikasi visual pada foto ini dan berikan penilaian triase dalam JSON sesuai skema yang diminta.",
               },
               {
-                type: "image_url",
-                image_url: { url: imageDataUrl, detail: "high" },
+                type: "input_image",
+                image_url: imageDataUrl,
+                detail: "high",
               },
             ],
           },
         ],
-        thinking: { type: "disabled" },
-        response_format: { type: "json_object" },
+        reasoning: { effort: "none" },
+        text: {
+          format: {
+            type: "json_schema",
+            name: "peat_guard_report_assessment",
+            schema: REPORT_ASSESSMENT_SCHEMA,
+          },
+        },
         safety_check: { level: "high" },
         temperature: 0.1,
-        max_tokens: 900,
+        max_output_tokens: 900,
       }),
       signal: AbortSignal.timeout(20_000),
     });
@@ -241,7 +294,7 @@ export async function analyzeNormalizedReportPhoto(
 
   let content: string;
   try {
-    content = readAssistantContent(payload);
+    content = readResponsesOutput(payload);
   } catch (error) {
     if (error instanceof DeepSeekAnalysisError) throw error;
     throw new DeepSeekAnalysisError();

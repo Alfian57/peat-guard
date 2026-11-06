@@ -2,7 +2,13 @@
 
 import Image from "next/image";
 import { Camera, Check, MapPin, Sparkles, Upload } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { compressPhoto } from "@/lib/client/offline/compress-photo";
 import type {
   NewFieldReport,
@@ -53,6 +59,9 @@ export function FieldReportForm({
   const [photoType, setPhotoType] = useState(
     initialReport?.photoType ?? "image/webp",
   );
+  const [capturedAt, setCapturedAt] = useState<string | null>(
+    initialReport?.capturedAt ?? null,
+  );
   const [isDemoSample, setIsDemoSample] = useState(
     initialReport?.isDemoSample ?? false,
   );
@@ -77,6 +86,10 @@ export function FieldReportForm({
     null,
   );
   const errorSummaryRef = useRef<HTMLParagraphElement>(null);
+  const automaticLocationRequestRef = useRef<
+    Promise<GeolocationPosition> | undefined
+  >(undefined);
+  const manualLocationEditedRef = useRef(false);
   const demoSampleBlocked = isDemoSample && !canUseDemoSamples;
   const canSubmit = canSave && !demoSampleBlocked;
   const effectiveSaveBlockedMessage = demoSampleBlocked
@@ -94,6 +107,7 @@ export function FieldReportForm({
 
   async function selectPhoto(file: File | undefined) {
     if (!file) return;
+    const selectedAt = new Date().toISOString();
     setErrorMessage("");
     setInvalidField(null);
     setIsCompressing(true);
@@ -102,7 +116,10 @@ export function FieldReportForm({
       setPhoto(compressed.blob);
       setPhotoName(compressed.fileName);
       setPhotoType(compressed.blob.type);
+      setCapturedAt(selectedAt);
       if (isDemoSample) {
+        manualLocationEditedRef.current = false;
+        automaticLocationRequestRef.current = undefined;
         setLatitude("");
         setLongitude("");
         setAccuracyMeters(null);
@@ -123,6 +140,7 @@ export function FieldReportForm({
 
   async function selectSample(sample: (typeof DEMO_SAMPLES)[number]) {
     if (!canUseDemoSamples) return;
+    const selectedAt = new Date().toISOString();
     setErrorMessage("");
     setInvalidField(null);
     setIsCompressing(true);
@@ -136,7 +154,9 @@ export function FieldReportForm({
       setPhoto(sampleBlob);
       setPhotoName(`${sample.id}.webp`);
       setPhotoType(sampleBlob.type || "image/webp");
+      setCapturedAt(selectedAt);
       setIsDemoSample(true);
+      manualLocationEditedRef.current = false;
       setLocationMessage(
         "Lokasi demo terpilih. Ubah koordinat untuk mencatat lokasi lain.",
       );
@@ -154,36 +174,95 @@ export function FieldReportForm({
     }
   }
 
-  function captureLocation() {
-    setInvalidField(null);
-    setLocationMessage("");
-    if (!navigator.geolocation) {
+  const requestLocation = useCallback(
+    () =>
+      new Promise<GeolocationPosition>((resolve, reject) => {
+        const geolocation = navigator.geolocation;
+        if (!geolocation) {
+          reject(new Error("UNSUPPORTED"));
+          return;
+        }
+
+        geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15_000,
+          maximumAge: 60_000,
+        });
+      }),
+    [],
+  );
+
+  const applyLocation = useCallback((position: GeolocationPosition) => {
+    setLatitude(position.coords.latitude.toFixed(6));
+    setLongitude(position.coords.longitude.toFixed(6));
+    setAccuracyMeters(Math.round(position.coords.accuracy));
+    setLocationMessage(
+      `Lokasi didapat dengan akurasi sekitar ${Math.round(position.coords.accuracy)} meter.`,
+    );
+  }, []);
+
+  const showLocationError = useCallback((error: unknown) => {
+    if (error instanceof Error && error.message === "UNSUPPORTED") {
       setLocationMessage(
         "GPS tidak tersedia di browser ini. Masukkan koordinat secara manual.",
       );
       return;
     }
+
+    const code =
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      typeof error.code === "number"
+        ? error.code
+        : null;
+    const reason =
+      code === 1
+        ? "Izin lokasi ditolak. Masukkan koordinat secara manual jika mengetahui lokasinya."
+        : code === 3
+          ? "Permintaan lokasi terlalu lama. Coba lagi atau masukkan koordinat manual."
+          : "Lokasi belum tersedia. Coba lagi atau masukkan koordinat manual.";
+    setLocationMessage(reason);
+  }, []);
+
+  useEffect(() => {
+    if (initialReport || isDemoSample) return;
+
+    let active = true;
+    automaticLocationRequestRef.current ??= requestLocation();
+    void automaticLocationRequestRef.current
+      .then((position) => {
+        if (!active) return;
+        if (manualLocationEditedRef.current) {
+          setLocationMessage("Koordinat manual dipertahankan.");
+          return;
+        }
+        applyLocation(position);
+      })
+      .catch((error: unknown) => {
+        if (active) showLocationError(error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    applyLocation,
+    initialReport,
+    isDemoSample,
+    requestLocation,
+    showLocationError,
+  ]);
+
+  async function captureLocation() {
+    manualLocationEditedRef.current = false;
+    setInvalidField(null);
     setLocationMessage("Meminta lokasi perangkat…");
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(position.coords.latitude.toFixed(6));
-        setLongitude(position.coords.longitude.toFixed(6));
-        setAccuracyMeters(Math.round(position.coords.accuracy));
-        setLocationMessage(
-          `Lokasi didapat dengan akurasi sekitar ${Math.round(position.coords.accuracy)} meter.`,
-        );
-      },
-      (error) => {
-        const reason =
-          error.code === error.PERMISSION_DENIED
-            ? "Izin lokasi ditolak. Masukkan koordinat secara manual jika mengetahui lokasinya."
-            : error.code === error.TIMEOUT
-              ? "Permintaan lokasi terlalu lama. Coba lagi atau masukkan koordinat manual."
-              : "Lokasi belum tersedia. Coba lagi atau masukkan koordinat manual.";
-        setLocationMessage(reason);
-      },
-      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 },
-    );
+    try {
+      applyLocation(await requestLocation());
+    } catch (error) {
+      showLocationError(error);
+    }
   }
 
   function toggleTag(tag: string) {
@@ -235,7 +314,7 @@ export function FieldReportForm({
     setIsSaving(true);
     try {
       await onSave({
-        capturedAt: initialReport?.capturedAt ?? new Date().toISOString(),
+        capturedAt: capturedAt ?? new Date().toISOString(),
         latitude: lat,
         longitude: lon,
         accuracyMeters,
@@ -274,7 +353,9 @@ export function FieldReportForm({
           Foto temuan (wajib)
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Foto dikompres di perangkat ke maksimal 1280 piksel.
+          Foto dikompres di perangkat ke maksimal 1280 piksel. Waktu laporan
+          dicatat saat foto dipilih atau kembali dari kamera, bukan dari waktu
+          rana pada metadata foto.
         </p>
         <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-white">
           <div className="relative grid min-h-48 place-items-center bg-secondary/60">
@@ -400,7 +481,8 @@ export function FieldReportForm({
               Lokasi
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Lokasi membantu posko menindaklanjuti temuan.
+              Lokasi membantu posko menindaklanjuti temuan. GPS dicoba otomatis;
+              jika izin ditolak, masukkan koordinat secara manual.
             </p>
           </div>
           <button
@@ -434,6 +516,7 @@ export function FieldReportForm({
               inputMode="decimal"
               value={latitude}
               onChange={(event) => {
+                manualLocationEditedRef.current = true;
                 setLatitude(event.target.value);
                 setInvalidField(null);
               }}
@@ -453,6 +536,7 @@ export function FieldReportForm({
               inputMode="decimal"
               value={longitude}
               onChange={(event) => {
+                manualLocationEditedRef.current = true;
                 setLongitude(event.target.value);
                 setInvalidField(null);
               }}
