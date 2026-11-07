@@ -14,6 +14,7 @@ export class FirmsSyncError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
+    readonly retryAfterSeconds?: number,
   ) {
     super("NASA FIRMS synchronization failed.");
     this.name = "FirmsSyncError";
@@ -22,6 +23,12 @@ export class FirmsSyncError extends Error {
 
 export type FirmsSyncDependencies = {
   fetchHotspots: (apiKey: string, area: AreaBounds) => Promise<FirmsHotspot[]>;
+  reserveSyncSlot: (args: {
+    actorId: string | null;
+    intervalMinutes: number;
+  }) => Promise<
+    { allowed: true } | { allowed: false; retryAfterSeconds: number }
+  >;
   persistSuccess: (args: {
     hotspots: FirmsHotspot[];
     actorId: string | null;
@@ -39,6 +46,7 @@ export async function performFirmsSync(
     apiKey: string | null;
     area: AreaBounds;
     actorId: string | null;
+    intervalMinutes: number;
   },
   dependencies: FirmsSyncDependencies,
 ): Promise<FirmsSyncResult> {
@@ -46,6 +54,20 @@ export async function performFirmsSync(
 
   if (!apiKey) {
     return { status: "skipped", reason: "not_configured" };
+  }
+
+  let slot: Awaited<ReturnType<typeof dependencies.reserveSyncSlot>>;
+  try {
+    slot = await dependencies.reserveSyncSlot({
+      actorId: args.actorId,
+      intervalMinutes: args.intervalMinutes,
+    });
+  } catch {
+    throw new FirmsSyncError(503, "storage_unavailable");
+  }
+
+  if (!slot.allowed) {
+    throw new FirmsSyncError(429, "rate_limited", slot.retryAfterSeconds);
   }
 
   let hotspots: FirmsHotspot[];

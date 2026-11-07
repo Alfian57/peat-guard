@@ -6,8 +6,10 @@ import type { MapPoint } from "@/lib/maps/types";
 import type { FirmsHotspot } from "@/lib/server/firms/csv";
 import type { AreaBounds } from "@/lib/server/firms/client";
 import { isRecord } from "@/lib/server/command/http";
+import { evaluateFirmsSyncRateLimit } from "@/lib/server/firms/rate-limit";
 
 const SYNC_AGGREGATE_TYPE = "NASA_FIRMS_SYNC";
+const SYNC_RATE_LIMIT_AGGREGATE_ID = "f1a1f1a1-0000-4000-8000-000000000001";
 const UPSERT_CHUNK_SIZE = 400;
 
 export type FirmsSyncStatus = {
@@ -26,6 +28,62 @@ export type CommandHotspot = MapPoint & {
   confidence: string | null;
   brightnessKelvin: number | null;
 };
+
+export async function reserveFirmsSyncSlot(args: {
+  actorId: string | null;
+  intervalMinutes: number;
+}): Promise<ReturnType<typeof evaluateFirmsSyncRateLimit>> {
+  return prisma.$transaction(async (transaction) => {
+    // This advisory lock coordinates web and worker processes sharing Postgres.
+    await transaction.$queryRaw(
+      Prisma.sql`SELECT pg_advisory_xact_lock(1_862_026_11, 1)`,
+    );
+
+    const [clock] = await transaction.$queryRaw<Array<{ now: Date }>>`
+      SELECT clock_timestamp() AS now
+    `;
+    const lastStarted = await transaction.auditEvent.findFirst({
+      where: {
+        aggregateType: SYNC_AGGREGATE_TYPE,
+        aggregateId: SYNC_RATE_LIMIT_AGGREGATE_ID,
+        eventType: "FIRMS_SYNC_STARTED",
+      },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
+    const decision = evaluateFirmsSyncRateLimit({
+      lastStartedAt: lastStarted?.createdAt ?? null,
+      now: clock.now,
+      intervalMinutes: args.intervalMinutes,
+    });
+
+    if (!decision.allowed) {
+      return decision;
+    }
+
+    await transaction.$executeRaw(Prisma.sql`
+      INSERT INTO audit_events (
+        id,
+        actor_id,
+        aggregate_type,
+        aggregate_id,
+        event_type,
+        payload,
+        created_at
+      ) VALUES (
+        ${randomUUID()}::uuid,
+        ${args.actorId}::uuid,
+        ${SYNC_AGGREGATE_TYPE},
+        ${SYNC_RATE_LIMIT_AGGREGATE_ID}::uuid,
+        'FIRMS_SYNC_STARTED',
+        '{}'::jsonb,
+        clock_timestamp()
+      )
+    `);
+
+    return decision;
+  });
+}
 
 export async function upsertAndRecordSuccess(args: {
   hotspots: FirmsHotspot[];

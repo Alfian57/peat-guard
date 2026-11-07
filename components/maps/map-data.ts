@@ -23,6 +23,7 @@ export type PointProperties = {
   description: string;
   kind: MapPoint["kind"];
   urgency: MapPoint["urgency"] | "";
+  reportPinState: MapPoint["reportPinState"] | "";
   source: string;
   isDemoData: boolean;
 };
@@ -63,6 +64,7 @@ export function toPointCollection(
         description: point.description ?? "",
         kind: point.kind,
         urgency: point.urgency ?? "",
+        reportPinState: point.reportPinState ?? "",
         source: point.source ?? "",
         isDemoData: point.isDemoData ?? false,
       },

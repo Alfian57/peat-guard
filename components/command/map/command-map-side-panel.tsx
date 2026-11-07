@@ -9,6 +9,7 @@ import type { MapPoint, MapZone } from "@/lib/maps/types";
 
 export function CommandMapSidePanel({
   firmsError,
+  firmsNotice,
   firmsStatus,
   selectedPoint,
   selectedZone,
@@ -21,6 +22,7 @@ export function CommandMapSidePanel({
   reportControls,
 }: {
   firmsError: string;
+  firmsNotice: string;
   firmsStatus: FirmsSyncStatus | null;
   selectedPoint: MapPoint | null;
   selectedZone: MapZone | null;
@@ -88,6 +90,13 @@ export function CommandMapSidePanel({
         </div>
         {firmsError ? (
           <p className="mt-2 text-sm leading-5 text-red-800">{firmsError}</p>
+        ) : firmsNotice ? (
+          <p
+            className="mt-2 text-sm leading-5 text-peat-forest/75"
+            role="status"
+          >
+            {firmsNotice}
+          </p>
         ) : (
           <p className="mt-2 text-sm leading-5 text-peat-forest/70">
             {firmsStatus?.lastSuccessfulAt

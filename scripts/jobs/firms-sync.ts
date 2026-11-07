@@ -14,6 +14,13 @@ export async function runFirmsSyncJob(): Promise<void> {
       completedAt: result.completedAt,
     });
   } catch (error) {
+    if (error instanceof FirmsSyncError && error.code === "rate_limited") {
+      console.info("NASA FIRMS sync skipped by shared rate limit.", {
+        retryAfterSeconds: error.retryAfterSeconds,
+      });
+      return;
+    }
+
     console.error("NASA FIRMS sync failed.", {
       code: error instanceof FirmsSyncError ? error.code : "unexpected_error",
     });

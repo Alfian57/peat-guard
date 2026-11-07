@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { Satellite } from "lucide-react";
 
 import { CommandPageHeading } from "@/components/command/command-page-heading";
@@ -16,6 +23,10 @@ import { COMMAND_API_ROUTES } from "@/components/command/routes";
 import { CommandMapFrame } from "@/components/command/map/command-map-frame";
 import { CommandMapSidePanel } from "@/components/command/map/command-map-side-panel";
 import { MapSummaryGrid } from "@/components/command/map/map-summary-grid";
+import {
+  startVisibleReportMapPolling,
+  type VisibilitySource,
+} from "@/components/command/map/report-map-polling";
 import { toCommandReportMapPoint } from "@/components/command/map/report-map-point";
 import { type ReportMapLoadState } from "@/components/command/map/report-map-controls";
 import {
@@ -38,6 +49,7 @@ export function CommandMapScreen() {
   const [error, setError] = useState("");
   const [firmsStatus, setFirmsStatus] = useState<FirmsSyncStatus | null>(null);
   const [firmsError, setFirmsError] = useState("");
+  const [firmsNotice, setFirmsNotice] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [showZones, setShowZones] = useState(true);
   const [showWaterPoints, setShowWaterPoints] = useState(true);
@@ -55,6 +67,9 @@ export function CommandMapScreen() {
     useState<ReportMapPointsResponse | null>(null);
   const [reportMapError, setReportMapError] = useState("");
   const [reportRetryKey, setReportRetryKey] = useState(0);
+  const refreshReportPoints = useCallback(() => {
+    setReportRetryKey((current) => current + 1);
+  }, []);
   const [reportFilters, setReportFilters] = useState<ReportMapFilters>(
     DEFAULT_REPORT_MAP_FILTERS,
   );
@@ -120,7 +135,7 @@ export function CommandMapScreen() {
   }, [retryKey]);
 
   useEffect(() => {
-    if (!reportViewport) return;
+    if (!reportViewport || !showReports) return;
 
     const controller = new AbortController();
     const query = buildReportMapQuery(reportViewport, reportFilters);
@@ -155,7 +170,28 @@ export function CommandMapScreen() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [reportFilters, reportRetryKey, reportViewport]);
+  }, [reportFilters, reportRetryKey, reportViewport, showReports]);
+
+  useEffect(() => {
+    if (!reportViewport || !showReports) return;
+
+    const visibilitySource: VisibilitySource = {
+      get visibilityState() {
+        return document.visibilityState;
+      },
+      addVisibilityChangeListener(listener) {
+        document.addEventListener("visibilitychange", listener);
+      },
+      removeVisibilityChangeListener(listener) {
+        document.removeEventListener("visibilitychange", listener);
+      },
+    };
+
+    return startVisibleReportMapPolling(visibilitySource, refreshReportPoints, {
+      setInterval: (callback, delayMs) => window.setInterval(callback, delayMs),
+      clearInterval: (intervalId) => window.clearInterval(intervalId),
+    });
+  }, [refreshReportPoints, reportViewport, showReports]);
 
   const mapZones = useMemo<MapZone[]>(
     () =>
@@ -249,15 +285,20 @@ export function CommandMapScreen() {
   async function syncHotspots() {
     setSyncing(true);
     setFirmsError("");
+    setFirmsNotice("");
     try {
       await requestCommandJson(COMMAND_API_ROUTES.firmsSync, {
         method: "POST",
       });
       refreshMap();
     } catch (cause) {
-      setFirmsError(
-        cause instanceof Error ? cause.message : "Sinkronisasi hotspot gagal.",
-      );
+      const message =
+        cause instanceof Error ? cause.message : "Sinkronisasi hotspot gagal.";
+      if (cause instanceof CommandRequestError && cause.status === 429) {
+        setFirmsNotice(message);
+      } else {
+        setFirmsError(message);
+      }
     } finally {
       setSyncing(false);
     }
@@ -312,6 +353,7 @@ export function CommandMapScreen() {
         />
         <CommandMapSidePanel
           firmsError={firmsError}
+          firmsNotice={firmsNotice}
           firmsStatus={firmsStatus}
           selectedPoint={selectedPoint}
           selectedZone={selectedZone}

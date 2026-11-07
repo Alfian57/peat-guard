@@ -1,5 +1,5 @@
 import { afterEach, expect, mock, test } from "bun:test";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 const originalFetch = globalThis.fetch;
 
@@ -46,13 +46,49 @@ test("keeps report filters visible when the map has no configured viewport", asy
   expect(screen.getByLabelText("Status penanganan")).toBeTruthy();
   expect(screen.getByLabelText("Urgensi AI")).toBeTruthy();
   expect(
-    screen.getByLabelText("Keterangan warna urgensi pin laporan"),
+    screen.getByLabelText("Keterangan warna status pin laporan"),
   ).toBeTruthy();
-  expect(screen.getAllByText("Belum dinilai").length).toBeGreaterThan(1);
+  expect(screen.getByText("Rendah / belum dinilai")).toBeTruthy();
+  expect(screen.getByText("Aman / selesai")).toBeTruthy();
   expect(requestedReportPins).toHaveLength(0);
   expect(
     screen
       .getByRole("button", { name: "Sinkronkan NASA FIRMS" })
       .hasAttribute("disabled"),
   ).toBe(true);
+});
+
+test("shows a shared FIRMS cooldown as an informational status", async () => {
+  const message =
+    "Sinkronisasi baru dapat dilakukan setelah interval berikutnya.";
+  globalThis.fetch = mock(async (input) => {
+    const url = String(input);
+    if (url === "/api/command/map") {
+      return Response.json({ zones: [], waterPoints: [], hotspots: [] });
+    }
+    if (url === "/api/command/firms") {
+      return Response.json({
+        configured: true,
+        lastSuccessfulAt: null,
+        lastAttemptAt: null,
+        lastErrorCode: null,
+        lastProcessedCount: null,
+        storedHotspotCount: 0,
+      });
+    }
+    if (url === "/api/command/firms/sync") {
+      return Response.json({ error: "rate_limited", message }, { status: 429 });
+    }
+
+    return Response.json({ points: [], truncated: false, limit: 250 });
+  }) as typeof fetch;
+
+  render(<CommandMapScreen />);
+  const syncButton = await screen.findByRole("button", {
+    name: "Sinkronkan NASA FIRMS",
+  });
+  fireEvent.click(syncButton);
+
+  const cooldownNotice = await screen.findByText(message);
+  expect(cooldownNotice.getAttribute("role")).toBe("status");
 });

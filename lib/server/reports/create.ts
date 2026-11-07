@@ -57,14 +57,43 @@ async function deriveSpatialContext(
       LIMIT 1
     `,
     transaction.$queryRaw<Array<{ distanceMeters: number }>>`
+      WITH origin AS (
+        SELECT ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326) AS location
+      ),
+      nearest_seed AS (
+        SELECT
+          ST_Distance(point."location"::geography, origin.location::geography)
+            AS "distanceMeters"
+        FROM "water_points" AS point
+        CROSS JOIN origin
+        ORDER BY point."location" <-> ST_SetSRID(
+          ST_MakePoint(${longitude}, ${latitude}),
+          4326
+        )
+        LIMIT 1
+      ),
+      search_area AS (
+        SELECT ST_Envelope(
+          ST_Buffer(
+            origin.location::geography,
+            nearest_seed."distanceMeters" * 1.01 + 1,
+            32
+          )::geometry
+        ) AS bounds
+        FROM origin
+        CROSS JOIN nearest_seed
+      )
       SELECT ST_Distance(
         point."location"::geography,
-        ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography
+        origin.location::geography
       ) AS "distanceMeters"
       FROM "water_points" AS point
+      CROSS JOIN origin
+      CROSS JOIN search_area
+      WHERE point."location" && search_area.bounds
       ORDER BY ST_Distance(
         point."location"::geography,
-        ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography
+        origin.location::geography
       )
       LIMIT 1
     `,

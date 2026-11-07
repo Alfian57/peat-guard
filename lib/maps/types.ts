@@ -10,6 +10,7 @@ export type MapViewport = {
 };
 
 export type MapUrgency = "KRITIS" | "WASPADA" | "RENDAH";
+export type ReportPinState = "critical" | "warning" | "safe" | "neutral";
 
 export type MapPoint = {
   id: string;
@@ -18,6 +19,7 @@ export type MapPoint = {
   label: string;
   description?: string;
   urgency?: MapUrgency;
+  reportPinState?: ReportPinState;
   source?: string;
   isDemoData?: boolean;
 };

@@ -40,7 +40,14 @@ Provider keys are optional for database setup. Set `DEEPSEEK_API_KEY`, `NASA_FIR
 
 The public landing page uses `NEXT_PUBLIC_MAPTILER_KEY` for its interactive map. Without a MapTiler key, the landing page shows a configuration message and keeps its public data summaries available. The public endpoints are read-only and send `Cache-Control: no-store`; their response fields and privacy limits are documented in [public API contracts](docs/engineering/contracts.md#public-read-only-endpoints).
 
-The background worker is available with the `worker` profile. It currently starts an idle runner; the FIRMS feature adds scheduled work to it.
+The background worker is available with the `worker` profile. When
+`NASA_FIRMS_MAP_KEY` is configured, it syncs once at startup and then follows
+`NASA_FIRMS_SYNC_INTERVAL_MINUTES` (default `30`, valid range `5`–`1440`). The
+same interval limits manual and worker syncs through the shared database, so
+requests made during the cooldown receive `429` and a `Retry-After` header.
+`NASA_FIRMS_AREA` optionally sets `west,south,east,north`; the default is
+`109,-5,117,2`. The demo KHG-shaped polygons are synthetic examples, not
+official KHG boundaries.
 
 ```sh
 docker compose -p peatguard-main --profile worker up --build

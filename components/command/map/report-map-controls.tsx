@@ -147,18 +147,18 @@ export function ReportMapControls({
           </p>
         ) : null}
         <div
-          aria-label="Keterangan warna urgensi pin laporan"
+          aria-label="Keterangan warna status pin laporan"
           className="rounded-xl bg-peat-paper p-3"
           role="group"
         >
           <h3 className="text-xs font-semibold text-peat-forest">
-            Warna pin urgensi AI
+            Warna pin laporan
           </h3>
           <ul className="mt-2 grid grid-cols-2 gap-2 text-xs text-peat-forest/75">
             <LegendItem color="bg-red-600" label="Kritis" />
             <LegendItem color="bg-amber-600" label="Waspada" />
-            <LegendItem color="bg-emerald-700" label="Rendah" />
-            <LegendItem color="bg-slate-500" label="Belum dinilai" />
+            <LegendItem color="bg-emerald-700" label="Aman / selesai" />
+            <LegendItem color="bg-slate-500" label="Rendah / belum dinilai" />
           </ul>
         </div>
         <div className="flex gap-2">

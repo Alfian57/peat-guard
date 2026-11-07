@@ -8,14 +8,14 @@ import {
 } from "@/components/maps/map-data";
 import type { MapPoint, MapZone } from "@/lib/maps/types";
 
-export const UNRATED_REPORT_URGENCY_COLOR = "#64748b";
+export const NEUTRAL_REPORT_PIN_COLOR = "#64748b";
 
-const REPORT_URGENCY_COLOR_MATCHES = [
-  "KRITIS",
+const REPORT_PIN_COLOR_MATCHES = [
+  "critical",
   "#dc2626",
-  "WASPADA",
+  "warning",
   "#d97706",
-  "RENDAH",
+  "safe",
   "#047857",
 ] as const;
 
@@ -104,9 +104,9 @@ export function addMapLayers(
         ["==", ["get", "kind"], "report"],
         [
           "match",
-          ["get", "urgency"],
-          ...REPORT_URGENCY_COLOR_MATCHES,
-          UNRATED_REPORT_URGENCY_COLOR,
+          ["get", "reportPinState"],
+          ...REPORT_PIN_COLOR_MATCHES,
+          NEUTRAL_REPORT_PIN_COLOR,
         ],
         ["boolean", ["get", "isDemoData"], false],
         "#f6b84a",

@@ -14,6 +14,7 @@ function createDependencies(
 ): FirmsSyncDependencies {
   return {
     fetchHotspots: mock(async () => []),
+    reserveSyncSlot: mock(async () => ({ allowed: true as const })),
     persistSuccess: mock(async () => {}),
     persistFailure: mock(async () => {}),
     now: () => new Date("2026-11-15T10:00:00.000Z"),
@@ -26,8 +27,12 @@ describe("performFirmsSync", () => {
     const dependencies = createDependencies();
 
     await expect(
-      performFirmsSync({ apiKey: null, area, actorId: null }, dependencies),
+      performFirmsSync(
+        { apiKey: null, area, actorId: null, intervalMinutes: 30 },
+        dependencies,
+      ),
     ).resolves.toEqual({ status: "skipped", reason: "not_configured" });
+    expect(dependencies.reserveSyncSlot).not.toHaveBeenCalled();
     expect(dependencies.fetchHotspots).not.toHaveBeenCalled();
     expect(dependencies.persistSuccess).not.toHaveBeenCalled();
     expect(dependencies.persistFailure).not.toHaveBeenCalled();
@@ -42,7 +47,12 @@ describe("performFirmsSync", () => {
 
     await expect(
       performFirmsSync(
-        { apiKey: "test-key", area, actorId: "actor-1" },
+        {
+          apiKey: "test-key",
+          area,
+          actorId: "actor-1",
+          intervalMinutes: 30,
+        },
         dependencies,
       ),
     ).rejects.toBeInstanceOf(FirmsSyncError);
@@ -70,7 +80,12 @@ describe("performFirmsSync", () => {
 
     await expect(
       performFirmsSync(
-        { apiKey: "test-key", area, actorId: null },
+        {
+          apiKey: "test-key",
+          area,
+          actorId: null,
+          intervalMinutes: 30,
+        },
         dependencies,
       ),
     ).resolves.toEqual({
@@ -79,5 +94,57 @@ describe("performFirmsSync", () => {
       completedAt: "2026-11-15T10:00:00.000Z",
     });
     expect(dependencies.persistSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  test("does not call NASA again before a shared sync slot is available", async () => {
+    const dependencies = createDependencies({
+      reserveSyncSlot: mock(async () => ({
+        allowed: false as const,
+        retryAfterSeconds: 900,
+      })),
+    });
+
+    await expect(
+      performFirmsSync(
+        {
+          apiKey: "test-key",
+          area,
+          actorId: "actor-1",
+          intervalMinutes: 30,
+        },
+        dependencies,
+      ),
+    ).rejects.toMatchObject({
+      status: 429,
+      code: "rate_limited",
+      retryAfterSeconds: 900,
+    });
+    expect(dependencies.reserveSyncSlot).toHaveBeenCalledWith({
+      actorId: "actor-1",
+      intervalMinutes: 30,
+    });
+    expect(dependencies.fetchHotspots).not.toHaveBeenCalled();
+    expect(dependencies.persistFailure).not.toHaveBeenCalled();
+  });
+
+  test("fails closed when the shared rate limiter cannot reach the database", async () => {
+    const dependencies = createDependencies({
+      reserveSyncSlot: mock(async () => {
+        throw new Error("database unavailable");
+      }),
+    });
+
+    await expect(
+      performFirmsSync(
+        {
+          apiKey: "test-key",
+          area,
+          actorId: null,
+          intervalMinutes: 30,
+        },
+        dependencies,
+      ),
+    ).rejects.toMatchObject({ status: 503, code: "storage_unavailable" });
+    expect(dependencies.fetchHotspots).not.toHaveBeenCalled();
   });
 });

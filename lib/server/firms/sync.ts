@@ -11,13 +11,16 @@ import {
 } from "@/lib/server/firms/workflow";
 import {
   recordSyncFailure,
+  reserveFirmsSyncSlot,
   upsertAndRecordSuccess,
 } from "@/lib/server/firms/repository";
+import { getFirmsSyncIntervalMinutes } from "@/lib/server/firms/config";
 
 export { FirmsSyncError };
 
 const productionDependencies: FirmsSyncDependencies = {
   fetchHotspots: fetchRecentHotspots,
+  reserveSyncSlot: reserveFirmsSyncSlot,
   persistSuccess: upsertAndRecordSuccess,
   persistFailure: recordSyncFailure,
   now: () => new Date(),
@@ -58,11 +61,19 @@ async function runConfiguredSync(
     return { status: "skipped", reason: "not_configured" };
   }
 
+  let intervalMinutes: number;
+  try {
+    intervalMinutes = getFirmsSyncIntervalMinutes();
+  } catch {
+    throw new FirmsSyncError(503, "invalid_configuration");
+  }
+
   return performFirmsSync(
     {
       apiKey: configuration.apiKey,
       area: configuration.area,
       actorId,
+      intervalMinutes,
     },
     productionDependencies,
   );

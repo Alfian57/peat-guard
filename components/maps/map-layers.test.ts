@@ -2,9 +2,10 @@ import { expect, test } from "bun:test";
 import type { Map as MapLibreMap } from "maplibre-gl";
 
 import { toPointCollection } from "@/components/maps/map-data";
+import { getReportPinState } from "@/components/command/map/report-map-point";
 import {
   addMapLayers,
-  UNRATED_REPORT_URGENCY_COLOR,
+  NEUTRAL_REPORT_PIN_COLOR,
 } from "@/components/maps/map-layers";
 import { toCommandReportMapPoint } from "@/components/command/map/report-map-point";
 
@@ -22,7 +23,9 @@ test("keeps unrated reports neutral in point data and the MapLibre style", () =>
   const feature = toPointCollection([reportPoint]).features[0];
 
   expect(reportPoint.urgency).toBeUndefined();
+  expect(reportPoint.reportPinState).toBe("neutral");
   expect(feature.properties.urgency).toBe("");
+  expect(feature.properties.reportPinState).toBe("neutral");
   expect(reportPoint.description).toContain("Kategori belum dinilai");
 
   const layers: Array<{ id?: string; paint?: Record<string, unknown> }> = [];
@@ -43,12 +46,40 @@ test("keeps unrated reports neutral in point data and the MapLibre style", () =>
       JSON.stringify(entry) ===
         JSON.stringify(["==", ["get", "kind"], "report"]),
   );
-  const urgencyMatch = circleColor[reportConditionIndex + 1] as unknown[];
+  const pinStateMatch = circleColor[reportConditionIndex + 1] as unknown[];
 
   expect(reportConditionIndex).toBeGreaterThan(-1);
-  expect(urgencyMatch[0]).toBe("match");
-  expect(urgencyMatch.at(-1)).toBe(UNRATED_REPORT_URGENCY_COLOR);
-  expect(urgencyMatch.at(-1)).not.toBe("#047857");
+  expect(pinStateMatch[0]).toBe("match");
+  expect(pinStateMatch[1]).toEqual(["get", "reportPinState"]);
+  expect(pinStateMatch.at(-1)).toBe(NEUTRAL_REPORT_PIN_COLOR);
+  expect(pinStateMatch.at(-1)).not.toBe("#047857");
+});
+
+test("uses safe category or completed handling as the green pin state", () => {
+  const point = {
+    aiUrgency: "RENDAH" as const,
+    aiCategory: "API_AKTIF" as const,
+    handlingStatus: "MENUNGGU_TINDAKAN" as const,
+  };
+
+  expect(getReportPinState(point)).toBe("neutral");
+  expect(getReportPinState({ ...point, aiCategory: "AMAN_TERKENDALI" })).toBe(
+    "safe",
+  );
+  expect(getReportPinState({ ...point, handlingStatus: "SELESAI" })).toBe(
+    "safe",
+  );
+});
+
+test("keeps critical and warning pins distinct from low urgency", () => {
+  const point = {
+    aiCategory: "API_AKTIF" as const,
+    handlingStatus: "MENUNGGU_TINDAKAN" as const,
+  };
+
+  expect(getReportPinState({ ...point, aiUrgency: "KRITIS" })).toBe("critical");
+  expect(getReportPinState({ ...point, aiUrgency: "WASPADA" })).toBe("warning");
+  expect(getReportPinState({ ...point, aiUrgency: "RENDAH" })).toBe("neutral");
 });
 
 test("can disable point clustering for transparent public hotspot markers", () => {

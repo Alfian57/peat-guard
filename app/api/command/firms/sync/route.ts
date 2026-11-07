@@ -10,6 +10,23 @@ export async function POST() {
     return jsonResponse(result);
   } catch (error) {
     if (error instanceof FirmsSyncError) {
+      if (error.code === "rate_limited") {
+        return Response.json(
+          {
+            error: error.code,
+            message:
+              "Sinkronisasi baru dapat dilakukan setelah interval berikutnya.",
+          },
+          {
+            status: error.status,
+            headers: {
+              "Cache-Control": "no-store",
+              "Retry-After": String(error.retryAfterSeconds ?? 1),
+            },
+          },
+        );
+      }
+
       return jsonResponse(
         {
           error: error.code,
