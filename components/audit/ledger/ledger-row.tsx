@@ -8,6 +8,7 @@ import {
   formatDecimal,
 } from "../audit-formatters";
 import { LedgerPhotoViewer } from "./ledger-photo-viewer";
+import { LedgerReviewControl } from "./ledger-review-control";
 
 const aiCategoryLabels: Record<string, string> = {
   API_AKTIF: "Api aktif",
@@ -194,6 +195,13 @@ export function LedgerRow({ row }: { row: MrvLedgerRow }) {
           Bukti:{" "}
           {row.evidenceStatus === "complete" ? "lengkap" : "belum lengkap"}
         </p>
+        <LedgerReviewControl
+          auditHistory={row.auditHistory}
+          coordinates={row.coordinates}
+          hasPhoto={row.hasPhoto}
+          photoHref={row.photoHref}
+          reportId={row.reportId}
+        />
       </td>
       <td className="min-w-44 px-4 py-4">
         <AiTriage row={row} />

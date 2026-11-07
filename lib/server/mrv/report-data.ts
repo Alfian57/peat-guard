@@ -1,9 +1,9 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { getApprovedZoneValues } from "@/lib/server/mrv/data";
 import type {
-  ApprovedZoneValues,
+  CarbonSnapshotReason,
+  CarbonSnapshotZoneValues,
   MrvReportFilters,
 } from "@/lib/server/mrv/contracts";
 
@@ -35,9 +35,29 @@ export type HotspotAggregateRow = {
 };
 
 export type MrvReportSource = {
+  carbonSnapshotAsOf: string;
+  hasCarbonSnapshot: boolean;
   hotspots: HotspotAggregateRow;
   reports: ReportAggregateRow;
-  zones: ApprovedZoneValues[];
+  zones: CarbonSnapshotZoneValues[];
+};
+
+type CarbonSnapshotRow = {
+  areaHectares: number;
+  biomassFactor: number;
+  co2ConversionFactor: number;
+  emissionFactor: number;
+  incentivePerTonIdr: number;
+  isDemoData: boolean;
+  isParameterDemoData: boolean;
+  isZoneApproved: boolean;
+  name: string;
+  parameterSetId: string;
+  snapshotAt: Date;
+  snapshotReason: CarbonSnapshotReason;
+  villageName: string | null;
+  zoneId: string;
+  zoneName: string;
 };
 
 function reportRangeBounds(filters: MrvReportFilters) {
@@ -45,6 +65,45 @@ function reportRangeBounds(filters: MrvReportFilters) {
     from: filters.range?.from ?? null,
     toExclusive: filters.range?.toExclusive ?? null,
   };
+}
+
+function snapshotAsOf(filters: MrvReportFilters, now: Date): Date {
+  const toExclusive = filters.range?.toExclusive;
+  return toExclusive ? new Date(toExclusive.getTime() - 1) : now;
+}
+
+async function getCarbonSnapshots(
+  filters: MrvReportFilters,
+  currentTime: Date,
+): Promise<CarbonSnapshotRow[]> {
+  const toExclusive = filters.range?.toExclusive ?? null;
+  const zoneId = filters.zoneId;
+
+  return prisma.$queryRaw<CarbonSnapshotRow[]>`
+    SELECT DISTINCT ON (snapshot.zone_id)
+      snapshot.zone_id::text AS "zoneId",
+      snapshot.zone_name AS "zoneName",
+      snapshot.village_name AS "villageName",
+      snapshot.area_hectares::double precision AS "areaHectares",
+      snapshot.carbon_parameter_set_id::text AS "parameterSetId",
+      snapshot.parameter_set_name AS name,
+      snapshot.biomass_factor::double precision AS "biomassFactor",
+      snapshot.emission_factor::double precision AS "emissionFactor",
+      snapshot.co2_conversion_factor::double precision AS "co2ConversionFactor",
+      snapshot.incentive_per_ton_idr::double precision AS "incentivePerTonIdr",
+      snapshot.is_zone_demo_data AS "isDemoData",
+      snapshot.is_parameter_demo_data AS "isParameterDemoData",
+      snapshot.is_zone_approved AS "isZoneApproved",
+      snapshot.reason::text AS "snapshotReason",
+      snapshot.captured_at AS "snapshotAt"
+    FROM forest_zone_carbon_snapshots AS snapshot
+    WHERE (
+      (${toExclusive}::timestamptz IS NULL AND snapshot.captured_at <= ${currentTime}) OR
+      (${toExclusive}::timestamptz IS NOT NULL AND snapshot.captured_at < ${toExclusive})
+    )
+      AND (${zoneId}::uuid IS NULL OR snapshot.zone_id = ${zoneId}::uuid)
+    ORDER BY snapshot.zone_id, snapshot.captured_at DESC, snapshot.id DESC
+  `;
 }
 
 async function getReportAggregate(
@@ -181,7 +240,6 @@ async function getHotspotAggregate(
           SELECT 1
           FROM forest_zones AS zone
           WHERE zone.id = ${zoneId}::uuid
-            AND zone.is_approved = TRUE
             AND ST_Intersects(zone.boundary, hotspot.location)
         )
       )
@@ -192,17 +250,49 @@ async function getHotspotAggregate(
 
 export async function getMrvReportSource(
   filters: MrvReportFilters,
+  currentTime = new Date(),
 ): Promise<MrvReportSource | null> {
-  const zones = await getApprovedZoneValues(filters.zoneId);
+  const selectedZone = filters.zoneId
+    ? await prisma.forestZone.findUnique({
+        where: { id: filters.zoneId },
+        select: { id: true },
+      })
+    : null;
 
-  if (filters.zoneId && zones.length === 0) {
+  if (filters.zoneId && !selectedZone) {
     return null;
   }
 
-  const [reports, hotspots] = await Promise.all([
+  const [reports, hotspots, carbonSnapshots] = await Promise.all([
     getReportAggregate(filters),
     getHotspotAggregate(filters),
+    getCarbonSnapshots(filters, currentTime),
   ]);
 
-  return { hotspots, reports, zones };
+  const approvedSnapshotZones = carbonSnapshots.filter(
+    (snapshot) => snapshot.isZoneApproved,
+  );
+
+  return {
+    carbonSnapshotAsOf: snapshotAsOf(filters, currentTime).toISOString(),
+    hasCarbonSnapshot: carbonSnapshots.length > 0,
+    hotspots,
+    reports,
+    zones: approvedSnapshotZones.map((snapshot): CarbonSnapshotZoneValues => ({
+      areaHectares: snapshot.areaHectares,
+      biomassFactor: snapshot.biomassFactor,
+      co2ConversionFactor: snapshot.co2ConversionFactor,
+      emissionFactor: snapshot.emissionFactor,
+      incentivePerTonIdr: snapshot.incentivePerTonIdr,
+      isDemoData: snapshot.isDemoData,
+      name: snapshot.name,
+      parameterIsDemoData: snapshot.isParameterDemoData,
+      parameterSetId: snapshot.parameterSetId,
+      snapshotAt: snapshot.snapshotAt.toISOString(),
+      snapshotReason: snapshot.snapshotReason,
+      villageName: snapshot.villageName,
+      zoneId: snapshot.zoneId,
+      zoneName: snapshot.zoneName,
+    })),
+  };
 }

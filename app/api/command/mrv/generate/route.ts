@@ -2,29 +2,16 @@ import { requireRole } from "@/lib/authz";
 import { generateMrvReport } from "@/lib/server/mrv/report-generator";
 import {
   createMrvPrivateHandler,
+  isMrvSameOrigin,
   readBoundedRequestBody,
 } from "@/lib/server/mrv/http";
 import { parseMrvReportRequest } from "@/lib/server/mrv/validation";
 
 const MAX_REQUEST_BYTES = 4_096;
 
-function isSameOrigin(request: Request): boolean {
-  const requestOrigin = request.headers.get("origin");
-
-  if (!requestOrigin) {
-    return false;
-  }
-
-  try {
-    return new URL(requestOrigin).origin === new URL(request.url).origin;
-  } catch {
-    return false;
-  }
-}
-
 export const POST = createMrvPrivateHandler(
   async (request) => {
-    if (!isSameOrigin(request)) {
+    if (!isMrvSameOrigin(request)) {
       return Response.json(
         { error: "Permintaan harus berasal dari situs yang sama." },
         { status: 403 },

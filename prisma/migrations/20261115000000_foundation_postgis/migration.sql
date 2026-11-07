@@ -22,6 +22,15 @@ CREATE TYPE "HandlingStatus" AS ENUM ('MENUNGGU_TINDAKAN', 'DALAM_PENANGANAN', '
 -- CreateEnum
 CREATE TYPE "AIAnalysisState" AS ENUM ('PENDING', 'COMPLETED', 'FAILED', 'SKIPPED');
 
+-- CreateEnum
+CREATE TYPE "CarbonSnapshotReason" AS ENUM (
+    'INITIAL_BASELINE',
+    'PARAMETER_SET_CREATED',
+    'PARAMETER_SET_UPDATED',
+    'ZONE_CREATED',
+    'ZONE_UPDATED'
+);
+
 -- CreateTable
 CREATE TABLE "users" (
     "id" UUID NOT NULL,
@@ -162,6 +171,28 @@ CREATE TABLE "audit_events" (
     CONSTRAINT "audit_events_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "forest_zone_carbon_snapshots" (
+    "id" BIGSERIAL NOT NULL,
+    "zone_id" UUID NOT NULL,
+    "zone_name" VARCHAR(150) NOT NULL,
+    "village_name" VARCHAR(100),
+    "area_hectares" DECIMAL(12,2) NOT NULL,
+    "carbon_parameter_set_id" UUID NOT NULL,
+    "parameter_set_name" VARCHAR(120) NOT NULL,
+    "biomass_factor" DECIMAL(8,2) NOT NULL,
+    "emission_factor" DECIMAL(8,4) NOT NULL,
+    "co2_conversion_factor" DECIMAL(6,3) NOT NULL,
+    "incentive_per_ton_idr" DECIMAL(14,2) NOT NULL,
+    "is_zone_approved" BOOLEAN NOT NULL,
+    "is_zone_demo_data" BOOLEAN NOT NULL,
+    "is_parameter_demo_data" BOOLEAN NOT NULL,
+    "reason" "CarbonSnapshotReason" NOT NULL,
+    "captured_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "forest_zone_carbon_snapshots_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
@@ -207,6 +238,10 @@ CREATE INDEX "audit_events_aggregate_type_aggregate_id_created_at_idx" ON "audit
 -- CreateIndex
 CREATE INDEX "audit_events_report_id_created_at_idx" ON "audit_events"("report_id", "created_at");
 
+-- CreateIndex
+CREATE INDEX "forest_zone_carbon_snapshots_zone_id_captured_at_id_idx"
+    ON "forest_zone_carbon_snapshots"("zone_id", "captured_at", "id");
+
 -- AddForeignKey
 ALTER TABLE "forest_zones" ADD CONSTRAINT "forest_zones_carbon_parameter_set_id_fkey" FOREIGN KEY ("carbon_parameter_set_id") REFERENCES "carbon_parameter_sets"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -230,6 +265,9 @@ ALTER TABLE "audit_events" ADD CONSTRAINT "audit_events_report_id_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "audit_events" ADD CONSTRAINT "audit_events_actor_id_fkey" FOREIGN KEY ("actor_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "forest_zone_carbon_snapshots" ADD CONSTRAINT "forest_zone_carbon_snapshots_zone_id_fkey" FOREIGN KEY ("zone_id") REFERENCES "forest_zones"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- Carbon parameters are estimates and must remain positive/configurable values.
 ALTER TABLE "carbon_parameter_sets"
@@ -256,6 +294,116 @@ CREATE TRIGGER forest_zones_set_area_hectares
     BEFORE INSERT OR UPDATE OF boundary ON "forest_zones"
     FOR EACH ROW EXECUTE FUNCTION set_forest_zone_area_hectares();
 
+-- Retain the exact values used by each carbon calculation before source rows change.
+CREATE FUNCTION record_forest_zone_carbon_snapshot() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    snapshot_reason "CarbonSnapshotReason";
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        snapshot_reason := 'ZONE_CREATED';
+    ELSE
+        snapshot_reason := 'ZONE_UPDATED';
+    END IF;
+
+    INSERT INTO "forest_zone_carbon_snapshots" (
+        "zone_id", "zone_name", "village_name", "area_hectares",
+        "carbon_parameter_set_id", "parameter_set_name", "biomass_factor",
+        "emission_factor", "co2_conversion_factor", "incentive_per_ton_idr",
+        "is_zone_approved", "is_zone_demo_data", "is_parameter_demo_data",
+        "reason", "captured_at"
+    )
+    SELECT
+        zone."id", zone."zone_name", zone."village_name", zone."area_hectares",
+        parameters."id", parameters."name", parameters."biomass_factor",
+        parameters."emission_factor", parameters."co2_conversion_factor",
+        parameters."incentive_per_ton_idr", zone."is_approved",
+        zone."is_demo_data", parameters."is_demo_data", snapshot_reason,
+        clock_timestamp()
+    FROM "forest_zones" AS zone
+    INNER JOIN "carbon_parameter_sets" AS parameters
+        ON parameters."id" = zone."carbon_parameter_set_id"
+    WHERE zone."id" = NEW."id";
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER forest_zones_carbon_snapshot_created
+    AFTER INSERT ON "forest_zones"
+    FOR EACH ROW EXECUTE FUNCTION record_forest_zone_carbon_snapshot();
+
+CREATE TRIGGER forest_zones_carbon_snapshot_updated
+    AFTER UPDATE OF "zone_name", "village_name", "area_hectares", "boundary",
+        "carbon_parameter_set_id", "is_approved", "is_demo_data"
+    ON "forest_zones"
+    FOR EACH ROW EXECUTE FUNCTION record_forest_zone_carbon_snapshot();
+
+CREATE FUNCTION record_parameter_set_carbon_snapshots() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    snapshot_reason "CarbonSnapshotReason";
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        snapshot_reason := 'PARAMETER_SET_CREATED';
+    ELSE
+        snapshot_reason := 'PARAMETER_SET_UPDATED';
+    END IF;
+
+    INSERT INTO "forest_zone_carbon_snapshots" (
+        "zone_id", "zone_name", "village_name", "area_hectares",
+        "carbon_parameter_set_id", "parameter_set_name", "biomass_factor",
+        "emission_factor", "co2_conversion_factor", "incentive_per_ton_idr",
+        "is_zone_approved", "is_zone_demo_data", "is_parameter_demo_data",
+        "reason", "captured_at"
+    )
+    SELECT
+        zone."id", zone."zone_name", zone."village_name", zone."area_hectares",
+        parameters."id", parameters."name", parameters."biomass_factor",
+        parameters."emission_factor", parameters."co2_conversion_factor",
+        parameters."incentive_per_ton_idr", zone."is_approved",
+        zone."is_demo_data", parameters."is_demo_data", snapshot_reason,
+        clock_timestamp()
+    FROM "forest_zones" AS zone
+    INNER JOIN "carbon_parameter_sets" AS parameters
+        ON parameters."id" = zone."carbon_parameter_set_id"
+    WHERE parameters."id" = NEW."id";
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER carbon_parameter_sets_carbon_snapshot_created
+    AFTER INSERT ON "carbon_parameter_sets"
+    FOR EACH ROW EXECUTE FUNCTION record_parameter_set_carbon_snapshots();
+
+CREATE TRIGGER carbon_parameter_sets_carbon_snapshot_updated
+    AFTER UPDATE OF "name", "biomass_factor", "emission_factor",
+        "co2_conversion_factor", "incentive_per_ton_idr", "is_demo_data"
+    ON "carbon_parameter_sets"
+    FOR EACH ROW EXECUTE FUNCTION record_parameter_set_carbon_snapshots();
+
+-- This marks the start of recorded history; it does not synthesize earlier states.
+INSERT INTO "forest_zone_carbon_snapshots" (
+    "zone_id", "zone_name", "village_name", "area_hectares",
+    "carbon_parameter_set_id", "parameter_set_name", "biomass_factor",
+    "emission_factor", "co2_conversion_factor", "incentive_per_ton_idr",
+    "is_zone_approved", "is_zone_demo_data", "is_parameter_demo_data",
+    "reason", "captured_at"
+)
+SELECT
+    zone."id", zone."zone_name", zone."village_name", zone."area_hectares",
+    parameters."id", parameters."name", parameters."biomass_factor",
+    parameters."emission_factor", parameters."co2_conversion_factor",
+    parameters."incentive_per_ton_idr", zone."is_approved",
+    zone."is_demo_data", parameters."is_demo_data", 'INITIAL_BASELINE',
+    clock_timestamp()
+FROM "forest_zones" AS zone
+INNER JOIN "carbon_parameter_sets" AS parameters
+    ON parameters."id" = zone."carbon_parameter_set_id";
+
 -- Point geometry is derived from coordinates on every insert or coordinate update.
 CREATE FUNCTION set_point_location() RETURNS trigger
     LANGUAGE plpgsql
@@ -281,6 +429,7 @@ CREATE TRIGGER satellite_hotspots_set_location
 CREATE TRIGGER field_reports_set_location
     BEFORE INSERT OR UPDATE OF latitude, longitude ON "field_reports"
     FOR EACH ROW EXECUTE FUNCTION set_point_location();
+
 
 -- Add GiST indexes to geometry columns used by maps and nearest-point queries.
 CREATE INDEX "forest_zones_boundary_gist_idx" ON "forest_zones" USING GIST ("boundary");
@@ -334,4 +483,12 @@ CREATE TRIGGER audit_events_reject_update_delete
 
 CREATE TRIGGER audit_events_reject_truncate
     BEFORE TRUNCATE ON "audit_events"
+    FOR EACH STATEMENT EXECUTE FUNCTION reject_append_only_mutation();
+
+CREATE TRIGGER forest_zone_carbon_snapshots_reject_update_delete
+    BEFORE UPDATE OR DELETE ON "forest_zone_carbon_snapshots"
+    FOR EACH ROW EXECUTE FUNCTION reject_append_only_mutation();
+
+CREATE TRIGGER forest_zone_carbon_snapshots_reject_truncate
+    BEFORE TRUNCATE ON "forest_zone_carbon_snapshots"
     FOR EACH STATEMENT EXECUTE FUNCTION reject_append_only_mutation();

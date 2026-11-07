@@ -21,7 +21,7 @@ export async function generateMrvReport(
   provider: NarrativeProvider = generateExecutiveNarrative,
   generatedAt = new Date(),
 ): Promise<MrvGeneratedReportResult> {
-  const source = await getMrvReportSource(request.filters);
+  const source = await getMrvReportSource(request.filters, generatedAt);
 
   if (!source) {
     return null;

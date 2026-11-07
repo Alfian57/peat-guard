@@ -24,11 +24,14 @@ const baseReport: MrvGeneratedReport = {
   },
   metrics: {
     carbon: {
+      asOf: "2026-11-15T02:00:00.000Z",
       approvedZoneCount: 0,
       containsIllustrativeData: false,
       estimatedCarbonTons: 0,
       estimatedIncentiveIdr: 0,
       protectedAreaHectares: 0,
+      reason: null,
+      status: "available",
       zones: [],
     },
     hotspots: { demoCount: 0, nonDemoCount: 6, totalCount: 6 },
@@ -94,6 +97,11 @@ test("generator submits explicit consent and shows the server-derived preview", 
     screen.getByText("Koordinasi lapangan mendukung respons yang terarah."),
   ).toBeTruthy();
   expect(screen.getByText("Belum tersedia")).toBeTruthy();
+  expect(
+    screen.getByText(
+      "Ilustrasi CO₂e × tarif tersimpan; bukan formula insentif patroli final.",
+    ),
+  ).toBeTruthy();
 
   const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
   expect(JSON.parse(String(request.body))).toMatchObject({

@@ -28,8 +28,8 @@ export type ExecutiveNarrativeMetrics = {
   aiTriagedReportCount: number;
   averageResponseMinutes: number | null;
   closedReportCount: number;
-  estimatedCarbonTons: number;
-  estimatedIncentiveIdr: number;
+  estimatedCarbonTons: number | null;
+  estimatedIncentiveIdr: number | null;
   fieldReportCount: number;
   reportsWithResponseTime: number;
   satelliteHotspotCount: number;
@@ -73,12 +73,15 @@ export type MrvGeneratedReport = {
   narrative: MrvGeneratedNarrative;
   metrics: {
     carbon: {
-      approvedZoneCount: number;
+      asOf: string | null;
+      approvedZoneCount: number | null;
       containsIllustrativeData: boolean;
-      estimatedCarbonTons: number;
-      estimatedIncentiveIdr: number;
-      protectedAreaHectares: number;
-      zones: ZoneImpact[];
+      estimatedCarbonTons: number | null;
+      estimatedIncentiveIdr: number | null;
+      protectedAreaHectares: number | null;
+      reason: "CARBON_SNAPSHOT_NOT_RECORDED" | null;
+      status: "available" | "unavailable";
+      zones: CarbonSnapshotZoneImpact[];
     };
     hotspots: {
       demoCount: number;
@@ -163,6 +166,18 @@ export type ApprovedZoneValues = CarbonParameterValues & {
   zoneName: string;
 };
 
+export type CarbonSnapshotReason =
+  | "INITIAL_BASELINE"
+  | "PARAMETER_SET_CREATED"
+  | "PARAMETER_SET_UPDATED"
+  | "ZONE_CREATED"
+  | "ZONE_UPDATED";
+
+export type CarbonSnapshotZoneValues = ApprovedZoneValues & {
+  snapshotAt: string;
+  snapshotReason: CarbonSnapshotReason;
+};
+
 export type ZoneImpact = {
   areaHectares: number;
   calculationVersion: "peatguard-mrv-v1";
@@ -182,6 +197,11 @@ export type ZoneImpact = {
   villageName: string | null;
   zoneId: string;
   zoneName: string;
+};
+
+export type CarbonSnapshotZoneImpact = ZoneImpact & {
+  snapshotAt: string;
+  snapshotReason: CarbonSnapshotReason;
 };
 
 export type VillageActivity = {
@@ -239,6 +259,43 @@ export type LedgerStatusEvent = {
   previousStatus: string | null;
 };
 
+export type EvidenceReviewDecision =
+  "ACCEPTED" | "NEEDS_FOLLOW_UP" | "REJECTED";
+
+export type MrvEvidenceSnapshot = {
+  accuracyMeters: number | null;
+  aiCategory: string | null;
+  aiConfidence: number | null;
+  aiState: string | null;
+  aiUrgency: string | null;
+  capturedAt: string;
+  latitude: number;
+  longitude: number;
+  photoPresent: boolean;
+  photoSha256: string | null;
+  syncedAt: string;
+};
+
+export type MrvLedgerAuditEntry = {
+  actorRole: string | null;
+  classification: {
+    category: string | null;
+    confidence: number | null;
+    state: string;
+    urgency: string | null;
+  } | null;
+  createdAt: string;
+  decision: EvidenceReviewDecision | null;
+  eventId: string;
+  eventType:
+    | "MRV_EVIDENCE_REVIEWED"
+    | "REPORT_AI_ANALYSIS_COMPLETED"
+    | "REPORT_AI_ANALYSIS_FAILED"
+    | "REPORT_EVIDENCE_RECORDED";
+  evidenceSnapshot: MrvEvidenceSnapshot | null;
+  source: "field_sync" | null;
+};
+
 export type MrvLedgerRow = {
   aiTriage: {
     category: string | null;
@@ -255,6 +312,7 @@ export type MrvLedgerRow = {
   createdAt: string;
   capturedAt: string;
   evidenceStatus: "complete" | "incomplete";
+  auditHistory: MrvLedgerAuditEntry[];
   hasPhoto: boolean;
   handlingStatus: string;
   isDemoSample: boolean;

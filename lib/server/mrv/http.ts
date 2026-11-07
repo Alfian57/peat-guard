@@ -98,6 +98,25 @@ function addPrivateHeaders(response: Response): Response {
   });
 }
 
+export function mrvPrivateJsonResponse(
+  payload: unknown,
+  status = 200,
+): Response {
+  return addPrivateHeaders(Response.json(payload, { status }));
+}
+
+export function isMrvSameOrigin(request: Request): boolean {
+  const requestOrigin = request.headers.get("origin");
+
+  if (!requestOrigin) return false;
+
+  try {
+    return new URL(requestOrigin).origin === new URL(request.url).origin;
+  } catch {
+    return false;
+  }
+}
+
 export function createMrvPrivateHandler(
   operation: MrvOperation,
   options: {

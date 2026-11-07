@@ -5,12 +5,12 @@ import {
   type NarrativeProvider,
 } from "@/lib/server/mrv/report-calculations";
 import type {
-  ApprovedZoneValues,
+  CarbonSnapshotZoneValues,
   MrvReportRequest,
 } from "@/lib/server/mrv/contracts";
 import type { MrvReportSource } from "@/lib/server/mrv/report-data";
 
-const illustrativeZone: ApprovedZoneValues = {
+const illustrativeZone: CarbonSnapshotZoneValues = {
   areaHectares: 200,
   biomassFactor: 50,
   co2ConversionFactor: 3.67,
@@ -20,12 +20,14 @@ const illustrativeZone: ApprovedZoneValues = {
   name: "FigCraft demo values (illustrative)",
   parameterIsDemoData: true,
   parameterSetId: "60000000-0000-4000-8000-000000000001",
+  snapshotAt: "2026-11-15T00:00:00.000Z",
+  snapshotReason: "INITIAL_BASELINE",
   villageName: "Desa Demo",
   zoneId: "61000000-0000-4000-8000-000000000001",
   zoneName: "Zona Demo",
 };
 
-const observedZone: ApprovedZoneValues = {
+const observedZone: CarbonSnapshotZoneValues = {
   ...illustrativeZone,
   areaHectares: 100,
   biomassFactor: 25,
@@ -34,12 +36,16 @@ const observedZone: ApprovedZoneValues = {
   name: "Operator configured",
   parameterIsDemoData: false,
   parameterSetId: "60000000-0000-4000-8000-000000000002",
+  snapshotAt: "2026-11-14T23:00:00.000Z",
+  snapshotReason: "PARAMETER_SET_UPDATED",
   villageName: "Desa A",
   zoneId: "61000000-0000-4000-8000-000000000002",
   zoneName: "Zona A",
 };
 
 const source: MrvReportSource = {
+  carbonSnapshotAsOf: "2026-11-15T00:00:00.000Z",
+  hasCarbonSnapshot: true,
   hotspots: { demoCount: 2, nonDemoCount: 5, totalCount: 7 },
   reports: {
     activeCount: 4,
@@ -111,6 +117,68 @@ describe("MRV situation report generation", () => {
     expect(report.narrative.status).toBe("generated");
     expect(report.canalCondition.status).toBe("unavailable");
     expect(report.containsIllustrativeData).toBe(true);
+  });
+
+  test("leaves period carbon unavailable when no snapshot exists", async () => {
+    const receivedInputs: unknown[] = [];
+    const provider: NarrativeProvider = async (input) => {
+      receivedInputs.push(input);
+      return {
+        headline: "Koordinasi lapangan mendukung tindak lanjut.",
+        narrative: "Catatan lapangan mendukung peninjauan yang terarah.",
+        recommendations: ["Lanjutkan koordinasi petugas."],
+      };
+    };
+    const report = await buildMrvGeneratedReport(
+      reportRequest,
+      {
+        ...source,
+        carbonSnapshotAsOf: "2020-01-01T16:59:59.999Z",
+        hasCarbonSnapshot: false,
+        zones: [],
+      },
+      provider,
+    );
+
+    expect(report.metrics.carbon).toMatchObject({
+      asOf: null,
+      approvedZoneCount: null,
+      estimatedCarbonTons: null,
+      estimatedIncentiveIdr: null,
+      protectedAreaHectares: null,
+      reason: "CARBON_SNAPSHOT_NOT_RECORDED",
+      status: "unavailable",
+      zones: [],
+    });
+    expect(receivedInputs[0]).toMatchObject({
+      metrics: {
+        estimatedCarbonTons: null,
+        estimatedIncentiveIdr: null,
+      },
+    });
+  });
+
+  test("reports recorded zero carbon when snapshots show no approved zones", async () => {
+    const report = await buildMrvGeneratedReport(
+      reportRequest,
+      {
+        ...source,
+        zones: [],
+      },
+      undefined,
+      new Date("2026-11-15T00:00:00.000Z"),
+    );
+
+    expect(report.metrics.carbon).toMatchObject({
+      asOf: "2026-11-15T00:00:00.000Z",
+      approvedZoneCount: 0,
+      estimatedCarbonTons: 0,
+      estimatedIncentiveIdr: 0,
+      protectedAreaHectares: 0,
+      reason: null,
+      status: "available",
+      zones: [],
+    });
   });
 
   test("accepts a qualitative narrative longer than 200 characters", async () => {
@@ -232,6 +300,8 @@ describe("MRV situation report generation", () => {
 
   test("returns explicit empty and unavailable metrics when no data exists", async () => {
     const emptySource: MrvReportSource = {
+      carbonSnapshotAsOf: "2026-11-15T00:00:00.000Z",
+      hasCarbonSnapshot: false,
       hotspots: { demoCount: 0, nonDemoCount: 0, totalCount: 0 },
       reports: {
         activeCount: 0,
@@ -260,7 +330,8 @@ describe("MRV situation report generation", () => {
 
     expect(report.metrics.hotspots.totalCount).toBe(0);
     expect(report.metrics.reports.totalCount).toBe(0);
-    expect(report.metrics.carbon.estimatedCarbonTons).toBe(0);
+    expect(report.metrics.carbon.estimatedCarbonTons).toBeNull();
+    expect(report.metrics.carbon.status).toBe("unavailable");
     expect(report.metrics.responseTime).toMatchObject({
       averageMinutes: null,
       respondedReportCount: 0,

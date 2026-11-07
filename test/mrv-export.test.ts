@@ -31,6 +31,7 @@ const ledger: MrvLedger = {
       createdAt: "2026-11-15T02:31:00.000Z",
       capturedAt: "2026-11-15T02:24:00.000Z",
       evidenceStatus: "complete",
+      auditHistory: [],
       hasPhoto: true,
       handlingStatus: "MENUNGGU_TINDAKAN",
       isDemoSample: true,

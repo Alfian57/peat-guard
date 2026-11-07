@@ -60,6 +60,7 @@ const ledger = {
       createdAt: "2026-11-15T02:25:00.000Z",
       capturedAt: "2026-11-15T02:24:00.000Z",
       evidenceStatus: "complete" as const,
+      auditHistory: [],
       hasPhoto: true,
       handlingStatus: "MENUNGGU_TINDAKAN",
       isDemoSample: false,
@@ -135,6 +136,112 @@ test("ledger shows factual GPS evidence, private photo viewer, filters, and pagi
   expect(
     screen.getByText(/Estimasi emisi zona ditampilkan sebagai konteks/),
   ).toBeTruthy();
+  expect(screen.getByText("Peninjauan bukti · belum ditinjau")).toBeTruthy();
+});
+
+test("review timeline exposes stored evidence and permits human review when AI was skipped", async () => {
+  const user = userEvent.setup();
+  const evidenceEntry = {
+    actorRole: "SYSTEM",
+    classification: null,
+    createdAt: "2026-11-15T02:31:00.000Z",
+    decision: null,
+    eventId: "63000000-0000-4000-8000-000000000001",
+    eventType: "REPORT_EVIDENCE_RECORDED" as const,
+    evidenceSnapshot: {
+      accuracyMeters: 17.5,
+      aiCategory: null,
+      aiConfidence: null,
+      aiState: "SKIPPED",
+      aiUrgency: null,
+      capturedAt: "2026-11-15T02:24:00.000Z",
+      latitude: -2.3194,
+      longitude: 113.9102,
+      photoPresent: true,
+      photoSha256: null,
+      syncedAt: "2026-11-15T02:31:00.000Z",
+    },
+    source: "field_sync" as const,
+  };
+  const reviewEntry = {
+    actorRole: "VERIFIKATOR",
+    classification: null,
+    createdAt: "2026-11-15T03:00:00.000Z",
+    decision: "ACCEPTED" as const,
+    eventId: "63000000-0000-4000-8000-000000000002",
+    eventType: "MRV_EVIDENCE_REVIEWED" as const,
+    evidenceSnapshot: {
+      ...evidenceEntry.evidenceSnapshot,
+      photoSha256: "a".repeat(64),
+    },
+    source: null,
+  };
+  const reviewLedger = {
+    ...ledger,
+    rows: [
+      {
+        ...ledger.rows[0],
+        aiTriage: { ...ledger.rows[0].aiTriage, state: "SKIPPED" },
+        auditHistory: [evidenceEntry],
+      },
+    ],
+  };
+
+  render(
+    <LedgerView
+      filterError={null}
+      filters={filters}
+      from=""
+      ledger={reviewLedger}
+      to=""
+      zones={[]}
+    />,
+  );
+
+  await user.click(screen.getByText("Peninjauan bukti · belum ditinjau"));
+  expect(screen.getByText("Bukti awal dicatat")).toBeTruthy();
+  expect(screen.getByText("Koordinat tersimpan")).toBeTruthy();
+  expect(screen.getAllByText("-2.3194, 113.9102").length).toBeGreaterThan(1);
+  expect(screen.getByText(/Triase: Tidak dianalisis/)).toBeTruthy();
+  expect(screen.getByText("Tidak dianalisis")).toBeTruthy();
+  expect(screen.getByText(/tidak diverifikasi secara independen/)).toBeTruthy();
+
+  const acceptButton = screen.getByRole("button", {
+    name: "Terima bukti 61000000",
+  });
+  expect((acceptButton as HTMLButtonElement).disabled).toBe(false);
+  expect(
+    screen.getByRole("button", {
+      name: "Lihat foto bukti laporan 61000000",
+    }),
+  ).toBeTruthy();
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    expect(input).toBe(
+      "/api/command/mrv/ledger/61000000-0000-4000-8000-000000000001/review",
+    );
+    expect(init?.cache).toBe("no-store");
+    expect(init?.credentials).toBe("same-origin");
+    expect(init?.body).toBe(JSON.stringify({ decision: "ACCEPTED" }));
+
+    return new Response(JSON.stringify({ review: reviewEntry }), {
+      headers: { "Content-Type": "application/json" },
+      status: 201,
+    });
+  };
+
+  try {
+    await user.click(acceptButton);
+    expect(
+      await screen.findByText("Keputusan tercatat: Bukti diterima."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Keputusan peninjauan: bukti diterima"),
+    ).toBeTruthy();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("filter dialog applies supported filters and restores focus on Escape", async () => {
@@ -161,7 +268,7 @@ test("filter dialog applies supported filters and restores focus on Escape", asy
   expect(document.activeElement).toBe(screen.getByLabelText("Wilayah zona"));
   expect(dialog.textContent).toContain("bukan keputusan verifikator");
   await user.selectOptions(evidenceFilter, "complete");
-  expect(aiFilter.hasAttribute("disabled")).toBe(true);
+  expect(aiFilter.hasAttribute("disabled")).toBe(false);
   expect(evidenceFilter.closest("form")?.getAttribute("action")).toBe(
     "/audit/ledger",
   );
@@ -217,6 +324,20 @@ test("filter form submits parsable defaults, evidence-only, and AI-only filters"
   const aiParams = submitLedgerFilterForm(form);
   expect(aiParams.toString()).toBe("evidence=all&aiState=FAILED");
   expect(parseLedgerFilters(aiParams).ok).toBe(true);
+
+  await user.selectOptions(
+    screen.getByLabelText("Status kelengkapan bukti"),
+    "complete",
+  );
+  await user.selectOptions(
+    screen.getByLabelText("Status triase AI"),
+    "SKIPPED",
+  );
+  const evidenceAndAiParams = submitLedgerFilterForm(form);
+  expect(evidenceAndAiParams.toString()).toBe(
+    "evidence=complete&aiState=SKIPPED",
+  );
+  expect(parseLedgerFilters(evidenceAndAiParams).ok).toBe(true);
 });
 
 test("export dialog summarizes scope and blocks results above the endpoint cap", async () => {

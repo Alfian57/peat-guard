@@ -37,6 +37,22 @@ const validNarrative = {
 };
 
 describe("DeepSeek executive narrative", () => {
+  test("preserves unavailable carbon metrics as null instead of zero", () => {
+    const input: ExecutiveNarrativeInput = {
+      consent: true,
+      metrics: {
+        ...validMetrics,
+        estimatedCarbonTons: null,
+        estimatedIncentiveIdr: null,
+      },
+    };
+
+    expect(parseExecutiveNarrativeInput(input).metrics).toMatchObject({
+      estimatedCarbonTons: null,
+      estimatedIncentiveIdr: null,
+    });
+  });
+
   test("sends only validated anonymized metrics with high safety review", async () => {
     let requestBody = "";
     const fetchImpl: typeof fetch = async (_input, init) => {

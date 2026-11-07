@@ -61,8 +61,8 @@ export type ExecutiveNarrativeMetrics = {
   closedReportCount: number;
   reportsWithResponseTime: number;
   averageResponseMinutes: number | null;
-  estimatedCarbonTons: number;
-  estimatedIncentiveIdr: number;
+  estimatedCarbonTons: number | null;
+  estimatedIncentiveIdr: number | null;
 };
 
 export type ExecutiveNarrativeInput = {
@@ -109,6 +109,13 @@ function isBoundedNumber(
     value <= maximum &&
     (!integer || Number.isInteger(value))
   );
+}
+
+function isOptionalBoundedNumber(
+  value: unknown,
+  maximum: number,
+): value is number | null {
+  return value === null || isBoundedNumber(value, maximum);
 }
 
 function isBoundedText(value: unknown, maximumLength: number): value is string {
@@ -161,8 +168,8 @@ function parseExecutiveNarrativeMetrics(
     !isBoundedNumber(activeReportCount, MAX_COUNT, true) ||
     !isBoundedNumber(closedReportCount, MAX_COUNT, true) ||
     !isBoundedNumber(reportsWithResponseTime, MAX_COUNT, true) ||
-    !isBoundedNumber(estimatedCarbonTons, MAX_CARBON_TONS) ||
-    !isBoundedNumber(estimatedIncentiveIdr, MAX_INCENTIVE_IDR)
+    !isOptionalBoundedNumber(estimatedCarbonTons, MAX_CARBON_TONS) ||
+    !isOptionalBoundedNumber(estimatedIncentiveIdr, MAX_INCENTIVE_IDR)
   ) {
     throw new DeepSeekNarrativeError(
       "Aggregate report metrics failed validation.",
@@ -313,7 +320,7 @@ export async function generateExecutiveNarrative(
           {
             role: "system",
             content:
-              "Kamu menyusun draf narasi eksekutif berbahasa Indonesia untuk laporan situasi dan kepatuhan MRV gambut. Gunakan hanya fakta agregat yang diberikan dan jangan menyimpulkan sebab, lokasi, atau kondisi yang tidak tersedia. Tulis singkat dan kualitatif. Jangan menulis angka, digit, tanggal, mata uang, jumlah, perbandingan, tren, persentase, atau klaim kuantitatif dalam field teks; angka resmi akan ditampilkan langsung dari database secara terpisah. Berikan satu headline maksimal 120 karakter, satu narasi maksimal 800 karakter, dan 1 sampai 3 rekomendasi maksimal 200 karakter masing-masing. Keluarkan tepat satu objek JSON dengan key headline, narrative, recommendations; tanpa markdown dan tanpa field lain.",
+              "Kamu menyusun draf narasi eksekutif berbahasa Indonesia untuk laporan situasi dan kepatuhan MRV gambut. Gunakan hanya fakta agregat yang diberikan dan jangan menyimpulkan sebab, lokasi, atau kondisi yang tidak tersedia. Nilai null berarti metrik tersebut belum tersedia; jangan menafsirkannya sebagai nol. Tulis singkat dan kualitatif. Jangan menulis angka, digit, tanggal, mata uang, jumlah, perbandingan, tren, persentase, atau klaim kuantitatif dalam field teks; angka resmi akan ditampilkan langsung dari database secara terpisah. Berikan satu headline maksimal 120 karakter, satu narasi maksimal 800 karakter, dan 1 sampai 3 rekomendasi maksimal 200 karakter masing-masing. Keluarkan tepat satu objek JSON dengan key headline, narrative, recommendations; tanpa markdown dan tanpa field lain.",
           },
           {
             role: "user",

@@ -3,6 +3,7 @@ import {
   roundToTwoDecimals,
 } from "@/lib/server/mrv/calculations";
 import type {
+  CarbonSnapshotZoneImpact,
   ExecutiveNarrativeDraft,
   ExecutiveNarrativeInput,
   MrvGeneratedNarrative,
@@ -139,7 +140,7 @@ function createNarrativeMetrics(
   const observedZones = zoneImpacts.filter(
     (zone) => !zone.isDemoData && !zone.parameters.isDemoData,
   );
-  const carbon = sumZoneImpact(observedZones);
+  const carbon = source.hasCarbonSnapshot ? sumZoneImpact(observedZones) : null;
 
   return {
     activeReportCount: source.reports.nonDemoActiveCount,
@@ -149,8 +150,8 @@ function createNarrativeMetrics(
         ? null
         : roundToTwoDecimals(source.reports.nonDemoResponseMinutes),
     closedReportCount: source.reports.nonDemoClosedCount,
-    estimatedCarbonTons: carbon.carbonTons,
-    estimatedIncentiveIdr: carbon.incentiveIdr,
+    estimatedCarbonTons: carbon?.carbonTons ?? null,
+    estimatedIncentiveIdr: carbon?.incentiveIdr ?? null,
     fieldReportCount: source.reports.nonDemoCount,
     reportsWithResponseTime: source.reports.nonDemoRespondedCount,
     satelliteHotspotCount: source.hotspots.nonDemoCount,
@@ -205,8 +206,12 @@ function buildGeneratedReport(
   narrative: MrvGeneratedNarrative,
   generatedAt: Date,
 ): MrvGeneratedReport {
-  const zoneImpacts = source.zones.map(calculateZoneImpact);
-  const carbon = sumZoneImpact(zoneImpacts);
+  const zoneImpacts: CarbonSnapshotZoneImpact[] = source.zones.map((zone) => ({
+    ...calculateZoneImpact(zone),
+    snapshotAt: zone.snapshotAt,
+    snapshotReason: zone.snapshotReason,
+  }));
+  const carbon = source.hasCarbonSnapshot ? sumZoneImpact(zoneImpacts) : null;
   const generatedAtIso = generatedAt.toISOString();
 
   return {
@@ -223,13 +228,18 @@ function buildGeneratedReport(
     narrative,
     metrics: {
       carbon: {
-        approvedZoneCount: zoneImpacts.length,
+        asOf: source.hasCarbonSnapshot ? source.carbonSnapshotAsOf : null,
+        approvedZoneCount: source.hasCarbonSnapshot ? zoneImpacts.length : null,
         containsIllustrativeData: zoneImpacts.some(
           (zone) => zone.isIllustrative,
         ),
-        estimatedCarbonTons: carbon.carbonTons,
-        estimatedIncentiveIdr: carbon.incentiveIdr,
-        protectedAreaHectares: carbon.areaHectares,
+        estimatedCarbonTons: carbon?.carbonTons ?? null,
+        estimatedIncentiveIdr: carbon?.incentiveIdr ?? null,
+        protectedAreaHectares: carbon?.areaHectares ?? null,
+        reason: source.hasCarbonSnapshot
+          ? null
+          : "CARBON_SNAPSHOT_NOT_RECORDED",
+        status: source.hasCarbonSnapshot ? "available" : "unavailable",
         zones: zoneImpacts,
       },
       hotspots: {

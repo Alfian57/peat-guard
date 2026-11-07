@@ -5,6 +5,7 @@ import {
   buildMrvDashboard,
   calculateZoneImpact,
 } from "@/lib/server/mrv/calculations";
+import { parseMrvLedgerAuditHistory } from "@/lib/mrv/audit-history";
 import type {
   ApprovedZoneValues,
   DashboardFilters,
@@ -158,6 +159,13 @@ function toLedgerRow(report: {
   latitude: number;
   longitude: number;
   syncedAt: Date;
+  auditEvents: Array<{
+    actor: { role: string } | null;
+    createdAt: Date;
+    eventType: string;
+    id: string;
+    payload: unknown;
+  }>;
   statusEvents: Array<{
     changedBy: { role: string };
     createdAt: Date;
@@ -207,8 +215,7 @@ function toLedgerRow(report: {
     evidenceStatus:
       Number.isFinite(report.latitude) &&
       Number.isFinite(report.longitude) &&
-      hasPhoto &&
-      report.aiState === "COMPLETED"
+      hasPhoto
         ? "complete"
         : "incomplete",
     hasPhoto,
@@ -216,6 +223,7 @@ function toLedgerRow(report: {
     isDemoSample: report.isDemoSample,
     photoHref: hasPhoto ? `/api/reports/${report.id}/photo` : null,
     reportId: report.id,
+    auditHistory: parseMrvLedgerAuditHistory(report.auditEvents),
     statusHistory: report.statusEvents.map((event) => ({
       actorRole: event.changedBy.role,
       createdAt: event.createdAt.toISOString(),
@@ -230,8 +238,7 @@ function toLedgerRow(report: {
 }
 
 export async function getMrvLedger(filters: LedgerFilters): Promise<MrvLedger> {
-  const aiState =
-    filters.evidence === "complete" ? "COMPLETED" : filters.aiState;
+  const aiState = filters.aiState;
   const where = {
     ...(filters.zoneId ? { zoneId: filters.zoneId } : {}),
     ...(filters.range
@@ -296,6 +303,26 @@ export async function getMrvLedger(filters: LedgerFilters): Promise<MrvLedger> {
             nextStatus: true,
             createdAt: true,
             changedBy: { select: { role: true } },
+          },
+        },
+        auditEvents: {
+          where: {
+            eventType: {
+              in: [
+                "MRV_EVIDENCE_REVIEWED",
+                "REPORT_AI_ANALYSIS_COMPLETED",
+                "REPORT_AI_ANALYSIS_FAILED",
+                "REPORT_EVIDENCE_RECORDED",
+              ],
+            },
+          },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          select: {
+            id: true,
+            eventType: true,
+            payload: true,
+            createdAt: true,
+            actor: { select: { role: true } },
           },
         },
       },

@@ -46,6 +46,14 @@ enum AIAnalysisState {
   SKIPPED
 }
 
+enum CarbonSnapshotReason {
+  INITIAL_BASELINE
+  PARAMETER_SET_CREATED
+  PARAMETER_SET_UPDATED
+  ZONE_CREATED
+  ZONE_UPDATED
+}
+
 model User {
   id            String   @id @default(uuid()) @db.Uuid
   name          String   @db.VarChar(100)
@@ -147,12 +155,37 @@ model ForestZone {
   createdAt            DateTime                              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime                              @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  carbonParameterSet CarbonParameterSet @relation(fields: [carbonParameterSetId], references: [id], onDelete: Restrict)
+  carbonParameterSet CarbonParameterSet         @relation(fields: [carbonParameterSetId], references: [id], onDelete: Restrict)
+  carbonSnapshots    ForestZoneCarbonSnapshot[]
   waterPoints        WaterPoint[]
   fieldReports       FieldReport[]
 
   @@index([villageName])
   @@map("forest_zones")
+}
+
+model ForestZoneCarbonSnapshot {
+  id                   BigInt               @id @default(autoincrement()) @db.BigInt
+  zoneId               String               @map("zone_id") @db.Uuid
+  zoneName             String               @map("zone_name") @db.VarChar(150)
+  villageName          String?              @map("village_name") @db.VarChar(100)
+  areaHectares         Decimal              @map("area_hectares") @db.Decimal(12, 2)
+  carbonParameterSetId String               @map("carbon_parameter_set_id") @db.Uuid
+  parameterSetName     String               @map("parameter_set_name") @db.VarChar(120)
+  biomassFactor        Decimal              @map("biomass_factor") @db.Decimal(8, 2)
+  emissionFactor       Decimal              @map("emission_factor") @db.Decimal(8, 4)
+  co2ConversionFactor  Decimal              @map("co2_conversion_factor") @db.Decimal(6, 3)
+  incentivePerTonIdr   Decimal              @map("incentive_per_ton_idr") @db.Decimal(14, 2)
+  isZoneApproved       Boolean              @map("is_zone_approved")
+  isZoneDemoData       Boolean              @map("is_zone_demo_data")
+  isParameterDemoData  Boolean              @map("is_parameter_demo_data")
+  reason               CarbonSnapshotReason
+  capturedAt           DateTime             @default(now()) @map("captured_at") @db.Timestamptz(6)
+
+  zone ForestZone @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+
+  @@index([zoneId, capturedAt, id])
+  @@map("forest_zone_carbon_snapshots")
 }
 
 model WaterPoint {

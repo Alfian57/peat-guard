@@ -5,6 +5,7 @@ import {
   formatCount,
   formatCurrency,
   formatDate,
+  formatDateTime,
   formatDecimal,
   formatHectares,
 } from "../audit-formatters";
@@ -171,17 +172,33 @@ export function GeneratorReportPreview({
           />
           <Metric
             label="Estimasi emisi dicegah"
-            note="Berdasarkan snapshot zona gambut yang disetujui"
-            value={formatCarbon(report.metrics.carbon.estimatedCarbonTons)}
+            note={
+              report.metrics.carbon.asOf
+                ? `Snapshot zona disetujui sampai ${formatDateTime(report.metrics.carbon.asOf)}`
+                : "Riwayat snapshot tidak tersedia untuk periode ini"
+            }
+            value={
+              report.metrics.carbon.estimatedCarbonTons === null
+                ? "Belum tersedia"
+                : formatCarbon(report.metrics.carbon.estimatedCarbonTons)
+            }
           />
           <Metric
             label="Area zona disetujui"
-            value={formatHectares(report.metrics.carbon.protectedAreaHectares)}
+            value={
+              report.metrics.carbon.protectedAreaHectares === null
+                ? "Belum tersedia"
+                : formatHectares(report.metrics.carbon.protectedAreaHectares)
+            }
           />
           <Metric
             label="Estimasi insentif"
-            note="Perkiraan dari parameter yang tersimpan"
-            value={formatCurrency(report.metrics.carbon.estimatedIncentiveIdr)}
+            note="Ilustrasi CO₂e × tarif tersimpan; bukan formula insentif patroli final."
+            value={
+              report.metrics.carbon.estimatedIncentiveIdr === null
+                ? "Belum tersedia"
+                : formatCurrency(report.metrics.carbon.estimatedIncentiveIdr)
+            }
           />
           <Metric
             label="Kondisi sekat kanal"
@@ -201,7 +218,13 @@ export function GeneratorReportPreview({
         >
           Estimasi karbon per zona
         </h3>
-        {report.metrics.carbon.zones.length > 0 ? (
+        {report.metrics.carbon.status === "unavailable" ? (
+          <p className="mt-3 rounded-xl border border-warning/20 bg-warning/5 px-4 py-3 text-sm text-foreground">
+            Riwayat snapshot karbon belum tersedia pada periode yang dipilih.
+            Nilai karbon tidak dihitung dari data saat ini untuk menggantikan
+            riwayat tersebut.
+          </p>
+        ) : report.metrics.carbon.zones.length > 0 ? (
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[570px] border-collapse text-left">
               <caption className="sr-only">
@@ -234,6 +257,10 @@ export function GeneratorReportPreview({
                       scope="row"
                     >
                       {zone.zoneName}
+                      <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                        Snapshot {formatDateTime(zone.snapshotAt)} ·{" "}
+                        {zone.snapshotReason.replaceAll("_", " ").toLowerCase()}
+                      </span>
                       {zone.isIllustrative ? (
                         <span className="mt-1 block text-xs font-normal text-warning">
                           Data ilustratif

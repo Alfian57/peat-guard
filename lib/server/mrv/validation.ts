@@ -1,6 +1,7 @@
 import type {
   DashboardFilters,
   DateRange,
+  EvidenceReviewDecision,
   LedgerExportFilters,
   LedgerFilters,
   MrvReportRequest,
@@ -12,6 +13,35 @@ const UUID_PATTERN =
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const AI_STATES = ["COMPLETED", "FAILED", "PENDING", "SKIPPED"] as const;
 type AiState = (typeof AI_STATES)[number];
+const EVIDENCE_REVIEW_DECISIONS = [
+  "ACCEPTED",
+  "NEEDS_FOLLOW_UP",
+  "REJECTED",
+] as const satisfies readonly EvidenceReviewDecision[];
+
+export function parseEvidenceReviewRequest(
+  value: unknown,
+): ValidationResult<{ decision: EvidenceReviewDecision }> {
+  if (
+    !isRecord(value) ||
+    Object.keys(value).length !== 1 ||
+    !Object.hasOwn(value, "decision") ||
+    typeof value.decision !== "string" ||
+    !EVIDENCE_REVIEW_DECISIONS.includes(
+      value.decision as EvidenceReviewDecision,
+    )
+  ) {
+    return {
+      error: "Request body must contain one supported evidence decision.",
+      ok: false,
+    };
+  }
+
+  return {
+    ok: true,
+    value: { decision: value.decision as EvidenceReviewDecision },
+  };
+}
 
 type QueryValue = ValidationResult<string | null>;
 
@@ -207,17 +237,6 @@ function parseSharedFilters(searchParams: URLSearchParams): ValidationResult<{
   if (evidenceValue !== "all" && evidenceValue !== "complete") {
     return {
       error: "Parameter evidence must be all or complete.",
-      ok: false,
-    };
-  }
-
-  if (
-    evidenceValue === "complete" &&
-    aiStateValue !== null &&
-    aiStateValue !== "COMPLETED"
-  ) {
-    return {
-      error: "evidence=complete cannot be combined with another AI state.",
       ok: false,
     };
   }

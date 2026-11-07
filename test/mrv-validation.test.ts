@@ -2,12 +2,32 @@ import { describe, expect, test } from "bun:test";
 
 import {
   parseDashboardFilters,
+  parseEvidenceReviewRequest,
   parseLedgerExportFilters,
   parseLedgerFilters,
   parseMrvReportRequest,
 } from "@/lib/server/mrv/validation";
 
 describe("MRV query validation", () => {
+  test("accepts only one supported human evidence review decision", () => {
+    expect(parseEvidenceReviewRequest({ decision: "ACCEPTED" })).toEqual({
+      ok: true,
+      value: { decision: "ACCEPTED" },
+    });
+    expect(parseEvidenceReviewRequest({ decision: "NEEDS_FOLLOW_UP" })).toEqual(
+      { ok: true, value: { decision: "NEEDS_FOLLOW_UP" } },
+    );
+    expect(parseEvidenceReviewRequest({ decision: "VERIFIED_GPS" }).ok).toBe(
+      false,
+    );
+    expect(
+      parseEvidenceReviewRequest({
+        decision: "ACCEPTED",
+        note: "not an accepted review field",
+      }).ok,
+    ).toBe(false);
+  });
+
   test("interprets date filters as inclusive calendar days in WIB", () => {
     const result = parseDashboardFilters(
       new URLSearchParams("from=2026-11-01&to=2026-11-15"),
@@ -114,7 +134,7 @@ describe("MRV query validation", () => {
     );
   });
 
-  test("uses complete evidence as a filter without claiming verification", () => {
+  test("filters photo and coordinate completeness independently of AI state", () => {
     const valid = parseLedgerFilters(new URLSearchParams("evidence=complete"));
 
     expect(valid.ok).toBe(true);
@@ -128,9 +148,9 @@ describe("MRV query validation", () => {
     ).toBe(false);
     expect(
       parseLedgerFilters(
-        new URLSearchParams("evidence=complete&aiState=PENDING"),
+        new URLSearchParams("evidence=complete&aiState=SKIPPED"),
       ).ok,
-    ).toBe(false);
+    ).toBe(true);
   });
 
   test("accepts only bounded report filters and explicit narrative consent", () => {

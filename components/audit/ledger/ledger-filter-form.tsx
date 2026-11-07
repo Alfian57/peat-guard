@@ -121,18 +121,16 @@ export function LedgerFilterForm({
               <dt className="text-muted-foreground">Kelengkapan bukti</dt>
               <dd className="font-semibold text-peat-forest">
                 {selectedEvidence === "complete"
-                  ? "Koordinat, foto, dan triase AI tersedia"
+                  ? "Koordinat dan foto tersedia"
                   : "Semua catatan"}
               </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Triase AI</dt>
               <dd className="font-semibold text-peat-forest">
-                {selectedEvidence === "complete"
-                  ? "Selesai (termasuk dalam kelengkapan bukti)"
-                  : selectedAiState
-                    ? aiStateLabels[selectedAiState]
-                    : "Semua status"}
+                {selectedAiState
+                  ? aiStateLabels[selectedAiState]
+                  : "Semua status"}
               </dd>
             </div>
             <div>
@@ -192,14 +190,11 @@ export function LedgerFilterForm({
                   const value = event.currentTarget
                     .value as LedgerFilters["evidence"];
                   setSelectedEvidence(value);
-                  if (value === "complete") setSelectedAiState("");
                 }}
                 value={selectedEvidence}
               >
                 <option value="all">Semua laporan</option>
-                <option value="complete">
-                  Koordinat, foto, dan triase AI tersedia
-                </option>
+                <option value="complete">Koordinat dan foto tersedia</option>
               </select>
               <p
                 className="text-xs leading-5 text-muted-foreground"
@@ -219,7 +214,6 @@ export function LedgerFilterForm({
               </label>
               <select
                 className={fieldClassName}
-                disabled={selectedEvidence === "complete"}
                 id="ledger-ai-state"
                 name={selectedAiState ? "aiState" : undefined}
                 onChange={(event) =>
@@ -235,11 +229,6 @@ export function LedgerFilterForm({
                 <option value="FAILED">Gagal</option>
                 <option value="SKIPPED">Tidak dianalisis</option>
               </select>
-              {selectedEvidence === "complete" ? (
-                <p className="text-xs leading-5 text-muted-foreground">
-                  Triase selesai sudah diwajibkan oleh filter bukti lengkap.
-                </p>
-              ) : null}
             </div>
 
             <div className="space-y-2">
