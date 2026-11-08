@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { Leaf } from "lucide-react";
+import { APP_ROUTES } from "@/lib/routes";
+
+const CURRENT_YEAR = 2026;
 
 export function PublicFooter() {
   return (
@@ -8,7 +11,7 @@ export function PublicFooter() {
         <div>
           <Link
             className="inline-flex items-center gap-2 font-heading text-xl font-bold tracking-wide"
-            href="/"
+            href={APP_ROUTES.home}
           >
             <Leaf aria-hidden="true" size={19} />
             PEATGUARD
@@ -22,14 +25,13 @@ export function PublicFooter() {
           <a className="hover:text-white" href="#peta-publik">
             Peta pantauan
           </a>
-          <Link className="hover:text-white" href="/login">
+          <Link className="hover:text-white" href={APP_ROUTES.login}>
             Masuk
           </Link>
         </div>
       </div>
       <div className="border-t border-white/10 px-5 py-4 text-center text-xs text-white/55 sm:px-8">
-        © {new Date().getFullYear()} PEATGUARD · Data ilustrasi diberi label
-        secara terbuka.
+        © {CURRENT_YEAR} PEATGUARD · Data ilustrasi diberi label secara terbuka.
       </div>
     </footer>
   );

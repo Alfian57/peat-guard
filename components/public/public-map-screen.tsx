@@ -10,6 +10,7 @@ import { PublicMapFreshness } from "@/components/public/public-map-freshness";
 import { PublicMapResults } from "@/components/public/public-map-results";
 import type { MapViewport } from "@/lib/maps/types";
 import type { PublicMapViewData } from "@/lib/public/client-contracts";
+import { APP_ROUTES } from "@/lib/routes";
 
 export type PublicMapLoadState = "loading" | "ready" | "error";
 
@@ -43,7 +44,7 @@ export function PublicMapScreen({
           <Link
             aria-label="Kembali ke beranda PEATGUARD"
             className="grid size-11 shrink-0 place-items-center rounded-full text-peat-forest hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
-            href="/"
+            href={APP_ROUTES.home}
           >
             <ArrowLeft aria-hidden="true" size={20} />
           </Link>

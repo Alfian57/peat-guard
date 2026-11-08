@@ -2,7 +2,7 @@ import "dotenv/config";
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "better-auth/crypto";
-import { PrismaClient } from "../app/generated/prisma/client";
+import { PrismaClient } from "../lib/generated/prisma/client";
 import {
   demoLoginIsEnabled,
   demoPasswordForRole,

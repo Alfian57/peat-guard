@@ -1,38 +1,40 @@
+import { API_ROUTES, APP_ROUTES } from "@/lib/routes";
+
 export const COMMAND_ROUTES = {
-  map: "/command/map",
-  reports: "/command/reports",
-  zones: "/command/zones",
-  createZone: "/command/zones/create",
-  waterPoints: "/command/water-points",
-  login: "/login",
+  map: APP_ROUTES.command.map,
+  reports: APP_ROUTES.command.reports,
+  zones: APP_ROUTES.command.zones,
+  createZone: APP_ROUTES.command.createZone,
+  waterPoints: APP_ROUTES.command.waterPoints,
+  login: APP_ROUTES.login,
 } as const;
 
 export const COMMAND_API_ROUTES = {
-  map: "/api/command/map",
-  reportMapPoints: "/api/command/reports/map-points",
-  reports: "/api/reports",
-  zones: "/api/command/zones",
-  waterPoints: "/api/command/water-points",
-  firms: "/api/command/firms",
-  firmsSync: "/api/command/firms/sync",
+  map: API_ROUTES.command.map,
+  reportMapPoints: API_ROUTES.command.reportMapPoints,
+  reports: API_ROUTES.reports.root,
+  zones: API_ROUTES.command.zones,
+  waterPoints: API_ROUTES.command.waterPoints,
+  firms: API_ROUTES.command.firms,
+  firmsSync: API_ROUTES.command.firmsSync,
 } as const;
 
 export function zoneEditRoute(zoneId: string): string {
-  return `${COMMAND_ROUTES.zones}/${encodeURIComponent(zoneId)}/edit`;
+  return APP_ROUTES.command.editZone(zoneId);
 }
 
 export function reportDetailRoute(reportId: string): string {
-  return `${COMMAND_ROUTES.reports}/${encodeURIComponent(reportId)}`;
+  return APP_ROUTES.command.reportDetail(reportId);
 }
 
 export function reportApiRoute(reportId: string): string {
-  return `${COMMAND_API_ROUTES.reports}/${encodeURIComponent(reportId)}`;
+  return API_ROUTES.reports.detail(reportId);
 }
 
 export function zoneApiRoute(zoneId: string): string {
-  return `${COMMAND_API_ROUTES.zones}/${encodeURIComponent(zoneId)}`;
+  return API_ROUTES.command.zoneDetail(zoneId);
 }
 
 export function waterPointApiRoute(waterPointId: string): string {
-  return `${COMMAND_API_ROUTES.waterPoints}/${encodeURIComponent(waterPointId)}`;
+  return API_ROUTES.command.waterPointDetail(waterPointId);
 }

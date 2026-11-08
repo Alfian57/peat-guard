@@ -272,10 +272,14 @@ export async function readReportFormData(request: Request): Promise<FormData> {
   headers.delete("transfer-encoding");
 
   try {
+    const bodyBuffer =
+      boundedBody.buffer instanceof ArrayBuffer
+        ? boundedBody.buffer
+        : new Uint8Array(boundedBody).slice().buffer;
     const boundedRequest = new Request(request.url, {
       method: request.method,
       headers,
-      body: boundedBody,
+      body: new Blob([bodyBuffer]),
     });
     return await boundedRequest.formData();
   } catch {

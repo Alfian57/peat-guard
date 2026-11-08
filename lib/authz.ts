@@ -4,6 +4,7 @@ import { auth, type AuthSession } from "@/lib/auth";
 import { AuthorizationError, assertRoleAccess } from "@/lib/role-access";
 import type { AppRole } from "@/lib/roles";
 
+export type { AuthSession };
 export { AuthorizationError, assertRoleAccess } from "@/lib/role-access";
 
 export async function getServerSession(): Promise<AuthSession | null> {

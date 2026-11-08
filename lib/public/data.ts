@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Prisma } from "@/app/generated/prisma/client";
+import { Prisma } from "@/lib/generated/prisma/client";
 import { DEMO_HOTSPOT_SOURCE, FIRMS_SOURCES } from "@/lib/firms-sources";
 import { prisma } from "@/lib/prisma";
 import type { Polygon } from "geojson";
@@ -302,12 +302,12 @@ async function getApprovedZoneMetrics(): Promise<PublicMetrics> {
   };
 }
 
-const publicHotspotWhere = {
+const publicHotspotWhere: Prisma.SatelliteHotspotWhereInput = {
   OR: [
     { isDemoData: true, source: DEMO_HOTSPOT_SOURCE },
     { isDemoData: false, source: { in: [...FIRMS_SOURCES] } },
   ],
-} as const;
+};
 
 export async function getPublicMetrics(): Promise<PublicMetrics> {
   return getApprovedZoneMetrics();

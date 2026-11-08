@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { EditReport } from "./edit-report";
 import { ReportDetail } from "./report-detail";
+import { APP_ROUTES } from "@/lib/routes";
 
 export function ReportWorkspace() {
   const search = useSyncExternalStore(
@@ -25,7 +26,7 @@ export function ReportWorkspace() {
           Tautan laporan tidak memuat ID laporan.
         </p>
         <a
-          href="/field/home"
+          href={APP_ROUTES.field.home}
           className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-peat-green"
         >
           Kembali ke beranda

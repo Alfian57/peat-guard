@@ -5,6 +5,7 @@ import { ownerStatusMessage, useFieldShell } from "./field-app-shell";
 import { FieldReportForm } from "./field-report-form";
 import { createQueuedReport } from "@/lib/client/offline/report-contract";
 import { saveQueuedReport } from "@/lib/client/offline/report-store";
+import { APP_ROUTES } from "@/lib/routes";
 
 /* eslint-disable @next/next/no-location-assign-relative-destination -- Full navigations let the service worker serve cached field shells offline. */
 
@@ -35,17 +36,17 @@ export function CreateReport() {
     );
     if (isConnected) {
       window.location.assign(
-        `/field/report?reportId=${encodeURIComponent(report.clientReportId)}`,
+        `${APP_ROUTES.field.report}?reportId=${encodeURIComponent(report.clientReportId)}`,
       );
     } else {
-      window.location.assign("/field/queue");
+      window.location.assign(APP_ROUTES.field.queue);
     }
   }
 
   return (
     <div className="mx-auto w-full max-w-xl px-4 pt-5">
       <a
-        href="/field/home"
+        href={APP_ROUTES.field.home}
         className="inline-flex min-h-11 items-center gap-2 rounded-lg pr-3 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
       >
         <ArrowLeft aria-hidden="true" size={17} /> Kembali

@@ -3,7 +3,7 @@ import "server-only";
 import { AuthorizationError } from "@/lib/role-access";
 import { ReportInputError } from "@/lib/server/reports/input";
 import { ReportPhotoError } from "@/lib/server/uploads/private-photo";
-import type { HandlingStatus } from "@/app/generated/prisma/client";
+import type { HandlingStatus } from "@/lib/generated/prisma/client";
 
 export const PRIVATE_RESPONSE_HEADERS = {
   "Cache-Control": "private, no-store",

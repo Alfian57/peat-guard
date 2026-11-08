@@ -1,13 +1,13 @@
 import {
-  AIAnalysisState,
   HandlingStatus,
-  ReportCategory,
   ReportUrgency,
-  type AIAnalysisState as AIAnalysisStateValue,
   type HandlingStatus as HandlingStatusValue,
-  type ReportCategory as ReportCategoryValue,
   type ReportUrgency as ReportUrgencyValue,
-} from "@/app/generated/prisma/enums";
+} from "@/lib/generated/prisma/enums";
+
+export { ReportUrgencyBadge } from "./report-urgency-badge";
+export { ReportCategoryLabel } from "./report-category-label";
+export { AiStateLabel } from "./report-ai-state-label";
 
 export function ReportStatusBadge({ status }: { status: HandlingStatusValue }) {
   const label = statusLabel(status);
@@ -27,70 +27,6 @@ export function ReportStatusBadge({ status }: { status: HandlingStatusValue }) {
       {label}
     </span>
   );
-}
-
-export function ReportUrgencyBadge({
-  urgency,
-}: {
-  urgency: ReportUrgencyValue | null;
-}) {
-  if (!urgency) {
-    return <span className="text-xs text-peat-forest/60">Belum dinilai</span>;
-  }
-  const label = urgencyLabel(urgency);
-  const appearance =
-    urgency === ReportUrgency.KRITIS
-      ? "bg-red-50 text-red-900"
-      : urgency === ReportUrgency.WASPADA
-        ? "bg-amber-50 text-amber-950"
-        : "bg-safe/10 text-safe";
-  return (
-    <span
-      className={
-        "inline-flex min-h-8 items-center rounded-full px-3 text-xs font-semibold " +
-        appearance
-      }
-    >
-      {label}
-    </span>
-  );
-}
-
-export function ReportCategoryLabel({
-  category,
-}: {
-  category: ReportCategoryValue | null;
-}) {
-  if (!category)
-    return <span className="text-peat-forest/60">Belum dinilai</span>;
-  switch (category) {
-    case ReportCategory.API_AKTIF:
-      return "Api aktif";
-    case ReportCategory.ASAP_GAMBUT:
-      return "Asap gambut";
-    case ReportCategory.SEKAT_KANAL_KERING:
-      return "Sekat kanal kering";
-    case ReportCategory.AMAN_TERKENDALI:
-      return "Aman / terkendali";
-  }
-}
-
-export function AiStateLabel({
-  state,
-}: {
-  state: AIAnalysisStateValue | null;
-}) {
-  if (!state) return "Belum dianalisis";
-  switch (state) {
-    case AIAnalysisState.PENDING:
-      return "Analisis menunggu";
-    case AIAnalysisState.COMPLETED:
-      return "Analisis selesai";
-    case AIAnalysisState.FAILED:
-      return "Analisis gagal";
-    case AIAnalysisState.SKIPPED:
-      return "Analisis dilewati";
-  }
 }
 
 export function statusLabel(status: HandlingStatusValue): string {

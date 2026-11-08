@@ -1,6 +1,8 @@
 import type { FormEvent } from "react";
 
 import { LayerCheckbox } from "@/components/command/map/layer-checkbox";
+import { ReportMapControlField } from "@/components/command/map/report-map-control-field";
+import { ReportMapLegendItem } from "@/components/command/map/report-map-legend-item";
 import {
   REPORT_STATUSES,
   type ReportStatus,
@@ -10,7 +12,7 @@ import {
   urgencyLabel,
 } from "@/components/command/reports/report-status-badge";
 import type { ReportMapFilters } from "@/components/command/reports/report-map-query";
-import type { ReportUrgency } from "@/app/generated/prisma/enums";
+import type { ReportUrgency } from "@/lib/generated/prisma/enums";
 
 const REPORT_URGENCIES: ReportUrgency[] = ["KRITIS", "WASPADA", "RENDAH"];
 
@@ -73,7 +75,10 @@ export function ReportMapControls({
       </div>
 
       <form className="mt-3 space-y-3" onSubmit={onApply}>
-        <Field hint="Tanggal rekam WIB, termasuk hari itu" label="Dari tanggal">
+        <ReportMapControlField
+          hint="Tanggal rekam WIB, termasuk hari itu"
+          label="Dari tanggal"
+        >
           <input
             className={controlClassName + " font-mono"}
             max={draftFilters.to || undefined}
@@ -86,8 +91,8 @@ export function ReportMapControls({
             type="date"
             value={draftFilters.from}
           />
-        </Field>
-        <Field
+        </ReportMapControlField>
+        <ReportMapControlField
           hint="Tanggal rekam WIB, termasuk hari itu"
           label="Sampai tanggal"
         >
@@ -100,8 +105,8 @@ export function ReportMapControls({
             type="date"
             value={draftFilters.to}
           />
-        </Field>
-        <Field label="Status penanganan">
+        </ReportMapControlField>
+        <ReportMapControlField label="Status penanganan">
           <select
             className={controlClassName}
             onChange={(event) =>
@@ -119,8 +124,8 @@ export function ReportMapControls({
               </option>
             ))}
           </select>
-        </Field>
-        <Field label="Urgensi AI">
+        </ReportMapControlField>
+        <ReportMapControlField label="Urgensi AI">
           <select
             className={controlClassName}
             onChange={(event) =>
@@ -140,7 +145,7 @@ export function ReportMapControls({
             ))}
             <option value="UNRATED">Belum dinilai</option>
           </select>
-        </Field>
+        </ReportMapControlField>
         {filtersError ? (
           <p className="text-sm text-red-800" role="alert">
             {filtersError}
@@ -155,10 +160,16 @@ export function ReportMapControls({
             Warna pin laporan
           </h3>
           <ul className="mt-2 grid grid-cols-2 gap-2 text-xs text-peat-forest/75">
-            <LegendItem color="bg-red-600" label="Kritis" />
-            <LegendItem color="bg-amber-600" label="Waspada" />
-            <LegendItem color="bg-emerald-700" label="Aman / selesai" />
-            <LegendItem color="bg-slate-500" label="Rendah / belum dinilai" />
+            <ReportMapLegendItem color="bg-red-600" label="Kritis" />
+            <ReportMapLegendItem color="bg-amber-600" label="Waspada" />
+            <ReportMapLegendItem
+              color="bg-emerald-700"
+              label="Aman / selesai"
+            />
+            <ReportMapLegendItem
+              color="bg-slate-500"
+              label="Rendah / belum dinilai"
+            />
           </ul>
         </div>
         <div className="flex gap-2">
@@ -225,36 +236,5 @@ export function ReportMapControls({
         )}
       </div>
     </section>
-  );
-}
-
-function LegendItem({ color, label }: { color: string; label: string }) {
-  return (
-    <li className="flex items-center gap-2">
-      <span aria-hidden="true" className={`size-3 rounded-full ${color}`} />
-      {label}
-    </li>
-  );
-}
-
-function Field({
-  children,
-  hint,
-  label,
-}: {
-  children: React.ReactNode;
-  hint?: string;
-  label: string;
-}) {
-  return (
-    <label className="block text-xs font-semibold text-peat-forest">
-      <span className="mb-1.5 block">{label}</span>
-      {children}
-      {hint ? (
-        <span className="mt-1 block text-[11px] font-normal text-peat-forest/60">
-          {hint}
-        </span>
-      ) : null}
-    </label>
   );
 }

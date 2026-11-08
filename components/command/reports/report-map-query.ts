@@ -1,6 +1,6 @@
 import type { MapViewport } from "@/lib/maps/types";
 import type { ReportStatus } from "@/components/command/reports/report-contracts";
-import type { ReportUrgency } from "@/app/generated/prisma/enums";
+import type { ReportUrgency } from "@/lib/generated/prisma/enums";
 
 export type ReportMapFilters = {
   from: string;

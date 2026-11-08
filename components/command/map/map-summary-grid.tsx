@@ -1,3 +1,5 @@
+import { MapSummaryCard } from "./map-summary-card";
+
 export function MapSummaryGrid({
   hotspotCount,
   reportCount,
@@ -13,13 +15,16 @@ export function MapSummaryGrid({
 }) {
   return (
     <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <SummaryCard label="Zona gambut" value={formatCount(zoneCount)} />
-      <SummaryCard
+      <MapSummaryCard label="Zona gambut" value={formatCount(zoneCount)} />
+      <MapSummaryCard
         label="Titik sumber air"
         value={formatCount(waterPointCount)}
       />
-      <SummaryCard label="Hotspot satelit" value={formatCount(hotspotCount)} />
-      <SummaryCard
+      <MapSummaryCard
+        label="Hotspot satelit"
+        value={formatCount(hotspotCount)}
+      />
+      <MapSummaryCard
         label="Laporan pada area peta"
         value={
           reportCount === undefined
@@ -27,17 +32,6 @@ export function MapSummaryGrid({
             : formatCount(reportCount, reportTruncated)
         }
       />
-    </div>
-  );
-}
-
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-peat-forest/10 bg-white px-4 py-3">
-      <p className="text-xs font-medium text-peat-forest/65">{label}</p>
-      <p className="mt-1 font-heading text-3xl font-bold text-peat-forest">
-        {value}
-      </p>
     </div>
   );
 }

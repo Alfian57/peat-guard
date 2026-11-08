@@ -15,6 +15,7 @@ import {
 } from "@/lib/client/offline/server-report-client";
 import { listQueuedReports } from "@/lib/client/offline/report-store";
 import type { QueuedFieldReport } from "@/lib/client/offline/types";
+import type { ServerHistoryStatus } from "./server-report-history-section";
 
 type LocalReportSnapshot = {
   ownerId: string | null;
@@ -90,7 +91,7 @@ export function useFieldReportHistory() {
     canFetchServerHistory && serverSnapshotMatches
       ? serverSnapshot.reports
       : [];
-  const serverStatus = canFetchServerHistory
+  const serverStatus: ServerHistoryStatus = canFetchServerHistory
     ? serverSnapshotMatches
       ? serverSnapshot.status
       : "loading"

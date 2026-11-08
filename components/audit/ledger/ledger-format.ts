@@ -1,4 +1,5 @@
 import type { LedgerFilters } from "@/lib/server/mrv/contracts";
+import { API_ROUTES, APP_ROUTES } from "@/lib/routes";
 
 export function getLedgerQuery(filters: LedgerFilters): URLSearchParams {
   const params = new URLSearchParams();
@@ -18,7 +19,7 @@ export function getLedgerExportHref(
 ): string {
   const params = getLedgerQuery(filters);
   params.set("format", format);
-  return `/api/command/mrv/ledger/export?${params.toString()}`;
+  return `${API_ROUTES.command.mrvLedgerExport}?${params.toString()}`;
 }
 
 export function getLedgerPageHref(
@@ -29,5 +30,7 @@ export function getLedgerPageHref(
   params.set("page", String(page));
   params.set("pageSize", String(filters.pageSize));
   const query = params.toString();
-  return query ? `/audit/ledger?${query}` : "/audit/ledger";
+  return query
+    ? `${APP_ROUTES.audit.ledger}?${query}`
+    : APP_ROUTES.audit.ledger;
 }

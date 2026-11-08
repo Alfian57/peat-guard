@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, Compass, ShieldCheck } from "lucide-react";
 
 import { SiteHeader } from "@/components/public/site-header";
+import { APP_ROUTES } from "@/lib/routes";
 
 export function PublicHero() {
   return (
@@ -41,7 +42,7 @@ export function PublicHero() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-peat-sun px-6 font-semibold text-peat-forest transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-              href="/peta"
+              href={APP_ROUTES.publicMap}
             >
               <Compass aria-hidden="true" size={18} />
               Lihat peta pantauan
@@ -49,7 +50,7 @@ export function PublicHero() {
             </Link>
             <Link
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/55 px-6 font-semibold text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-              href="/login"
+              href={APP_ROUTES.login}
             >
               Coba sebagai relawan
               <ArrowRight aria-hidden="true" size={17} />

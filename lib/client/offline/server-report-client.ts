@@ -1,4 +1,5 @@
 import type { QueuedFieldReport } from "./types";
+import { API_ROUTES } from "@/lib/routes";
 
 const REPORT_CATEGORIES = [
   "API_AKTIF",
@@ -167,7 +168,7 @@ function nullableStringArray(value: unknown): string[] | null {
 
 function reportPhotoHref(reportId: string, value: unknown): string | null {
   const href = nullableString(value);
-  if (href !== null && href !== `/api/reports/${reportId}/photo`) {
+  if (href !== null && href !== API_ROUTES.reports.photo(reportId)) {
     return invalidResponse();
   }
   return href;
@@ -349,7 +350,7 @@ export async function fetchServerReportPage(
   const query = new URLSearchParams({ page: String(page), pageSize: "25" });
   let response: Response;
   try {
-    response = await fetch(`/api/reports?${query.toString()}`, {
+    response = await fetch(`${API_ROUTES.reports.root}?${query.toString()}`, {
       method: "GET",
       headers: { Accept: "application/json" },
       cache: "no-store",
@@ -383,7 +384,7 @@ export async function fetchServerReportDetail(
 ): Promise<ServerReportDetail> {
   let response: Response;
   try {
-    response = await fetch(`/api/reports/${encodeURIComponent(reportId)}`, {
+    response = await fetch(API_ROUTES.reports.detail(reportId), {
       method: "GET",
       headers: { Accept: "application/json" },
       cache: "no-store",

@@ -6,7 +6,7 @@ import {
   AIAnalysisState,
   HandlingStatus,
   Prisma,
-} from "@/app/generated/prisma/client";
+} from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { analyzeNormalizedReportPhoto } from "@/lib/server/ai/deepseek";
 import {

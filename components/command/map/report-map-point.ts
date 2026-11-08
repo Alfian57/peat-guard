@@ -2,7 +2,7 @@ import {
   HandlingStatus,
   ReportCategory,
   ReportUrgency,
-} from "@/app/generated/prisma/enums";
+} from "@/lib/generated/prisma/enums";
 import type { ReportMapPoint } from "@/components/command/reports/report-contracts";
 import { statusLabel } from "@/components/command/reports/report-status-badge";
 import type { MapPoint } from "@/lib/maps/types";

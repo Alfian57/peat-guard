@@ -10,6 +10,7 @@ import {
 } from "./owner-store";
 import { listQueuedReports, saveQueuedReport } from "./report-store";
 import type { QueuedFieldReport, SyncSummary } from "./types";
+import { API_ROUTES } from "@/lib/routes";
 
 let activeSync: { ownerId: string; promise: Promise<SyncSummary> } | null =
   null;
@@ -76,7 +77,7 @@ async function syncReports(
     const timeoutId = window.setTimeout(() => controller.abort(), 45000);
 
     try {
-      const response = await fetch("/api/reports", {
+      const response = await fetch(API_ROUTES.reports.root, {
         method: "POST",
         body: buildReportFormData(syncingReport),
         signal: controller.signal,

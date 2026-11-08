@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import type { ServerReportSummary } from "@/lib/client/offline/server-report-client";
+import { APP_ROUTES } from "@/lib/routes";
 import {
   HANDLING_LABELS,
   URGENCY_LABELS,
@@ -20,7 +21,7 @@ export function ServerReportCard({
 }: ServerReportCardProps) {
   const params = new URLSearchParams({ serverReportId: report.id });
   if (localReportId) params.set("reportId", localReportId);
-  const href = `/field/report?${params.toString()}`;
+  const href = `${APP_ROUTES.field.report}?${params.toString()}`;
   const title = reportSummaryTitle(report);
 
   return (

@@ -6,6 +6,7 @@ import { ChartNoAxesCombined, ClipboardList, FileText } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import type { AppRole } from "@/lib/roles";
+import { APP_ROUTES } from "@/lib/routes";
 
 type AuditNavProps = {
   role: AppRole | null;
@@ -18,19 +19,19 @@ const navigationItems: {
   roles: readonly AppRole[];
 }[] = [
   {
-    href: "/audit/dashboard",
+    href: APP_ROUTES.audit.dashboard,
     icon: ChartNoAxesCombined,
     label: "Dampak karbon",
     roles: ["VERIFIKATOR"],
   },
   {
-    href: "/audit/ledger",
+    href: APP_ROUTES.audit.ledger,
     icon: ClipboardList,
     label: "Log audit MRV",
     roles: ["VERIFIKATOR"],
   },
   {
-    href: "/audit/generator",
+    href: APP_ROUTES.audit.generator,
     icon: FileText,
     label: "Generator laporan",
     roles: ["POSKO", "VERIFIKATOR"],

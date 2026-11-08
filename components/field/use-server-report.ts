@@ -107,24 +107,25 @@ export function useServerReport(reportId: string | null) {
 
   useEffect(() => {
     if (!reportId || !canFetch) return;
+    const currentReportId = reportId;
 
     const controller = new AbortController();
     async function readReport() {
       try {
         const report = await fetchServerReportDetail(
-          reportId,
+          currentReportId,
           controller.signal,
         );
         if (
           controller.signal.aborted ||
           activeIdentityRef.current?.ownerId !== ownerId ||
-          activeIdentityRef.current?.reportId !== reportId
+          activeIdentityRef.current?.reportId !== currentReportId
         ) {
           return;
         }
         setSnapshot({
           ownerId,
-          reportId,
+          reportId: currentReportId,
           report,
           error: null,
           status: "loaded",
@@ -133,13 +134,13 @@ export function useServerReport(reportId: string | null) {
         if (
           controller.signal.aborted ||
           activeIdentityRef.current?.ownerId !== ownerId ||
-          activeIdentityRef.current?.reportId !== reportId
+          activeIdentityRef.current?.reportId !== currentReportId
         ) {
           return;
         }
         setSnapshot({
           ownerId,
-          reportId,
+          reportId: currentReportId,
           report: null,
           error:
             error instanceof Error

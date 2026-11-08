@@ -1,10 +1,9 @@
 "use client";
 
-/* eslint-disable @next/next/no-html-link-for-pages -- Full navigation lets the service worker serve the cached field shell offline. */
-
 import { ReportCard } from "./report-card";
 import { isRemovableLocalDraft } from "@/lib/client/offline/report-store";
 import type { QueuedFieldReport } from "@/lib/client/offline/types";
+import { APP_ROUTES } from "@/lib/routes";
 
 export function FieldOutboxSection({
   isLoading,
@@ -65,7 +64,7 @@ export function FieldOutboxSection({
             Tidak ada draf yang menunggu sinkronisasi.
           </p>
           <a
-            href="/field/reports/create"
+            href={APP_ROUTES.field.createReport}
             className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-peat-green px-4 text-sm font-semibold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-forest"
           >
             Buat laporan

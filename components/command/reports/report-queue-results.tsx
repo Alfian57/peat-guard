@@ -1,10 +1,7 @@
 import { ArrowLeft, ArrowRight, FileText } from "lucide-react";
 
-import { ReportCard } from "@/components/command/reports/report-card";
-import type {
-  ReportListItem,
-  ReportListResponse,
-} from "@/components/command/reports/report-contracts";
+import type { ReportListResponse } from "@/components/command/reports/report-contracts";
+import { ReportQueueRow } from "@/components/command/reports/report-queue-row";
 
 export function ReportQueueResults({
   currentPage,
@@ -76,7 +73,7 @@ export function ReportQueueResults({
       </p>
       <ul className="space-y-3">
         {response.reports.map((report) => (
-          <ReportRow key={report.id} report={report} zones={zones} />
+          <ReportQueueRow key={report.id} report={report} zones={zones} />
         ))}
       </ul>
       {pageCount > 1 ? (
@@ -111,21 +108,6 @@ export function ReportQueueResults({
         </nav>
       ) : null}
     </section>
-  );
-}
-
-function ReportRow({
-  report,
-  zones,
-}: {
-  report: ReportListItem;
-  zones: ReadonlyMap<string, string>;
-}) {
-  return (
-    <ReportCard
-      report={report}
-      zoneName={report.zoneId ? (zones.get(report.zoneId) ?? null) : null}
-    />
   );
 }
 

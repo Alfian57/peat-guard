@@ -6,8 +6,7 @@ import { ownerStatusMessage, useFieldShell } from "./field-app-shell";
 import { ReportCard } from "./report-card";
 import { listQueuedReports } from "@/lib/client/offline/report-store";
 import type { QueuedFieldReport } from "@/lib/client/offline/types";
-
-/* eslint-disable @next/next/no-html-link-for-pages -- Full navigations let the service worker serve cached field shells offline. */
+import { APP_ROUTES } from "@/lib/routes";
 
 export function FieldHome() {
   const { ownerId, ownerStatus, queueCount, setNotice, isConnected } =
@@ -133,7 +132,7 @@ export function FieldHome() {
           Laporan terbaru
         </h2>
         <a
-          href="/field/queue"
+          href={APP_ROUTES.field.queue}
           className="min-h-11 rounded-lg px-3 py-2 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-peat-green"
         >
           Lihat antrean
@@ -173,7 +172,7 @@ export function FieldHome() {
             pelaporan.
           </p>
           <a
-            href="/field/reports/create"
+            href={APP_ROUTES.field.createReport}
             className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-peat-green px-4 py-2 text-sm font-semibold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-forest"
           >
             <Plus aria-hidden="true" size={18} />
@@ -184,7 +183,7 @@ export function FieldHome() {
 
       {pendingReports.length > 0 ? (
         <a
-          href="/field/queue"
+          href={APP_ROUTES.field.queue}
           className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold text-peat-forest focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
         >
           <CloudUpload aria-hidden="true" size={18} />

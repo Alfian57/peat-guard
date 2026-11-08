@@ -1,8 +1,17 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  describe,
+  expect,
+  mock,
+  spyOn,
+  test,
+} from "bun:test";
 
 import { AuthorizationError } from "@/lib/role-access";
 import type { AppRole } from "@/lib/roles";
 import type { MrvLedgerAuditEntry } from "@/lib/server/mrv/contracts";
+import * as reviewMod from "@/lib/server/mrv/review";
 
 const reportId = "61000000-0000-4000-8000-000000000001";
 let activeRole: AppRole | null = null;
@@ -31,15 +40,10 @@ const reviewEntry: MrvLedgerAuditEntry = {
 };
 
 const recordReview = mock(async () => reviewEntry);
-
-class StubReviewError extends Error {
-  constructor(
-    readonly status: 404 | 422,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+const recordReviewSpy = spyOn(
+  reviewMod,
+  "recordMrvEvidenceReview",
+).mockImplementation(recordReview);
 
 mock.module("@/lib/authz", () => ({
   AuthorizationError,
@@ -54,10 +58,6 @@ mock.module("@/lib/authz", () => ({
       },
     };
   },
-}));
-mock.module("@/lib/server/mrv/review", () => ({
-  recordMrvEvidenceReview: recordReview,
-  MrvEvidenceReviewError: StubReviewError,
 }));
 
 const { POST } =
@@ -87,6 +87,10 @@ function makeContext(id = reportId) {
 afterEach(() => {
   activeRole = null;
   recordReview.mockClear();
+});
+
+afterAll(() => {
+  recordReviewSpy.mockRestore();
 });
 
 describe("MRV evidence review route", () => {

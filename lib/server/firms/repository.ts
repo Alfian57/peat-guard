@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { Prisma } from "@/app/generated/prisma/client";
+import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { MapPoint } from "@/lib/maps/types";
 import type { FirmsHotspot } from "@/lib/server/firms/csv";

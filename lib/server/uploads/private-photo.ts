@@ -32,7 +32,8 @@ export type NormalizedReportPhoto = {
 export function getPrivateUploadsDirectory(): string {
   const configuredDirectory = process.env.UPLOADS_DIR?.trim();
   return resolve(
-    configuredDirectory || join(process.cwd(), ".data", "uploads"),
+    /*turbopackIgnore: true*/ configuredDirectory ||
+      join(process.cwd(), ".data", "uploads"),
   );
 }
 
@@ -179,7 +180,9 @@ export async function removePrivateReportPhoto(
     );
   }
 
-  await rm(join(directory, fileName), { force: true });
+  await rm(/*turbopackIgnore: true*/ join(directory, fileName), {
+    force: true,
+  });
 }
 
 export async function readPrivateReportPhoto(
@@ -189,7 +192,7 @@ export async function readPrivateReportPhoto(
   if (!VALID_PHOTO_NAME.test(fileName)) return null;
 
   try {
-    return await readFile(join(directory, fileName));
+    return await readFile(/*turbopackIgnore: true*/ join(directory, fileName));
   } catch (error) {
     if (isNodeError(error) && error.code === "ENOENT") return null;
     throw error;

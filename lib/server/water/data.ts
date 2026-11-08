@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Prisma } from "@/app/generated/prisma/client";
+import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { CommandApiError, databaseErrorCode } from "@/lib/server/command/http";
 import type {

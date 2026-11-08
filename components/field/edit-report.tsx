@@ -6,6 +6,7 @@ import { FieldReportForm } from "./field-report-form";
 import { saveQueuedReport } from "@/lib/client/offline/report-store";
 import type { NewFieldReport } from "@/lib/client/offline/types";
 import { useOwnedReport } from "./use-owned-report";
+import { APP_ROUTES } from "@/lib/routes";
 
 /* eslint-disable @next/next/no-location-assign-relative-destination -- Full navigations let the service worker serve cached field shells offline. */
 
@@ -44,10 +45,10 @@ export function EditReport({ reportId }: { reportId: string }) {
     );
     if (isConnected) {
       window.location.assign(
-        `/field/report?reportId=${encodeURIComponent(reportId)}`,
+        `${APP_ROUTES.field.report}?reportId=${encodeURIComponent(reportId)}`,
       );
     } else {
-      window.location.assign("/field/queue");
+      window.location.assign(APP_ROUTES.field.queue);
     }
   }
 
@@ -77,7 +78,7 @@ export function EditReport({ reportId }: { reportId: string }) {
           Laporan sudah diterima posko dan tidak dapat diedit di perangkat ini.
         </p>
         <a
-          href={`/field/report?reportId=${encodeURIComponent(reportId)}`}
+          href={`${APP_ROUTES.field.report}?reportId=${encodeURIComponent(reportId)}`}
           className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-peat-green"
         >
           <ArrowLeft aria-hidden="true" size={17} /> Kembali ke laporan
@@ -89,7 +90,7 @@ export function EditReport({ reportId }: { reportId: string }) {
   return (
     <div className="mx-auto w-full max-w-xl px-4 pt-5">
       <a
-        href={`/field/report?reportId=${encodeURIComponent(reportId)}`}
+        href={`${APP_ROUTES.field.report}?reportId=${encodeURIComponent(reportId)}`}
         className="inline-flex min-h-11 items-center gap-2 rounded-lg pr-3 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
       >
         <ArrowLeft aria-hidden="true" size={17} /> Batal

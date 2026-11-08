@@ -13,6 +13,7 @@ import {
   type PublicMapViewData,
 } from "@/lib/public/client-contracts";
 import { PUBLIC_DEFAULT_VIEWPORT } from "@/lib/public/query";
+import { API_ROUTES } from "@/lib/routes";
 
 const INITIAL_FILTERS: PublicMapFilters = {
   period: "7d",
@@ -45,7 +46,7 @@ export function PublicMapPage() {
       confidence: filters.confidence,
     });
 
-    fetch(`/api/public/map?${searchParams}`, {
+    fetch(`${API_ROUTES.public.map}?${searchParams}`, {
       cache: "no-store",
       signal: controller.signal,
     })

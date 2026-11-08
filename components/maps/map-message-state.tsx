@@ -1,3 +1,5 @@
+export { MapConfigurationState } from "./map-configuration-state";
+
 export function MapMessageState({
   title,
   description,
@@ -20,14 +22,5 @@ export function MapMessageState({
         </p>
       </div>
     </div>
-  );
-}
-
-export function MapConfigurationState() {
-  return (
-    <MapMessageState
-      title="Peta dasar belum dikonfigurasi"
-      description="Peta interaktif menunggu konfigurasi layanan peta. Ringkasan zona dan titik panas tetap tersedia."
-    />
   );
 }

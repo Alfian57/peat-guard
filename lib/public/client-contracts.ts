@@ -80,29 +80,33 @@ export function parsePublicMetrics(value: unknown): PublicMetrics {
     "containsIllustrativeData",
   ]);
 
-  for (const key of [
-    "approvedZoneCount",
-    "protectedAreaHectares",
-    "estimatedCarbonTons",
-    "estimatedIncentiveIdr",
-    "hotspotCount",
-  ] as const) {
-    if (!isNonNegativeFiniteNumber(metrics[key])) {
-      throw new Error("Invalid public metrics response.");
-    }
-  }
+  const {
+    approvedZoneCount,
+    protectedAreaHectares,
+    estimatedCarbonTons,
+    estimatedIncentiveIdr,
+    hotspotCount,
+    containsIllustrativeData,
+  } = metrics;
 
-  if (typeof metrics.containsIllustrativeData !== "boolean") {
+  if (
+    !isNonNegativeFiniteNumber(approvedZoneCount) ||
+    !isNonNegativeFiniteNumber(protectedAreaHectares) ||
+    !isNonNegativeFiniteNumber(estimatedCarbonTons) ||
+    !isNonNegativeFiniteNumber(estimatedIncentiveIdr) ||
+    !isNonNegativeFiniteNumber(hotspotCount) ||
+    typeof containsIllustrativeData !== "boolean"
+  ) {
     throw new Error("Invalid public metrics response.");
   }
 
   return {
-    approvedZoneCount: metrics.approvedZoneCount,
-    protectedAreaHectares: metrics.protectedAreaHectares,
-    estimatedCarbonTons: metrics.estimatedCarbonTons,
-    estimatedIncentiveIdr: metrics.estimatedIncentiveIdr,
-    hotspotCount: metrics.hotspotCount,
-    containsIllustrativeData: metrics.containsIllustrativeData,
+    approvedZoneCount,
+    protectedAreaHectares,
+    estimatedCarbonTons,
+    estimatedIncentiveIdr,
+    hotspotCount,
+    containsIllustrativeData,
   };
 }
 

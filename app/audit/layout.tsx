@@ -1,9 +1,7 @@
 import { Suspense, type ReactNode } from "react";
 
-import {
-  AuditHeader,
-  AuditHeaderFallback,
-} from "@/components/audit/audit-header";
+import { AuditHeader } from "@/components/audit/audit-header";
+import { AuditHeaderFallback } from "@/components/audit/audit-header-fallback";
 
 import "./audit.css";
 

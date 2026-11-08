@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { HandlingStatus as HandlingStatusValue } from "@/app/generated/prisma/enums";
+import type { HandlingStatus as HandlingStatusValue } from "@/lib/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import {
   assertCanChangeReportStatus,

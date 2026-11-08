@@ -5,7 +5,7 @@ import {
   ReportUrgency,
   type HandlingStatus as HandlingStatusValue,
   type ReportUrgency as ReportUrgencyValue,
-} from "@/app/generated/prisma/enums";
+} from "@/lib/generated/prisma/enums";
 import { CommandApiError } from "@/lib/server/command/http";
 
 const QUERY_KEYS = new Set([

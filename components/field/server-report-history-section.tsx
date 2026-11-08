@@ -10,7 +10,8 @@ import {
 } from "@/lib/client/offline/server-report-client";
 import type { QueuedFieldReport } from "@/lib/client/offline/types";
 
-type ServerHistoryStatus = "loading" | "loaded" | "error" | "unavailable";
+export type ServerHistoryStatus =
+  "loading" | "loaded" | "error" | "unavailable";
 
 export function ServerReportHistorySection({
   hasOwner,

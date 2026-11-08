@@ -9,6 +9,7 @@ import { useServerReport } from "./use-server-report";
 import { ServerReportDetail } from "./server-report-detail";
 import { resolveReportDetailSource } from "@/lib/client/offline/server-report-client";
 import type { QueuedFieldReport } from "@/lib/client/offline/types";
+import { APP_ROUTES } from "@/lib/routes";
 
 function usePhotoUrl(photo: Blob | undefined) {
   const [url, setUrl] = useState<string | null>(null);
@@ -75,7 +76,7 @@ export function ReportDetail({
           {ownerStatusMessage(ownerStatus)}
         </p>
         <a
-          href="/field/home"
+          href={APP_ROUTES.field.home}
           className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-peat-green"
         >
           <ArrowLeft aria-hidden="true" size={17} /> Kembali ke beranda
@@ -137,7 +138,7 @@ export function ReportDetail({
               : "Laporan tidak ditemukan atau tidak dapat diakses oleh akun ini.")}
         </p>
         <a
-          href="/field/home"
+          href={APP_ROUTES.field.home}
           className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-peat-green"
         >
           <ArrowLeft aria-hidden="true" size={17} /> Kembali ke beranda
@@ -151,7 +152,7 @@ export function ReportDetail({
   return (
     <article className="mx-auto w-full max-w-xl px-4 pt-5">
       <a
-        href="/field/home"
+        href={APP_ROUTES.field.home}
         className="inline-flex min-h-11 items-center gap-2 rounded-lg pr-3 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
       >
         <ArrowLeft aria-hidden="true" size={17} /> Kembali
@@ -304,7 +305,7 @@ export function ReportDetail({
 
       {editable ? (
         <a
-          href={`/field/report?reportId=${encodeURIComponent(report.clientReportId)}&mode=edit`}
+          href={`${APP_ROUTES.field.report}?reportId=${encodeURIComponent(report.clientReportId)}&mode=edit`}
           className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-xl border border-peat-green px-4 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
         >
           <Pencil aria-hidden="true" size={17} /> Edit laporan tersimpan

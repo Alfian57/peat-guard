@@ -6,14 +6,18 @@ import { prisma } from "@/lib/prisma";
 const secret = process.env.BETTER_AUTH_SECRET;
 const baseURL = process.env.BETTER_AUTH_URL?.trim() || undefined;
 
-if (!secret || Buffer.byteLength(secret, "utf8") < 32) {
+const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+const resolvedSecret =
+  secret || (isBuildPhase ? "01234567890123456789012345678901" : "");
+
+if (!resolvedSecret || Buffer.byteLength(resolvedSecret, "utf8") < 32) {
   throw new Error("BETTER_AUTH_SECRET must contain at least 32 bytes.");
 }
 
 export const auth = betterAuth({
   appName: "PEATGUARD",
   baseURL,
-  secret,
+  secret: resolvedSecret,
   database: prismaAdapter(prisma, {
     provider: "postgresql",
     transaction: true,

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { barlowCondensed, inter, jetBrainsMono } from "./fonts";
+import { barlowCondensed, inter, jetBrainsMono } from "@/lib/fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { QueuedFieldReport } from "@/lib/client/offline/types";
+import { APP_ROUTES } from "@/lib/routes";
 
 function useBlobUrl(blob: Blob): string | null {
   const [url, setUrl] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export function ReportCard({
     <article className="rounded-2xl border border-border bg-white p-3">
       <div className="flex min-h-[88px] items-center gap-3">
         <a
-          href={`/field/report?reportId=${encodeURIComponent(report.clientReportId)}`}
+          href={`${APP_ROUTES.field.report}?reportId=${encodeURIComponent(report.clientReportId)}`}
           className="flex min-w-0 flex-1 items-center gap-3 rounded-xl transition hover:border-peat-green/50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
         >
           <span className="relative size-[72px] shrink-0 overflow-hidden rounded-xl bg-secondary">

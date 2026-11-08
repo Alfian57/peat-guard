@@ -33,8 +33,7 @@ import type {
   QueuedFieldReport,
   SyncSummary,
 } from "@/lib/client/offline/types";
-
-/* eslint-disable @next/next/no-html-link-for-pages -- Full navigations let the service worker serve cached field shells offline. */
+import { APP_ROUTES } from "@/lib/routes";
 
 type FieldShellContextValue = {
   online: boolean;
@@ -533,9 +532,9 @@ export function FieldAppShell({
     ],
   );
 
-  const activeRoute = pathname.startsWith("/field/queue")
+  const activeRoute = pathname.startsWith(APP_ROUTES.field.queue)
     ? "queue"
-    : pathname.startsWith("/field/reports/create")
+    : pathname.startsWith(APP_ROUTES.field.createReport)
       ? "create"
       : "home";
 
@@ -628,7 +627,7 @@ export function FieldAppShell({
           </div>
           <div className="flex h-[58px] items-center justify-between border-b border-border bg-background px-5">
             <a
-              href="/field/home"
+              href={APP_ROUTES.field.home}
               className="flex items-center gap-2 text-peat-forest"
               aria-label="PEATGUARD, beranda relawan"
             >
@@ -675,7 +674,7 @@ export function FieldAppShell({
           className="fixed inset-x-0 bottom-0 z-40 mx-auto grid h-[74px] w-full max-w-lg grid-cols-3 items-center border-t border-border bg-white/95 px-3 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(31,77,61,0.08)] backdrop-blur"
         >
           <a
-            href="/field/home"
+            href={APP_ROUTES.field.home}
             aria-current={activeRoute === "home" ? "page" : undefined}
             className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-peat-green ${activeRoute === "home" ? "font-semibold text-peat-green" : "text-muted-foreground"}`}
           >
@@ -683,14 +682,14 @@ export function FieldAppShell({
             Beranda
           </a>
           <a
-            href="/field/reports/create"
+            href={APP_ROUTES.field.createReport}
             aria-current={activeRoute === "create" ? "page" : undefined}
             className="mx-auto flex min-h-11 w-[134px] items-center justify-center rounded-xl bg-peat-green px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-peat-forest focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-forest"
           >
             + Lapor temuan
           </a>
           <a
-            href="/field/queue"
+            href={APP_ROUTES.field.queue}
             aria-current={activeRoute === "queue" ? "page" : undefined}
             className={`relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-peat-green ${activeRoute === "queue" ? "font-semibold text-peat-green" : "text-muted-foreground"}`}
           >

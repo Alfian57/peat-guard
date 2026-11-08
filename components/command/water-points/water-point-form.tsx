@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import type { CommandWaterPoint } from "@/lib/server/water/data";
 import type { CommandZone } from "@/lib/server/zones/data";
+import { WaterPointFormField } from "@/components/command/water-points/water-point-form-field";
 
 export type WaterPointInput = {
   name: string;
@@ -105,7 +106,7 @@ export function WaterPointForm({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Nama titik" required>
+        <WaterPointFormField label="Nama titik" required>
           <input
             autoComplete="off"
             className="mt-1.5 min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 text-sm text-peat-forest"
@@ -114,8 +115,8 @@ export function WaterPointForm({
             required
             value={name}
           />
-        </Field>
-        <Field label="Jenis titik" required>
+        </WaterPointFormField>
+        <WaterPointFormField label="Jenis titik" required>
           <select
             className="mt-1.5 min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 text-sm text-peat-forest"
             onChange={(event) =>
@@ -127,8 +128,8 @@ export function WaterPointForm({
             <option value="EMBUNG">Embung</option>
             <option value="SEKAT_KANAL">Sekat kanal</option>
           </select>
-        </Field>
-        <Field hint="-90 sampai 90" label="Lintang" required>
+        </WaterPointFormField>
+        <WaterPointFormField hint="-90 sampai 90" label="Lintang" required>
           <input
             className="mt-1.5 min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 font-mono text-sm text-peat-forest"
             inputMode="decimal"
@@ -140,8 +141,8 @@ export function WaterPointForm({
             type="number"
             value={latitude}
           />
-        </Field>
-        <Field hint="-180 sampai 180" label="Bujur" required>
+        </WaterPointFormField>
+        <WaterPointFormField hint="-180 sampai 180" label="Bujur" required>
           <input
             className="mt-1.5 min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 font-mono text-sm text-peat-forest"
             inputMode="decimal"
@@ -153,9 +154,9 @@ export function WaterPointForm({
             type="number"
             value={longitude}
           />
-        </Field>
+        </WaterPointFormField>
         <div className="sm:col-span-2">
-          <Field label="Zona terkait" optional>
+          <WaterPointFormField label="Zona terkait" optional>
             <select
               className="mt-1.5 min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 text-sm text-peat-forest"
               onChange={(event) => setZoneId(event.currentTarget.value)}
@@ -168,7 +169,7 @@ export function WaterPointForm({
                 </option>
               ))}
             </select>
-          </Field>
+          </WaterPointFormField>
         </div>
       </div>
 
@@ -210,39 +211,5 @@ export function WaterPointForm({
         </button>
       </div>
     </form>
-  );
-}
-
-function Field({
-  children,
-  hint,
-  label,
-  required = false,
-  optional = false,
-}: {
-  children: React.ReactNode;
-  hint?: string;
-  label: string;
-  required?: boolean;
-  optional?: boolean;
-}) {
-  return (
-    <label className="block text-sm font-semibold text-peat-forest">
-      <span className="mb-1.5 flex items-center gap-2">
-        {label}
-        {required ? <span className="text-red-800">Wajib</span> : null}
-        {optional ? (
-          <span className="text-xs font-normal text-peat-forest/55">
-            Opsional
-          </span>
-        ) : null}
-      </span>
-      {children}
-      {hint ? (
-        <span className="mt-1 block text-xs font-normal text-peat-forest/60">
-          {hint}
-        </span>
-      ) : null}
-    </label>
   );
 }

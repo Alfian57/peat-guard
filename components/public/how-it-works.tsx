@@ -7,6 +7,7 @@ import {
   Satellite,
   ShieldCheck,
 } from "lucide-react";
+import { APP_ROUTES } from "@/lib/routes";
 
 const steps = [
   {
@@ -98,7 +99,7 @@ export function HowItWorks() {
 
             <Link
               className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-full bg-peat-forest px-6 text-sm font-semibold text-white hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-peat-green"
-              href="/login"
+              href={APP_ROUTES.login}
             >
               Masuk ke PEATGUARD
               <ArrowRight aria-hidden="true" size={17} />

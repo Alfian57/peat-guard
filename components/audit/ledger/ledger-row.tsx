@@ -1,4 +1,4 @@
-import { MapPin, ShieldAlert } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 import type { MrvLedgerRow } from "@/lib/server/mrv/contracts";
 
@@ -7,28 +7,10 @@ import {
   formatDateTime,
   formatDecimal,
 } from "../audit-formatters";
+import { LedgerAiTriage } from "./ledger-ai-triage";
 import { LedgerPhotoViewer } from "./ledger-photo-viewer";
 import { LedgerReviewControl } from "./ledger-review-control";
-
-const aiCategoryLabels: Record<string, string> = {
-  API_AKTIF: "Api aktif",
-  AMAN_TERKENDALI: "Aman terkendali",
-  ASAP_GAMBUT: "Asap gambut",
-  SEKAT_KANAL_KERING: "Sekat kanal kering",
-};
-
-const aiUrgencyLabels: Record<string, string> = {
-  KRITIS: "Kritis",
-  RENDAH: "Rendah",
-  WASPADA: "Waspada",
-};
-
-const aiStateLabels: Record<string, string> = {
-  COMPLETED: "Selesai",
-  FAILED: "Gagal",
-  PENDING: "Menunggu",
-  SKIPPED: "Tidak dianalisis",
-};
+import { LedgerStatusHistory } from "./ledger-status-history";
 
 const handlingStatusLabels: Record<string, string> = {
   DALAM_PENANGANAN: "Ditangani",
@@ -45,64 +27,6 @@ function statusClass(status: string): string {
 function statusLabel(status: string | null): string {
   if (!status) return "Laporan dibuat";
   return handlingStatusLabels[status] ?? status.replaceAll("_", " ");
-}
-
-function AiTriage({ row }: { row: MrvLedgerRow }) {
-  const category = row.aiTriage.category;
-  const urgency = row.aiTriage.urgency;
-  const confidence = row.aiTriage.confidence;
-
-  return (
-    <div className="min-w-36">
-      <p className="font-semibold text-peat-forest">
-        {category
-          ? (aiCategoryLabels[category] ?? category)
-          : "Belum ada klasifikasi"}
-      </p>
-      {urgency ? (
-        <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-          <ShieldAlert aria-hidden="true" size={13} />
-          {aiUrgencyLabels[urgency] ?? urgency}
-          {confidence !== null ? ` · ${formatDecimal(confidence * 100)}%` : ""}
-        </p>
-      ) : null}
-      <p className="mt-1 text-xs text-muted-foreground">
-        Triase: {aiStateLabels[row.aiTriage.state ?? ""] ?? "Belum tersedia"}
-      </p>
-    </div>
-  );
-}
-
-function StatusHistory({ row }: { row: MrvLedgerRow }) {
-  return (
-    <details className="mt-2 max-w-52 rounded-lg border border-border bg-white px-2.5 py-2 text-xs">
-      <summary className="min-h-8 cursor-pointer font-semibold text-peat-green">
-        Riwayat status ({row.statusHistory.length})
-      </summary>
-      {row.statusHistory.length > 0 ? (
-        <ol className="mt-2 space-y-2 border-l border-peat-green/20 pl-3">
-          {row.statusHistory.map((event) => (
-            <li key={event.eventId}>
-              <time
-                className="block text-muted-foreground"
-                dateTime={event.createdAt}
-              >
-                {formatDateTime(event.createdAt)} · {event.actorRole}
-              </time>
-              <span className="font-semibold text-peat-forest">
-                {statusLabel(event.previousStatus)} →{" "}
-                {statusLabel(event.nextStatus)}
-              </span>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="mt-2 text-muted-foreground">
-          Belum ada perubahan status.
-        </p>
-      )}
-    </details>
-  );
 }
 
 export function LedgerRow({ row }: { row: MrvLedgerRow }) {
@@ -204,7 +128,7 @@ export function LedgerRow({ row }: { row: MrvLedgerRow }) {
         />
       </td>
       <td className="min-w-44 px-4 py-4">
-        <AiTriage row={row} />
+        <LedgerAiTriage row={row} />
       </td>
       <td className="min-w-44 px-4 py-4">
         <span
@@ -212,7 +136,7 @@ export function LedgerRow({ row }: { row: MrvLedgerRow }) {
         >
           {statusLabel(row.handlingStatus)}
         </span>
-        <StatusHistory row={row} />
+        <LedgerStatusHistory row={row} />
       </td>
       <td className="min-w-40 px-4 py-4">
         {zone ? (

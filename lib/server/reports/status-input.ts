@@ -3,7 +3,7 @@ import "server-only";
 import {
   HandlingStatus,
   type HandlingStatus as HandlingStatusValue,
-} from "@/app/generated/prisma/enums";
+} from "@/lib/generated/prisma/enums";
 import {
   readBoundedRequestBody,
   ReportInputError,

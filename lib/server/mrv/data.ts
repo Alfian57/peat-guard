@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { API_ROUTES } from "@/lib/routes";
 import {
   buildMrvDashboard,
   calculateZoneImpact,
@@ -221,7 +222,7 @@ function toLedgerRow(report: {
     hasPhoto,
     handlingStatus: report.handlingStatus,
     isDemoSample: report.isDemoSample,
-    photoHref: hasPhoto ? `/api/reports/${report.id}/photo` : null,
+    photoHref: hasPhoto ? API_ROUTES.reports.photo(report.id) : null,
     reportId: report.id,
     auditHistory: parseMrvLedgerAuditHistory(report.auditEvents),
     statusHistory: report.statusEvents.map((event) => ({

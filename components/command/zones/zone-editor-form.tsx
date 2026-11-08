@@ -2,6 +2,7 @@ import type { FormEvent } from "react";
 import { Check } from "lucide-react";
 
 import { ZoneBoundaryControls } from "@/components/command/zones/zone-boundary-controls";
+import { ZoneEditorFormField } from "@/components/command/zones/zone-editor-form-field";
 import type { CommandZone } from "@/lib/server/zones/data";
 import type { ZonePolygon } from "@/lib/server/zones/validation";
 
@@ -53,7 +54,7 @@ export function ZoneEditorForm({
       className="space-y-4 rounded-2xl border border-peat-forest/10 bg-white p-5 shadow-sm"
       onSubmit={onSubmit}
     >
-      <Field label="Nama zona" required>
+      <ZoneEditorFormField label="Nama zona" required>
         <input
           autoComplete="off"
           className="mt-1.5 min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 text-sm text-peat-forest"
@@ -62,8 +63,8 @@ export function ZoneEditorForm({
           required
           value={zoneName}
         />
-      </Field>
-      <Field label="Desa" optional>
+      </ZoneEditorFormField>
+      <ZoneEditorFormField label="Desa" optional>
         <input
           autoComplete="off"
           className="mt-1.5 min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 text-sm text-peat-forest"
@@ -71,8 +72,12 @@ export function ZoneEditorForm({
           onChange={(event) => onVillageNameChange(event.currentTarget.value)}
           value={villageName}
         />
-      </Field>
-      <Field hint="0 sampai 20 meter" label="Kedalaman gambut (meter)" required>
+      </ZoneEditorFormField>
+      <ZoneEditorFormField
+        hint="0 sampai 20 meter"
+        label="Kedalaman gambut (meter)"
+        required
+      >
         <input
           className="mt-1.5 min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 font-mono text-sm text-peat-forest"
           inputMode="decimal"
@@ -84,7 +89,7 @@ export function ZoneEditorForm({
           type="number"
           value={peatDepth}
         />
-      </Field>
+      </ZoneEditorFormField>
 
       {zone ? (
         <div className="rounded-xl bg-peat-paper p-4">
@@ -164,39 +169,5 @@ export function ZoneEditorForm({
         tersedia untuk peran Verifikator.
       </p>
     </form>
-  );
-}
-
-function Field({
-  children,
-  hint,
-  label,
-  optional = false,
-  required = false,
-}: {
-  children: React.ReactNode;
-  hint?: string;
-  label: string;
-  optional?: boolean;
-  required?: boolean;
-}) {
-  return (
-    <label className="block text-sm font-semibold text-peat-forest">
-      <span className="mb-1.5 flex items-center gap-2">
-        {label}
-        {required ? <span className="text-red-800">Wajib</span> : null}
-        {optional ? (
-          <span className="text-xs font-normal text-peat-forest/55">
-            Opsional
-          </span>
-        ) : null}
-      </span>
-      {children}
-      {hint ? (
-        <span className="mt-1 block text-xs font-normal text-peat-forest/60">
-          {hint}
-        </span>
-      ) : null}
-    </label>
   );
 }

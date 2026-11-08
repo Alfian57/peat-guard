@@ -6,7 +6,6 @@ import { useState, type FormEvent } from "react";
 import {
   Eye,
   EyeOff,
-  Leaf,
   LoaderCircle,
   MapPin,
   ShieldCheck,
@@ -15,6 +14,8 @@ import {
 
 import { authClient } from "@/lib/auth-client";
 import { APP_ROLES, ROLE_LABELS, type AppRole } from "@/lib/roles";
+import { BrandMark } from "@/components/auth/brand-mark";
+import { API_ROUTES, APP_ROUTES } from "@/lib/routes";
 
 const demoRoleIcons = {
   RELAWAN: MapPin,
@@ -56,7 +57,7 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
         return;
       }
 
-      router.replace("/");
+      router.replace(APP_ROUTES.home);
       router.refresh();
     } catch {
       setErrorMessage("Kami belum dapat memproses masuk. Coba lagi sebentar.");
@@ -70,7 +71,7 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
     setActiveDemoRole(role);
 
     try {
-      const response = await fetch("/api/auth/demo", {
+      const response = await fetch(API_ROUTES.auth.demo, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role }),
@@ -83,7 +84,7 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
         return;
       }
 
-      router.replace("/");
+      router.replace(APP_ROUTES.home);
       router.refresh();
     } catch {
       setErrorMessage("Mode demo belum dapat dihubungi. Coba lagi sebentar.");
@@ -307,18 +308,5 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
         </div>
       </section>
     </main>
-  );
-}
-
-function BrandMark() {
-  return (
-    <div className="flex items-center gap-2.5">
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-[#c5dc8c] backdrop-blur-sm">
-        <Leaf aria-hidden="true" size={22} />
-      </span>
-      <span className="font-heading text-2xl leading-none font-bold tracking-[0.12em]">
-        PEATGUARD
-      </span>
-    </div>
   );
 }

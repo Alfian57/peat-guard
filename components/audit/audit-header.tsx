@@ -3,6 +3,7 @@ import { Leaf } from "lucide-react";
 
 import { getServerSession } from "@/lib/authz";
 import { isAppRole, ROLE_LABELS } from "@/lib/roles";
+import { APP_ROUTES } from "@/lib/routes";
 
 import { AuditNav } from "./audit-nav";
 
@@ -27,7 +28,7 @@ export async function AuditHeader() {
         <Link
           aria-label="PEATGUARD beranda"
           className="flex shrink-0 items-center gap-2.5 rounded-md text-peat-forest focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-peat-green"
-          href="/"
+          href={APP_ROUTES.home}
         >
           <span className="grid size-10 place-items-center rounded-xl bg-peat-forest text-peat-paper">
             <Leaf aria-hidden="true" size={22} strokeWidth={2.2} />
@@ -59,7 +60,7 @@ export async function AuditHeader() {
           {!session ? (
             <Link
               className="rounded-lg px-3 py-2 text-sm font-semibold text-peat-green underline-offset-4 hover:underline"
-              href="/login"
+              href={APP_ROUTES.login}
             >
               Masuk
             </Link>
@@ -70,18 +71,4 @@ export async function AuditHeader() {
   );
 }
 
-export function AuditHeaderFallback() {
-  return (
-    <header
-      aria-label="Memuat navigasi"
-      className="min-h-[4.5rem] border-b border-peat-forest/10 bg-peat-paper/95"
-    >
-      <div className="mx-auto flex min-h-[4.5rem] max-w-[1440px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <span className="font-heading text-2xl font-bold tracking-wide text-peat-forest">
-          PEATGUARD
-        </span>
-        <span className="h-8 w-40 animate-pulse rounded-lg bg-peat-forest/10" />
-      </div>
-    </header>
-  );
-}
+export { AuditHeaderFallback } from "./audit-header-fallback";

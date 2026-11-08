@@ -8,6 +8,7 @@ import { CarbonImpactCard } from "@/components/public/carbon-impact-card";
 import { MetricsGrid } from "@/components/public/metrics-grid";
 import { PublicMapPanel } from "@/components/public/public-map-panel";
 import type { PublicLoadState } from "@/components/public/public-types";
+import { API_ROUTES, APP_ROUTES } from "@/lib/routes";
 import {
   parsePublicMapData,
   parsePublicMetrics,
@@ -35,7 +36,7 @@ export function PublicMonitor() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetchJson("/api/public/map?period=30d", controller.signal)
+    fetchJson(`${API_ROUTES.public.map}?period=30d`, controller.signal)
       .then((data) => {
         setMapData(parsePublicMapData(data));
         setMapState("ready");
@@ -46,7 +47,7 @@ export function PublicMonitor() {
         }
       });
 
-    fetchJson("/api/public/metrics", controller.signal)
+    fetchJson(API_ROUTES.public.metrics, controller.signal)
       .then(parsePublicMetrics)
       .then((data) => {
         setMetrics(data);
@@ -95,7 +96,7 @@ export function PublicMonitor() {
           </div>
           <Link
             className="inline-flex min-h-11 shrink-0 items-center gap-2 self-start rounded-full border border-peat-forest/20 px-4 text-sm font-semibold text-peat-forest transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-peat-green sm:self-auto"
-            href="/peta"
+            href={APP_ROUTES.publicMap}
           >
             <MapPinned aria-hidden="true" size={17} />
             Buka peta publik

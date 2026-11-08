@@ -7,8 +7,10 @@ import type {
   MrvLedgerAuditEntry,
 } from "@/lib/server/mrv/contracts";
 import { parseMrvLedgerAuditEntry } from "@/lib/mrv/audit-history";
+import { API_ROUTES } from "@/lib/routes";
 
 import { formatDateTime, formatDecimal } from "../audit-formatters";
+import { EvidenceSnapshotDetails } from "./evidence-snapshot-details";
 
 const decisionLabels: Record<EvidenceReviewDecision, string> = {
   ACCEPTED: "Bukti diterima",
@@ -34,47 +36,6 @@ function eventTitle(event: MrvLedgerAuditEntry): string {
     return "Kegagalan triase AI dicatat";
   }
   return `Keputusan peninjauan: ${event.decision ? decisionLabels[event.decision].toLowerCase() : "tidak tersedia"}`;
-}
-
-function EvidenceSnapshotDetails({ event }: { event: MrvLedgerAuditEntry }) {
-  const snapshot = event.evidenceSnapshot;
-
-  if (!snapshot) return null;
-
-  return (
-    <dl className="mt-2 grid gap-x-3 gap-y-1 text-xs sm:grid-cols-[auto_1fr]">
-      <dt className="text-muted-foreground">Koordinat tersimpan</dt>
-      <dd className="font-mono text-peat-forest">
-        {snapshot.latitude.toFixed(4)}, {snapshot.longitude.toFixed(4)}
-      </dd>
-      <dt className="text-muted-foreground">Akurasi perangkat</dt>
-      <dd className="text-peat-forest">
-        {snapshot.accuracyMeters === null
-          ? "Belum tersedia"
-          : `${formatDecimal(snapshot.accuracyMeters)} m`}
-      </dd>
-      <dt className="text-muted-foreground">Foto</dt>
-      <dd className="text-peat-forest">
-        {snapshot.photoPresent ? "Tersimpan" : "Tidak tersedia"}
-        {snapshot.photoSha256 ? (
-          <span className="mt-0.5 block font-mono text-[0.65rem] break-all text-muted-foreground">
-            SHA-256 {snapshot.photoSha256}
-          </span>
-        ) : null}
-      </dd>
-      <dt className="text-muted-foreground">Triase saat dicatat</dt>
-      <dd className="text-peat-forest">
-        {aiStateLabels[snapshot.aiState ?? ""] ?? "Belum tersedia"}
-        {snapshot.aiCategory ? ` · ${snapshot.aiCategory}` : ""}
-        {snapshot.aiUrgency ? ` · ${snapshot.aiUrgency}` : ""}
-      </dd>
-      <dt className="text-muted-foreground">Waktu lapangan / sinkronisasi</dt>
-      <dd className="text-peat-forest">
-        {formatDateTime(snapshot.capturedAt)} /{" "}
-        {formatDateTime(snapshot.syncedAt)}
-      </dd>
-    </dl>
-  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -146,7 +107,7 @@ export function LedgerReviewControl({
 
     try {
       const response = await fetch(
-        `/api/command/mrv/ledger/${reportId}/review`,
+        API_ROUTES.command.mrvLedgerReview(reportId),
         {
           method: "POST",
           credentials: "same-origin",

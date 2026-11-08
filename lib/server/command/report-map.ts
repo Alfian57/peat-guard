@@ -1,11 +1,11 @@
 import "server-only";
 
-import { Prisma } from "@/app/generated/prisma/client";
+import { Prisma } from "@/lib/generated/prisma/client";
 import {
   type HandlingStatus as HandlingStatusValue,
   type ReportCategory as ReportCategoryValue,
   type ReportUrgency as ReportUrgencyValue,
-} from "@/app/generated/prisma/enums";
+} from "@/lib/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { assertRoleAccess } from "@/lib/role-access";
 import type { ReportMapFilters } from "@/lib/server/command/report-map-input";

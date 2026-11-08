@@ -1,4 +1,12 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  describe,
+  expect,
+  mock,
+  spyOn,
+  test,
+} from "bun:test";
 import { createHash } from "node:crypto";
 
 import { AuthorizationError } from "@/lib/role-access";
@@ -40,12 +48,14 @@ const transaction = mock(
     callback(transactionClient),
 );
 const readPrivatePhoto = mock(async () => storedPhoto);
+const photoMod = await import("@/lib/server/uploads/private-photo");
+const readPrivatePhotoSpy = spyOn(
+  photoMod,
+  "readPrivateReportPhoto",
+).mockImplementation(readPrivatePhoto);
 
 mock.module("@/lib/prisma", () => ({
   prisma: { $transaction: transaction },
-}));
-mock.module("@/lib/server/uploads/private-photo", () => ({
-  readPrivateReportPhoto: readPrivatePhoto,
 }));
 
 const { recordMrvEvidenceReview, MrvEvidenceReviewError } =
@@ -70,6 +80,10 @@ afterEach(() => {
   create.mockClear();
   transaction.mockClear();
   readPrivatePhoto.mockClear();
+});
+
+afterAll(() => {
+  readPrivatePhotoSpy.mockRestore();
 });
 
 describe("append-only MRV evidence review", () => {

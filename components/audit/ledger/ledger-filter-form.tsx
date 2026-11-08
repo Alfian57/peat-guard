@@ -9,6 +9,7 @@ import type {
 } from "@/lib/server/mrv/contracts";
 
 import { LedgerDialog, useLedgerDialog } from "./ledger-dialog";
+import { APP_ROUTES } from "@/lib/routes";
 
 type LedgerFilterFormProps = {
   aiState: LedgerFilters["aiState"];
@@ -144,7 +145,11 @@ export function LedgerFilterForm({
           </dl>
         </div>
 
-        <form action="/audit/ledger" className="mt-5 space-y-4" method="get">
+        <form
+          action={APP_ROUTES.audit.ledger}
+          className="mt-5 space-y-4"
+          method="get"
+        >
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <label
@@ -221,7 +226,7 @@ export function LedgerFilterForm({
                     event.currentTarget.value as LedgerFilters["aiState"] | "",
                   )
                 }
-                value={selectedAiState}
+                value={selectedAiState ?? ""}
               >
                 <option value="">Semua status</option>
                 <option value="COMPLETED">Selesai</option>
@@ -278,7 +283,7 @@ export function LedgerFilterForm({
             </button>
             <a
               className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-peat-green underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              href="/audit/ledger"
+              href={APP_ROUTES.audit.ledger}
             >
               Atur ulang
             </a>

@@ -7,6 +7,7 @@ import type { ServerReportDetail as ServerReportDetailDto } from "@/lib/client/o
 import { ServerReportAiAnalysis } from "./server-report-ai-analysis";
 import { ServerReportStatusHistory } from "./server-report-status-history";
 import { CATEGORY_LABELS, HANDLING_LABELS } from "./server-report-labels";
+import { APP_ROUTES } from "@/lib/routes";
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("id-ID", {
@@ -35,7 +36,7 @@ export function ServerReportDetail({
   return (
     <article className="mx-auto w-full max-w-xl px-4 pt-5">
       <a
-        href="/field/queue"
+        href={APP_ROUTES.field.queue}
         className="inline-flex min-h-11 items-center gap-2 rounded-lg pr-3 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
       >
         <ArrowLeft aria-hidden="true" size={17} /> Kembali ke antrean

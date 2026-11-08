@@ -7,7 +7,7 @@ import {
   type HandlingStatus as HandlingStatusValue,
   type ReportCategory as ReportCategoryValue,
   type ReportUrgency as ReportUrgencyValue,
-} from "@/app/generated/prisma/enums";
+} from "@/lib/generated/prisma/enums";
 import { isRecord } from "@/components/command/command-api";
 
 export const REPORT_STATUSES = [

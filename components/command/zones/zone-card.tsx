@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Trash2 } from "lucide-react";
 
 import { zoneEditRoute } from "@/components/command/routes";
+import { ZoneCardMetric } from "@/components/command/zones/zone-card-metric";
 import type { CommandZone } from "@/lib/server/zones/data";
 
 export function ZoneCard({
@@ -37,19 +38,19 @@ export function ZoneCard({
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-peat-paper p-3">
-        <Metric
+        <ZoneCardMetric
           label="Luas terhitung"
           value={formatNumber(zone.areaHectares, 1) + " ha"}
         />
-        <Metric
+        <ZoneCardMetric
           label="Kedalaman gambut"
           value={formatNumber(zone.peatDepthMeters, 2) + " m"}
         />
-        <Metric
+        <ZoneCardMetric
           label="Faktor karbon"
           value={formatNumber(zone.carbonFactor, 2)}
         />
-        <Metric
+        <ZoneCardMetric
           label="Titik sumber air"
           value={formatNumber(waterPointCount)}
         />
@@ -78,15 +79,6 @@ export function ZoneCard({
         </button>
       </div>
     </li>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-[11px] leading-4 text-peat-forest/60">{label}</p>
-      <p className="mt-0.5 text-sm font-semibold text-peat-forest">{value}</p>
-    </div>
   );
 }
 
