@@ -13,7 +13,7 @@ export function PublicHero() {
           alt="Ilustrasi sintetis patroli berjalan di lanskap gambut tropis"
           className="object-cover object-[58%_center]"
           fill
-          priority
+          loading="eager"
           sizes="100vw"
           src="/images/peatland-patrol-hero.png"
         />

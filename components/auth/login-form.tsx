@@ -105,7 +105,6 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
           src="/images/peatland-patrol-hero.png"
           alt="Petugas patroli memeriksa sekat kanal di lahan gambut"
           fill
-          priority
           sizes="50vw"
           className="object-cover"
         />
@@ -139,7 +138,6 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
             src="/images/peatland-patrol-mobile.png"
             alt="Petugas patroli memeriksa kondisi kanal gambut"
             fill
-            priority
             sizes="100vw"
             className="object-cover object-center"
           />
