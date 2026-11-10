@@ -35,7 +35,7 @@ export async function reserveFirmsSyncSlot(args: {
 }): Promise<ReturnType<typeof evaluateFirmsSyncRateLimit>> {
   return prisma.$transaction(async (transaction) => {
     // This advisory lock coordinates web and worker processes sharing Postgres.
-    await transaction.$queryRaw(
+    await transaction.$executeRaw(
       Prisma.sql`SELECT pg_advisory_xact_lock(1_862_026_11, 1)`,
     );
 
