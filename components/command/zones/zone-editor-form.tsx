@@ -60,6 +60,7 @@ export function ZoneEditorForm({
           className="mt-1.5 min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 text-sm text-peat-forest"
           maxLength={150}
           onChange={(event) => onZoneNameChange(event.currentTarget.value)}
+          placeholder="Kesatuan Gambut Rasau Jaya"
           required
           value={zoneName}
         />
@@ -70,6 +71,7 @@ export function ZoneEditorForm({
           className="mt-1.5 min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 text-sm text-peat-forest"
           maxLength={100}
           onChange={(event) => onVillageNameChange(event.currentTarget.value)}
+          placeholder="Desa Rasau Jaya I"
           value={villageName}
         />
       </ZoneEditorFormField>
@@ -84,6 +86,7 @@ export function ZoneEditorForm({
           max="20"
           min="0"
           onChange={(event) => onPeatDepthChange(event.currentTarget.value)}
+          placeholder="2.50"
           required
           step="0.01"
           type="number"

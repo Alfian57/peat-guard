@@ -93,15 +93,12 @@ test("requests GPS on a new form and saves the photo selection time", async () =
   );
 
   await waitFor(() =>
-    expect(screen.getByLabelText("Lintang (wajib)")).toHaveProperty(
+    expect(screen.getByLabelText(/Lintang/)).toHaveProperty(
       "value",
       "-2.319400",
     ),
   );
-  expect(screen.getByLabelText("Bujur (wajib)")).toHaveProperty(
-    "value",
-    "113.910200",
-  );
+  expect(screen.getByLabelText(/Bujur/)).toHaveProperty("value", "113.910200");
 
   const photoSelectedAt = new NativeDate(currentTime).toISOString();
   await user.upload(
@@ -147,8 +144,8 @@ test("keeps manual coordinates available when automatic GPS permission is denied
       "Izin lokasi ditolak. Masukkan koordinat secara manual jika mengetahui lokasinya.",
     ),
   ).toBeTruthy();
-  expect(screen.getByLabelText("Lintang (wajib)")).toBeTruthy();
-  expect(screen.getByLabelText("Bujur (wajib)")).toBeTruthy();
+  expect(screen.getByLabelText(/Lintang/)).toBeTruthy();
+  expect(screen.getByLabelText(/Bujur/)).toBeTruthy();
 });
 
 test("preserves manual coordinates if automatic GPS resolves after the volunteer edits them", async () => {
@@ -170,8 +167,8 @@ test("preserves manual coordinates if automatic GPS resolves after the volunteer
   );
   await waitFor(() => expect(finishLocationRequest).toBeTruthy());
 
-  await user.type(screen.getByLabelText("Lintang (wajib)"), "-2.500000");
-  await user.type(screen.getByLabelText("Bujur (wajib)"), "113.750000");
+  await user.type(screen.getByLabelText(/Lintang/), "-2.500000");
+  await user.type(screen.getByLabelText(/Bujur/), "113.750000");
 
   await act(async () => {
     finishLocationRequest?.({
@@ -188,13 +185,7 @@ test("preserves manual coordinates if automatic GPS resolves after the volunteer
     } as GeolocationPosition);
   });
 
-  expect(screen.getByLabelText("Lintang (wajib)")).toHaveProperty(
-    "value",
-    "-2.500000",
-  );
-  expect(screen.getByLabelText("Bujur (wajib)")).toHaveProperty(
-    "value",
-    "113.750000",
-  );
+  expect(screen.getByLabelText(/Lintang/)).toHaveProperty("value", "-2.500000");
+  expect(screen.getByLabelText(/Bujur/)).toHaveProperty("value", "113.750000");
   expect(screen.getByText("Koordinat manual dipertahankan.")).toBeTruthy();
 });

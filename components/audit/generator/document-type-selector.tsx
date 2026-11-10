@@ -3,7 +3,7 @@ export function DocumentTypeSelector() {
     <fieldset className="space-y-2">
       <legend className="text-sm font-semibold text-peat-forest">
         Jenis dokumen{" "}
-        <span aria-hidden="true" className="text-critical">
+        <span className="text-red-500" aria-hidden="true">
           *
         </span>
       </legend>

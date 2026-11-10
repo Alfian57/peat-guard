@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "PEATGUARD — Lindungi Gambut, Cegah Karhutla",
+    default: "PEATGUARD: Lindungi Gambut, Cegah Karhutla",
     template: "%s | PEATGUARD",
   },
   description:

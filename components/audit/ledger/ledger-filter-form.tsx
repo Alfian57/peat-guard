@@ -15,6 +15,7 @@ type LedgerFilterFormProps = {
   aiState: LedgerFilters["aiState"];
   evidence: LedgerFilters["evidence"];
   from: string;
+  reportId: string | null;
   to: string;
   zoneId: string | null;
   zones: ApprovedZoneValues[];
@@ -35,6 +36,7 @@ export function LedgerFilterForm({
   aiState,
   evidence,
   from,
+  reportId,
   to,
   zoneId,
   zones,
@@ -150,13 +152,19 @@ export function LedgerFilterForm({
           className="mt-5 space-y-4"
           method="get"
         >
+          {reportId ? (
+            <input name="reportId" type="hidden" value={reportId} />
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <label
                 className="block text-xs font-semibold text-peat-forest"
                 htmlFor="ledger-zone"
               >
-                Wilayah zona
+                Wilayah zona{" "}
+                <span className="text-[11px] font-normal text-muted-foreground">
+                  (opsional)
+                </span>
               </label>
               <select
                 className={fieldClassName}
@@ -184,7 +192,10 @@ export function LedgerFilterForm({
                 className="block text-xs font-semibold text-peat-forest"
                 htmlFor="ledger-evidence"
               >
-                Status kelengkapan bukti
+                Status kelengkapan bukti{" "}
+                <span className="text-[11px] font-normal text-muted-foreground">
+                  (opsional)
+                </span>
               </label>
               <select
                 aria-describedby="ledger-evidence-help"
@@ -215,7 +226,10 @@ export function LedgerFilterForm({
                 className="block text-xs font-semibold text-peat-forest"
                 htmlFor="ledger-ai-state"
               >
-                Status triase AI
+                Status triase AI{" "}
+                <span className="text-[11px] font-normal text-muted-foreground">
+                  (opsional)
+                </span>
               </label>
               <select
                 className={fieldClassName}
@@ -241,7 +255,10 @@ export function LedgerFilterForm({
                 className="block text-xs font-semibold text-peat-forest"
                 htmlFor="ledger-from"
               >
-                Dari tanggal (WIB)
+                Dari tanggal (WIB){" "}
+                <span className="text-[11px] font-normal text-muted-foreground">
+                  (opsional)
+                </span>
               </label>
               <input
                 className={fieldClassName}
@@ -249,6 +266,7 @@ export function LedgerFilterForm({
                 max={selectedTo || undefined}
                 name={selectedFrom ? "from" : undefined}
                 onChange={(event) => setSelectedFrom(event.currentTarget.value)}
+                placeholder="YYYY-MM-DD"
                 required={Boolean(selectedTo)}
                 type="date"
                 value={selectedFrom}
@@ -259,7 +277,10 @@ export function LedgerFilterForm({
                 className="block text-xs font-semibold text-peat-forest"
                 htmlFor="ledger-to"
               >
-                Sampai tanggal (WIB)
+                Sampai tanggal (WIB){" "}
+                <span className="text-[11px] font-normal text-muted-foreground">
+                  (opsional)
+                </span>
               </label>
               <input
                 className={fieldClassName}
@@ -267,6 +288,7 @@ export function LedgerFilterForm({
                 min={selectedFrom || undefined}
                 name={selectedTo ? "to" : undefined}
                 onChange={(event) => setSelectedTo(event.currentTarget.value)}
+                placeholder="YYYY-MM-DD"
                 required={Boolean(selectedFrom)}
                 type="date"
                 value={selectedTo}

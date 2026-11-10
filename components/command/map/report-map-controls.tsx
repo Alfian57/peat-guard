@@ -1,23 +1,13 @@
-import type { FormEvent } from "react";
+"use client";
+
+import { useState, type FormEvent } from "react";
+import { Filter } from "lucide-react";
 
 import { LayerCheckbox } from "@/components/command/map/layer-checkbox";
-import { ReportMapControlField } from "@/components/command/map/report-map-control-field";
 import { ReportMapLegendItem } from "@/components/command/map/report-map-legend-item";
-import {
-  REPORT_STATUSES,
-  type ReportStatus,
-} from "@/components/command/reports/report-contracts";
-import {
-  statusLabel,
-  urgencyLabel,
-} from "@/components/command/reports/report-status-badge";
+import { ReportMapFilterDialog } from "@/components/command/map/report-map-filter-dialog";
+import { ReportMapActiveFilterTags } from "@/components/command/map/report-map-active-filter-tags";
 import type { ReportMapFilters } from "@/components/command/reports/report-map-query";
-import type { ReportUrgency } from "@/lib/generated/prisma/enums";
-
-const REPORT_URGENCIES: ReportUrgency[] = ["KRITIS", "WASPADA", "RENDAH"];
-
-const controlClassName =
-  "min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 text-sm text-peat-forest";
 
 export type ReportMapLoadState = "idle" | "loading" | "ready" | "error";
 
@@ -52,7 +42,14 @@ export function ReportMapControls({
   pointCount,
   truncated,
 }: ReportMapControlsProps) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const isLoading = loadState === "loading";
+
+  const activeFiltersCount =
+    (draftFilters.from ? 1 : 0) +
+    (draftFilters.to ? 1 : 0) +
+    (draftFilters.status && draftFilters.status !== "all" ? 1 : 0) +
+    (draftFilters.urgency && draftFilters.urgency !== "all" ? 1 : 0);
 
   return (
     <section
@@ -74,122 +71,45 @@ export function ReportMapControls({
         />
       </div>
 
-      <form className="mt-3 space-y-3" onSubmit={onApply}>
-        <ReportMapControlField
-          hint="Tanggal rekam WIB, termasuk hari itu"
-          label="Dari tanggal"
+      <div className="mt-3.5 space-y-2.5">
+        <button
+          aria-controls="report-map-filter-dialog"
+          aria-expanded={isDialogOpen}
+          aria-haspopup="dialog"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-peat-forest/15 bg-white px-3 text-sm font-semibold text-peat-forest transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          onClick={() => setIsDialogOpen(true)}
+          type="button"
         >
-          <input
-            className={controlClassName + " font-mono"}
-            max={draftFilters.to || undefined}
-            onChange={(event) =>
-              onDraftChange({
-                ...draftFilters,
-                from: event.currentTarget.value,
-              })
-            }
-            type="date"
-            value={draftFilters.from}
+          <Filter aria-hidden="true" size={17} />
+          <span>Filter pin laporan</span>
+          {activeFiltersCount > 0 ? (
+            <span className="grid size-5 place-items-center rounded-full bg-peat-green text-[11px] font-bold text-white">
+              {activeFiltersCount}
+            </span>
+          ) : null}
+        </button>
+
+        <ReportMapActiveFilterTags filters={draftFilters} onReset={onReset} />
+      </div>
+
+      <div
+        aria-label="Keterangan warna status pin laporan"
+        className="mt-3.5 rounded-xl bg-peat-paper p-3"
+        role="group"
+      >
+        <h3 className="text-xs font-semibold text-peat-forest">
+          Warna pin laporan
+        </h3>
+        <ul className="mt-2 grid grid-cols-2 gap-2 text-xs text-peat-forest/75">
+          <ReportMapLegendItem color="bg-red-600" label="Kritis" />
+          <ReportMapLegendItem color="bg-amber-600" label="Waspada" />
+          <ReportMapLegendItem color="bg-emerald-700" label="Aman / selesai" />
+          <ReportMapLegendItem
+            color="bg-slate-500"
+            label="Rendah / belum dinilai"
           />
-        </ReportMapControlField>
-        <ReportMapControlField
-          hint="Tanggal rekam WIB, termasuk hari itu"
-          label="Sampai tanggal"
-        >
-          <input
-            className={controlClassName + " font-mono"}
-            min={draftFilters.from || undefined}
-            onChange={(event) =>
-              onDraftChange({ ...draftFilters, to: event.currentTarget.value })
-            }
-            type="date"
-            value={draftFilters.to}
-          />
-        </ReportMapControlField>
-        <ReportMapControlField label="Status penanganan">
-          <select
-            className={controlClassName}
-            onChange={(event) =>
-              onDraftChange({
-                ...draftFilters,
-                status: event.currentTarget.value as ReportStatus | "all",
-              })
-            }
-            value={draftFilters.status}
-          >
-            <option value="all">Semua status</option>
-            {REPORT_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {statusLabel(status)}
-              </option>
-            ))}
-          </select>
-        </ReportMapControlField>
-        <ReportMapControlField label="Urgensi AI">
-          <select
-            className={controlClassName}
-            onChange={(event) =>
-              onDraftChange({
-                ...draftFilters,
-                urgency: event.currentTarget
-                  .value as ReportMapFilters["urgency"],
-              })
-            }
-            value={draftFilters.urgency}
-          >
-            <option value="all">Semua urgensi</option>
-            {REPORT_URGENCIES.map((urgency) => (
-              <option key={urgency} value={urgency}>
-                {urgencyLabel(urgency)}
-              </option>
-            ))}
-            <option value="UNRATED">Belum dinilai</option>
-          </select>
-        </ReportMapControlField>
-        {filtersError ? (
-          <p className="text-sm text-red-800" role="alert">
-            {filtersError}
-          </p>
-        ) : null}
-        <div
-          aria-label="Keterangan warna status pin laporan"
-          className="rounded-xl bg-peat-paper p-3"
-          role="group"
-        >
-          <h3 className="text-xs font-semibold text-peat-forest">
-            Warna pin laporan
-          </h3>
-          <ul className="mt-2 grid grid-cols-2 gap-2 text-xs text-peat-forest/75">
-            <ReportMapLegendItem color="bg-red-600" label="Kritis" />
-            <ReportMapLegendItem color="bg-amber-600" label="Waspada" />
-            <ReportMapLegendItem
-              color="bg-emerald-700"
-              label="Aman / selesai"
-            />
-            <ReportMapLegendItem
-              color="bg-slate-500"
-              label="Rendah / belum dinilai"
-            />
-          </ul>
-        </div>
-        <div className="flex gap-2">
-          <button
-            className="min-h-11 flex-1 rounded-xl border border-peat-forest/15 px-3 text-sm font-semibold text-peat-forest hover:bg-peat-paper disabled:opacity-60"
-            disabled={isLoading}
-            onClick={onReset}
-            type="button"
-          >
-            Atur ulang
-          </button>
-          <button
-            className="min-h-11 flex-1 rounded-xl bg-peat-forest px-3 text-sm font-semibold text-white hover:bg-peat-green disabled:opacity-60"
-            disabled={isLoading}
-            type="submit"
-          >
-            Terapkan
-          </button>
-        </div>
-      </form>
+        </ul>
+      </div>
 
       <div
         aria-live="polite"
@@ -235,6 +155,17 @@ export function ReportMapControls({
           </>
         )}
       </div>
+
+      <ReportMapFilterDialog
+        draftFilters={draftFilters}
+        filtersError={filtersError}
+        isLoading={isLoading}
+        isOpen={isDialogOpen}
+        onApply={onApply}
+        onClose={() => setIsDialogOpen(false)}
+        onDraftChange={onDraftChange}
+        onReset={onReset}
+      />
     </section>
   );
 }

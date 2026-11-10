@@ -15,6 +15,8 @@ import {
   type ReactNode,
 } from "react";
 import { authClient } from "@/lib/auth-client";
+import { UserAccountMenu } from "@/components/auth/user-account-menu";
+import { GlobalSearch } from "@/components/search/global-search";
 import { canUseDemoSamples as canUseLocalDemoSamples } from "@/lib/client/offline/demo-samples";
 import {
   clearLastKnownOwner,
@@ -641,9 +643,29 @@ export function FieldAppShell({
                 PEATGUARD
               </span>
             </a>
-            <span className="rounded-full border border-border bg-white px-3 py-1 text-[11px] font-semibold text-muted-foreground">
-              MPA · demo
-            </span>
+            {ownerStatus === "authenticated" && sessionUser ? (
+              <div className="flex items-center gap-2">
+                <GlobalSearch />
+                <UserAccountMenu
+                  email={sessionUser.email}
+                  image={sessionUser.image ?? null}
+                  name={sessionUser.name}
+                  role="RELAWAN"
+                />
+              </div>
+            ) : (
+              <span className="rounded-full border border-border bg-white px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+                {ownerStatus === "signed-out"
+                  ? "Belum masuk"
+                  : ownerStatus === "loading"
+                    ? "Memeriksa sesi"
+                    : ownerStatus === "offline-known"
+                      ? "Relawan offline"
+                      : ownerStatus === "unavailable"
+                        ? "Akun belum dikenal"
+                        : "Akun relawan"}
+              </span>
+            )}
           </div>
         </header>
 

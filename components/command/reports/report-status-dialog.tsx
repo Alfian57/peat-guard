@@ -118,7 +118,10 @@ export function ReportStatusDialog({
 
         <fieldset className="space-y-2">
           <legend className="mb-2 text-sm font-semibold text-peat-forest">
-            Status penanganan <span className="text-red-800">Wajib</span>
+            Status penanganan{" "}
+            <span className="text-red-500" aria-hidden="true">
+              *
+            </span>
           </legend>
           {REPORT_STATUSES.map((status) => (
             <label
@@ -151,13 +154,15 @@ export function ReportStatusDialog({
         <label className="block text-sm font-semibold text-peat-forest">
           <span className="mb-1.5 block">
             Catatan penanganan{" "}
-            <span className="font-normal text-peat-forest/60">Opsional</span>
+            <span className="text-xs font-normal text-muted-foreground">
+              (opsional)
+            </span>
           </span>
           <textarea
             className="min-h-28 w-full resize-y rounded-xl border border-peat-forest/15 bg-white px-3 py-2 text-sm text-peat-forest"
             maxLength={500}
             onChange={(event) => setNote(event.currentTarget.value)}
-            placeholder="Catat arahan atau hasil koordinasi POSKO."
+            placeholder="Catat arahan atau hasil koordinasi POSKO..."
             value={note}
           />
           <span className="mt-1 block text-right text-xs font-normal text-peat-forest/60">

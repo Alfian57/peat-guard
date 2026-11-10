@@ -52,7 +52,12 @@ export function PublicMapFiltersPanel({
 
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
         <label className="grid gap-1.5 text-sm font-semibold text-peat-forest">
-          Waktu pengamatan
+          <span>
+            Waktu pengamatan{" "}
+            <span className="text-xs font-normal text-muted-foreground">
+              (opsional)
+            </span>
+          </span>
           <select
             className="min-h-11 w-full rounded-xl border border-peat-forest/20 bg-white px-3 font-normal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
             onChange={(event) =>
@@ -68,7 +73,12 @@ export function PublicMapFiltersPanel({
         </label>
 
         <label className="grid gap-1.5 text-sm font-semibold text-peat-forest">
-          Sumber hotspot
+          <span>
+            Sumber hotspot{" "}
+            <span className="text-xs font-normal text-muted-foreground">
+              (opsional)
+            </span>
+          </span>
           <select
             className="min-h-11 w-full rounded-xl border border-peat-forest/20 bg-white px-3 font-normal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
             onChange={(event) =>
@@ -87,7 +97,12 @@ export function PublicMapFiltersPanel({
         </label>
 
         <label className="grid gap-1.5 text-sm font-semibold text-peat-forest">
-          Keyakinan satelit
+          <span>
+            Keyakinan satelit{" "}
+            <span className="text-xs font-normal text-muted-foreground">
+              (opsional)
+            </span>
+          </span>
           <select
             className="min-h-11 w-full rounded-xl border border-peat-forest/20 bg-white px-3 font-normal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
             onChange={(event) =>

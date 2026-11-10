@@ -21,19 +21,25 @@ const { LoginForm } = await import("@/components/auth/login-form");
 
 test("login fields are labeled and the password can be revealed", async () => {
   const user = userEvent.setup();
-  render(<LoginForm demoEnabled={false} />);
+  render(<LoginForm />);
 
-  expect(screen.getByRole("textbox", { name: "Email" })).toBeTruthy();
-  expect(screen.getByLabelText("Kata sandi").getAttribute("type")).toBe(
-    "password",
-  );
+  expect(screen.getByRole("textbox", { name: /Email/i })).toBeTruthy();
+  expect(
+    screen
+      .getByLabelText(/Kata sandi/i, { selector: "input" })
+      .getAttribute("type"),
+  ).toBe("password");
   expect(screen.queryByText("atau coba akun demo")).toBeNull();
 
   await user.click(
     screen.getByRole("button", { name: "Tampilkan kata sandi" }),
   );
 
-  expect(screen.getByLabelText("Kata sandi").getAttribute("type")).toBe("text");
+  expect(
+    screen
+      .getByLabelText(/Kata sandi/i, { selector: "input" })
+      .getAttribute("type"),
+  ).toBe("text");
   expect(
     screen.getByRole("button", { name: "Sembunyikan kata sandi" }),
   ).toBeTruthy();

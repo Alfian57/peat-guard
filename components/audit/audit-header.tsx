@@ -1,20 +1,13 @@
 import Link from "next/link";
 import { Leaf } from "lucide-react";
 
+import { UserAccountMenu } from "@/components/auth/user-account-menu";
+import { GlobalSearch } from "@/components/search/global-search";
 import { getServerSession } from "@/lib/authz";
-import { isAppRole, ROLE_LABELS } from "@/lib/roles";
+import { isAppRole } from "@/lib/roles";
 import { APP_ROUTES } from "@/lib/routes";
 
 import { AuditNav } from "./audit-nav";
-
-function initials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
-}
 
 export async function AuditHeader() {
   const session = await getServerSession();
@@ -41,22 +34,17 @@ export async function AuditHeader() {
         <AuditNav role={role} />
 
         <div className="flex shrink-0 items-center gap-2.5">
-          {role ? (
-            <span
-              aria-hidden="true"
-              className="grid size-10 place-items-center rounded-full bg-peat-green/10 text-sm font-bold text-peat-green"
-            >
-              {initials(name) || "PG"}
-            </span>
+          {session && role ? (
+            <>
+              <GlobalSearch />
+              <UserAccountMenu
+                email={session.user.email}
+                image={session.user.image ?? null}
+                name={name}
+                role={role}
+              />
+            </>
           ) : null}
-          <div className="hidden text-right sm:block">
-            <p className="max-w-40 truncate text-sm font-semibold text-peat-forest">
-              {name}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {role ? ROLE_LABELS[role] : "Area audit"}
-            </p>
-          </div>
           {!session ? (
             <Link
               className="rounded-lg px-3 py-2 text-sm font-semibold text-peat-green underline-offset-4 hover:underline"

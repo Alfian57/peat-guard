@@ -5,7 +5,9 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
-    seed: "bun run db:seed",
+    ...(process.env.PEATGUARD_FRESH_RESET === "1"
+      ? {}
+      : { seed: "bun run db:seed" }),
   },
   datasource: {
     url: env("DATABASE_URL"),

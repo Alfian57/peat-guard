@@ -43,8 +43,9 @@ test("keeps report filters visible when the map has no configured viewport", asy
   expect(
     screen.getByRole("checkbox", { name: "Tampilkan pin laporan" }),
   ).toBeTruthy();
-  expect(screen.getByLabelText("Status penanganan")).toBeTruthy();
-  expect(screen.getByLabelText("Urgensi AI")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Filter pin laporan" }));
+  expect(screen.getByLabelText(/Status penanganan/)).toBeTruthy();
+  expect(screen.getByLabelText(/Urgensi AI/)).toBeTruthy();
   expect(
     screen.getByLabelText("Keterangan warna status pin laporan"),
   ).toBeTruthy();

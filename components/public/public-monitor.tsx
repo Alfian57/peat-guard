@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight, MapPinned } from "lucide-react";
 import { useEffect, useState } from "react";
-import { MapPinned } from "lucide-react";
 
-import { CarbonImpactCard } from "@/components/public/carbon-impact-card";
 import { MetricsGrid } from "@/components/public/metrics-grid";
 import { PublicMapPanel } from "@/components/public/public-map-panel";
 import type { PublicLoadState } from "@/components/public/public-types";
@@ -71,64 +70,87 @@ export function PublicMonitor() {
   }
 
   return (
-    <section
-      aria-labelledby="pantauan-title"
-      className="bg-peat-paper py-16 sm:py-20"
-      id="dampak"
-    >
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div className="max-w-2xl">
-            <p className="text-sm font-bold tracking-[.16em] text-peat-green uppercase">
-              Kondisi yang dapat dipantau
-            </p>
-            <h2
-              className="mt-3 font-heading text-4xl leading-none font-bold text-peat-forest sm:text-5xl"
-              id="pantauan-title"
+    <>
+      <section
+        aria-labelledby="pantauan-title"
+        className="public-monitor__metrics-section bg-peat-paper py-20 sm:py-24"
+        id="pantauan"
+      >
+        <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-14">
+          <div className="grid gap-8 border-b border-peat-forest/15 pb-9 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div className="public-scroll-reveal max-w-3xl">
+              <p className="text-xs font-bold tracking-[.18em] text-peat-green uppercase">
+                Data riil · rujukan resmi gambut & karhutla
+              </p>
+              <h2
+                className="mt-4 font-heading text-4xl leading-[.98] font-bold text-balance text-peat-forest sm:text-6xl"
+                id="pantauan-title"
+              >
+                Keadaan gambut, terlihat lebih jelas.
+              </h2>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-peat-forest/75">
+                Ringkasan faktual bentang Kesatuan Hidrologis Gambut (KHG),
+                kawasan lindung, dan pantauan karhutla di wilayah Kalimantan.
+              </p>
+            </div>
+            <Link
+              className="inline-flex min-h-11 items-center gap-2 self-start rounded-full border border-peat-forest/20 px-4 text-sm font-semibold text-peat-forest transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-peat-green lg:self-auto"
+              href={APP_ROUTES.publicMap}
             >
-              Data terbuka, perlindungan terukur.
-            </h2>
-            <p className="mt-4 max-w-xl leading-7 text-peat-forest/75">
-              Ringkasan ini hanya menggunakan zona yang sudah disetujui dan
-              catatan hotspot satelit. Titik laporan warga tidak ditampilkan di
-              peta publik.
-            </p>
+              Jelajahi peta
+              <ArrowRight aria-hidden="true" size={16} />
+            </Link>
           </div>
-          <Link
-            className="inline-flex min-h-11 shrink-0 items-center gap-2 self-start rounded-full border border-peat-forest/20 px-4 text-sm font-semibold text-peat-forest transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-peat-green sm:self-auto"
-            href={APP_ROUTES.publicMap}
-          >
-            <MapPinned aria-hidden="true" size={17} />
-            Buka peta publik
-          </Link>
-        </div>
 
-        <MetricsGrid
-          metrics={metrics}
-          onRetry={retryLoadingData}
-          state={metricsState}
-        />
-
-        {metrics?.containsIllustrativeData ? (
-          <p className="mt-4 rounded-xl border border-peat-sun/50 bg-peat-sun/15 px-4 py-3 text-sm leading-6 text-peat-forest">
-            Sebagian angka atau titik pada ringkasan ini memakai data ilustrasi
-            sintetis untuk demonstrasi. Data tersebut bukan hasil pemantauan
-            operasional.
-          </p>
-        ) : null}
-
-        <div
-          className="mt-12 grid gap-8 lg:grid-cols-[1.55fr_.75fr]"
-          id="peta-publik"
-        >
-          <PublicMapPanel
-            mapData={mapData}
+          <MetricsGrid
+            metrics={metrics}
             onRetry={retryLoadingData}
-            state={mapState}
+            state={metricsState}
           />
-          <CarbonImpactCard />
         </div>
-      </div>
-    </section>
+      </section>
+
+      <section
+        aria-labelledby="peta-publik-title"
+        className="public-monitor__map-section bg-white py-20 sm:py-24"
+        id="peta-publik"
+      >
+        <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-14">
+          <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+            <div className="public-scroll-reveal max-w-3xl">
+              <p className="text-xs font-bold tracking-[.18em] text-peat-green uppercase">
+                Buka · baca · telusuri
+              </p>
+              <h2
+                className="mt-4 font-heading text-4xl leading-[.98] font-bold text-balance text-peat-forest sm:text-6xl"
+                id="peta-publik-title"
+              >
+                Satu peta untuk memahami konteks.
+              </h2>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-peat-forest/75">
+                Jelajahi zona yang telah disetujui dan indikasi hotspot dari
+                NASA FIRMS. Titik panas adalah indikasi satelit, bukan
+                konfirmasi kejadian kebakaran.
+              </p>
+            </div>
+            <Link
+              className="inline-flex min-h-11 items-center gap-2 self-start rounded-full bg-peat-forest px-5 text-sm font-semibold text-white transition-colors hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-peat-green md:self-auto"
+              href={APP_ROUTES.publicMap}
+            >
+              <MapPinned aria-hidden="true" size={17} />
+              Lihat peta layar penuh
+            </Link>
+          </div>
+
+          <div className="public-map__frame w-full rounded-[2rem] border border-peat-forest/10 bg-peat-paper p-5 shadow-sm sm:p-8 lg:p-10">
+            <PublicMapPanel
+              mapData={mapData}
+              onRetry={retryLoadingData}
+              state={mapState}
+            />
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

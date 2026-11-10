@@ -85,6 +85,7 @@ describe("MRV query validation", () => {
         page: 1,
         pageSize: 25,
         range: null,
+        reportId: null,
         zoneId: null,
       },
     });
@@ -119,6 +120,7 @@ describe("MRV query validation", () => {
         page: 2,
         pageSize: 50,
         range: null,
+        reportId: null,
         zoneId: null,
       },
     });

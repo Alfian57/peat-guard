@@ -63,7 +63,8 @@ export function LedgerView({
         aiState={filters.aiState}
         evidence={filters.evidence}
         from={from}
-        key={`${filters.zoneId ?? ""}:${filters.evidence}:${filters.aiState ?? ""}:${from}:${to}`}
+        key={`${filters.reportId ?? ""}:${filters.zoneId ?? ""}:${filters.evidence}:${filters.aiState ?? ""}:${from}:${to}`}
+        reportId={filters.reportId}
         to={to}
         zoneId={filters.zoneId}
         zones={zones}

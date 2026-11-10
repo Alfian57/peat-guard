@@ -11,6 +11,7 @@ afterEach(() => {
 });
 
 test("shows filter controls and the empty state when no reports match", async () => {
+  const user = userEvent.setup();
   globalThis.fetch = mock(async (input) => {
     const url = String(input);
     if (url === "/api/command/zones") {
@@ -22,10 +23,11 @@ test("shows filter controls and the empty state when no reports match", async ()
   render(<ReportQueueScreen />);
 
   expect(await screen.findByText("Tidak ada laporan yang sesuai")).toBeTruthy();
-  expect(screen.getByLabelText("Zona gambut")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Filter insiden" }));
+  expect(screen.getByLabelText(/Zona gambut/)).toBeTruthy();
   expect(screen.getByLabelText(/Dari tanggal/)).toBeTruthy();
   expect(screen.getByLabelText(/Sampai tanggal/)).toBeTruthy();
-  expect(screen.getByLabelText("Data demonstrasi")).toBeTruthy();
+  expect(screen.getByLabelText(/Data demonstrasi/)).toBeTruthy();
 });
 
 test("shows a retry action when the report endpoint fails", async () => {
@@ -72,9 +74,10 @@ test("applies status and zone filters and shows the requested page", async () =>
   render(<ReportQueueScreen />);
   await screen.findByRole("link", { name: "Lihat detail laporan PG-AAAAAAAA" });
 
-  await user.selectOptions(screen.getByLabelText("Zona gambut"), zone.id);
+  await user.click(screen.getByRole("button", { name: "Filter insiden" }));
+  await user.selectOptions(screen.getByLabelText(/Zona gambut/), zone.id);
   await user.click(screen.getByRole("button", { name: /Terapkan/ }));
-  expect((await screen.findAllByText("Zona Utara")).length).toBeGreaterThan(1);
+  expect(await screen.findByText("Zona: Zona Utara")).toBeTruthy();
   expect(requestedUrls.some((url) => url.includes(`zoneId=${zone.id}`))).toBe(
     true,
   );

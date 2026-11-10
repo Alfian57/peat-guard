@@ -47,3 +47,5 @@ next-env.d.ts
 
 # generated Prisma client
 /lib/generated/prisma/
+
+.playwright-mcp/

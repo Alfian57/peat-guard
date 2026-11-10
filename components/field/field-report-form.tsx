@@ -350,7 +350,10 @@ export function FieldReportForm({
           id="photo-title"
           className="font-heading text-2xl font-bold text-peat-forest"
         >
-          Foto temuan (wajib)
+          Foto temuan{" "}
+          <span className="text-red-500" aria-hidden="true">
+            *
+          </span>
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Foto dikompres di perangkat ke maksimal 1280 piksel. Waktu laporan
@@ -505,7 +508,10 @@ export function FieldReportForm({
         ) : null}
         <div className="mt-3 grid grid-cols-2 gap-3">
           <label className="text-xs font-semibold text-peat-forest">
-            Lintang (wajib)
+            Lintang{" "}
+            <span className="text-red-500" aria-hidden="true">
+              *
+            </span>
             <input
               type="number"
               step="any"
@@ -525,7 +531,10 @@ export function FieldReportForm({
             />
           </label>
           <label className="text-xs font-semibold text-peat-forest">
-            Bujur (wajib)
+            Bujur{" "}
+            <span className="text-red-500" aria-hidden="true">
+              *
+            </span>
             <input
               type="number"
               step="any"
@@ -561,7 +570,10 @@ export function FieldReportForm({
         </h2>
         <fieldset className="mt-2">
           <legend className="text-sm text-muted-foreground">
-            Pilih kategori temuan (opsional)
+            Pilih kategori temuan{" "}
+            <span className="text-xs font-normal text-muted-foreground">
+              (opsional)
+            </span>
           </legend>
           <div className="mt-2 flex flex-wrap gap-2">
             {TAG_OPTIONS.map((tag) => (
@@ -589,7 +601,7 @@ export function FieldReportForm({
             maxLength={1000}
             rows={4}
             className="mt-1 w-full resize-y rounded-xl border border-border bg-white p-3 text-sm font-normal text-foreground outline-none focus-visible:ring-2 focus-visible:ring-peat-green"
-            placeholder="Jelaskan kondisi sekitar, waktu pengamatan, atau tindak lanjut yang diperlukan…"
+            placeholder="Jelaskan kondisi sekitar, waktu pengamatan, atau tindak lanjut yang diperlukan..."
           />
         </label>
         <p className="mt-1 text-right text-xs text-muted-foreground">
@@ -608,7 +620,10 @@ export function FieldReportForm({
           <span>
             <span className="flex items-center gap-2 font-semibold text-peat-forest">
               <Sparkles aria-hidden="true" size={17} /> Izinkan analisis foto
-              dengan AI
+              dengan AI{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                (opsional)
+              </span>
             </span>
             <span className="mt-1 block text-sm leading-5 text-muted-foreground">
               Foto hanya dianalisis jika Anda memberi izin. Tanpa izin, laporan

@@ -241,6 +241,7 @@ function toLedgerRow(report: {
 export async function getMrvLedger(filters: LedgerFilters): Promise<MrvLedger> {
   const aiState = filters.aiState;
   const where = {
+    ...(filters.reportId ? { id: filters.reportId } : {}),
     ...(filters.zoneId ? { zoneId: filters.zoneId } : {}),
     ...(filters.range
       ? {
@@ -336,6 +337,7 @@ export async function getMrvLedger(filters: LedgerFilters): Promise<MrvLedger> {
       aiState: filters.aiState,
       evidence: filters.evidence,
       from: filters.range?.fromDate ?? null,
+      reportId: filters.reportId,
       to: filters.range?.toDate ?? null,
       zoneId: filters.zoneId,
     },

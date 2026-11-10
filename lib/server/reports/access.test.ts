@@ -13,7 +13,7 @@ import { AuthorizationError } from "@/lib/role-access";
 
 const relawan: ReportActor = {
   id: "70000000-0000-4000-8000-000000000001",
-  email: "relawan.demo@peatguard.local",
+  email: "relawan@gmail.com",
   role: "RELAWAN",
 };
 
@@ -47,9 +47,7 @@ describe("report access rules", () => {
     expect(() => reportActorFromSession({ ...relawan, role: "ADMIN" })).toThrow(
       AuthorizationError,
     );
-    expect(isLocalDemoVolunteer(relawan, "1", "development")).toBe(true);
-    expect(isLocalDemoVolunteer(relawan, "1", "production")).toBe(false);
-    expect(isLocalDemoVolunteer(relawan, "0", "development")).toBe(false);
+    expect(isLocalDemoVolunteer(relawan)).toBe(true);
     expect(
       isLocalDemoVolunteer({ ...relawan, email: "field@example.test" }),
     ).toBe(false);

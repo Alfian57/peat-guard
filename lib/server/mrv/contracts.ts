@@ -137,6 +137,7 @@ export type LedgerFilters = {
   evidence: "all" | "complete";
   page: number;
   pageSize: number;
+  reportId: string | null;
   range: DateRange | null;
   zoneId: string | null;
 };
@@ -333,6 +334,7 @@ export type MrvLedger = {
     aiState: LedgerFilters["aiState"];
     evidence: LedgerFilters["evidence"];
     from: string | null;
+    reportId: string | null;
     to: string | null;
     zoneId: string | null;
   };

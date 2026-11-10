@@ -1,5 +1,5 @@
 import { expect, mock, test } from "bun:test";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 mock.module("next/link", () => ({
   default: ({
@@ -51,8 +51,11 @@ test("dashboard labels the estimate and unavailable history without a readiness 
   );
 
   expect(screen.getByRole("heading", { name: /Jejak patroli/ })).toBeTruthy();
-  expect(screen.getByLabelText("Dari tanggal")).toBeTruthy();
-  expect(screen.getByLabelText("Sampai tanggal")).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", { name: /Filter periode tanggal/ }),
+  );
+  expect(screen.getByLabelText(/Dari tanggal/)).toBeTruthy();
+  expect(screen.getByLabelText(/Sampai tanggal/)).toBeTruthy();
   expect(
     screen.getByRole("heading", { name: "Tren estimasi karbon" }),
   ).toBeTruthy();

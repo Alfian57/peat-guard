@@ -199,11 +199,13 @@ function isAiState(value: string): value is AiState {
 function parseSharedFilters(searchParams: URLSearchParams): ValidationResult<{
   aiState: LedgerFilters["aiState"];
   evidence: LedgerFilters["evidence"];
+  reportId: LedgerFilters["reportId"];
   range: DateRange | null;
   zoneId: string | null;
 }> {
   const range = parseDateRange(searchParams);
   const zoneId = parseOptionalUuid(searchParams, "zoneId");
+  const reportId = parseOptionalUuid(searchParams, "reportId");
   const aiState = getSingleValue(searchParams, "aiState");
   const evidence = getSingleValue(searchParams, "evidence");
 
@@ -213,6 +215,10 @@ function parseSharedFilters(searchParams: URLSearchParams): ValidationResult<{
 
   if (!zoneId.ok) {
     return zoneId;
+  }
+
+  if (!reportId.ok) {
+    return reportId;
   }
 
   if (!aiState.ok) {
@@ -246,6 +252,7 @@ function parseSharedFilters(searchParams: URLSearchParams): ValidationResult<{
     value: {
       aiState: aiStateValue,
       evidence: evidenceValue,
+      reportId: reportId.value,
       range: range.value,
       zoneId: zoneId.value,
     },

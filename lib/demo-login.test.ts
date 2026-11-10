@@ -1,24 +1,15 @@
 import { describe, expect, test } from "bun:test";
 
-import { demoLoginIsEnabled, demoPasswordForRole } from "@/lib/demo-login";
+import { DEMO_USERS } from "@/lib/demo-login";
 import { assertRoleAccess, AuthorizationError } from "@/lib/role-access";
 
-describe("demo login gate", () => {
-  test("is enabled only when the flag is on outside production", () => {
-    expect(demoLoginIsEnabled("1", "development")).toBe(true);
-    expect(demoLoginIsEnabled("0", "development")).toBe(false);
-    expect(demoLoginIsEnabled("1", "production")).toBe(false);
-    expect(demoLoginIsEnabled("", "development")).toBe(false);
-  });
-
-  test("derives a stable server-side password per role", () => {
-    const firstValue = demoPasswordForRole("RELAWAN", "x".repeat(32));
-    const secondValue = demoPasswordForRole("RELAWAN", "x".repeat(32));
-    const otherRoleValue = demoPasswordForRole("POSKO", "x".repeat(32));
-
-    expect(firstValue).toBe(secondValue);
-    expect(firstValue).not.toBe(otherRoleValue);
-    expect(firstValue).not.toContain("x".repeat(32));
+describe("default accounts", () => {
+  test("maps a seeded default account to each application role", () => {
+    expect(DEMO_USERS.map((user) => user.email)).toEqual([
+      "relawan@gmail.com",
+      "posko@gmail.com",
+      "verifikator@gmail.com",
+    ]);
   });
 });
 

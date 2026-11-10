@@ -3,35 +3,17 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import {
-  Eye,
-  EyeOff,
-  LoaderCircle,
-  MapPin,
-  ShieldCheck,
-  UsersRound,
-} from "lucide-react";
+import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 
 import { authClient } from "@/lib/auth-client";
-import { APP_ROLES, ROLE_LABELS, type AppRole } from "@/lib/roles";
 import { BrandMark } from "@/components/auth/brand-mark";
-import { API_ROUTES, APP_ROUTES } from "@/lib/routes";
+import { APP_ROUTES } from "@/lib/routes";
+import { getRoleHomeRoute, isAppRole } from "@/lib/roles";
 
-const demoRoleIcons = {
-  RELAWAN: MapPin,
-  POSKO: UsersRound,
-  VERIFIKATOR: ShieldCheck,
-} satisfies Record<AppRole, typeof MapPin>;
-
-type LoginFormProps = {
-  demoEnabled: boolean;
-};
-
-export function LoginForm({ demoEnabled }: LoginFormProps) {
+export function LoginForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeDemoRole, setActiveDemoRole] = useState<AppRole | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function submitCredentials(event: FormEvent<HTMLFormElement>) {
@@ -57,7 +39,24 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
         return;
       }
 
-      router.replace(APP_ROUTES.home);
+      let targetRoute: string = APP_ROUTES.home;
+      const roleFromSignIn = (
+        result.data as { user?: { role?: unknown } } | null
+      )?.user?.role;
+
+      if (isAppRole(roleFromSignIn)) {
+        targetRoute = getRoleHomeRoute(roleFromSignIn);
+      } else {
+        const session = await authClient.getSession();
+        const roleFromSession = (
+          session?.data as { user?: { role?: unknown } } | null
+        )?.user?.role;
+        if (isAppRole(roleFromSession)) {
+          targetRoute = getRoleHomeRoute(roleFromSession);
+        }
+      }
+
+      router.replace(targetRoute);
       router.refresh();
     } catch {
       setErrorMessage("Kami belum dapat memproses masuk. Coba lagi sebentar.");
@@ -66,40 +65,13 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
     }
   }
 
-  async function signInAsDemo(role: AppRole) {
-    setErrorMessage(null);
-    setActiveDemoRole(role);
-
-    try {
-      const response = await fetch(API_ROUTES.auth.demo, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
-      });
-
-      if (!response.ok) {
-        setErrorMessage(
-          "Mode demo belum siap. Pastikan seed lokal sudah dijalankan.",
-        );
-        return;
-      }
-
-      router.replace(APP_ROUTES.home);
-      router.refresh();
-    } catch {
-      setErrorMessage("Mode demo belum dapat dihubungi. Coba lagi sebentar.");
-    } finally {
-      setActiveDemoRole(null);
-    }
-  }
-
-  const isBusy = isSubmitting || activeDemoRole !== null;
+  const isBusy = isSubmitting;
 
   return (
-    <main className="grid min-h-[100dvh] flex-1 bg-peat-forest lg:grid-cols-2 lg:gap-5 lg:p-5">
+    <main className="grid min-h-[100dvh] flex-1 bg-peat-paper lg:grid-cols-2">
       <section
         aria-label="Patroli perlindungan gambut"
-        className="relative hidden min-h-[calc(100dvh-2.5rem)] overflow-hidden rounded-3xl lg:flex"
+        className="relative hidden min-h-[100dvh] overflow-hidden lg:flex"
       >
         <Image
           src="/images/peatland-patrol-hero.png"
@@ -132,7 +104,7 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
         </div>
       </section>
 
-      <section className="relative flex min-h-[100dvh] flex-col lg:min-h-0 lg:justify-center lg:rounded-3xl lg:bg-peat-paper lg:px-8 lg:py-10 xl:px-16">
+      <section className="relative flex min-h-[100dvh] flex-col bg-peat-paper lg:items-center lg:justify-center lg:px-12 lg:py-12 xl:px-20">
         <div className="relative h-[18rem] shrink-0 overflow-hidden sm:h-[21rem] lg:hidden">
           <Image
             src="/images/peatland-patrol-mobile.png"
@@ -150,7 +122,7 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
           </div>
         </div>
 
-        <div className="relative -mt-6 flex flex-1 flex-col rounded-t-3xl bg-peat-paper px-5 pt-8 pb-8 sm:px-8 lg:mx-auto lg:mt-0 lg:w-full lg:max-w-[31rem] lg:rounded-none lg:px-0 lg:py-0">
+        <div className="relative -mt-6 flex flex-1 flex-col rounded-t-3xl bg-peat-paper px-5 pt-8 pb-8 sm:px-8 lg:mx-auto lg:mt-0 lg:w-full lg:max-w-[31rem] lg:flex-none lg:rounded-none lg:px-0 lg:py-0">
           <div className="mb-7 lg:mb-8">
             <p className="text-sm font-semibold tracking-[0.14em] text-peat-green uppercase">
               Ruang kerja PEATGUARD
@@ -169,7 +141,10 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
                 htmlFor="email"
                 className="text-sm font-semibold text-foreground"
               >
-                Email
+                Email{" "}
+                <span className="text-red-500" aria-hidden="true">
+                  *
+                </span>
               </label>
               <input
                 id="email"
@@ -188,7 +163,10 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
                 htmlFor="password"
                 className="text-sm font-semibold text-foreground"
               >
-                Kata sandi
+                Kata sandi{" "}
+                <span className="text-red-500" aria-hidden="true">
+                  *
+                </span>
               </label>
               <div className="relative">
                 <input
@@ -196,9 +174,10 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
                   name="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
+                  placeholder="Masukkan kata sandi"
                   required
                   disabled={isBusy}
-                  className="h-12 w-full rounded-xl border border-border bg-white px-4 pr-12 text-base transition outline-none focus-visible:border-peat-green focus-visible:ring-3 focus-visible:ring-peat-green/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="h-12 w-full rounded-xl border border-border bg-white px-4 pr-12 text-base transition outline-none placeholder:text-muted-foreground/75 focus-visible:border-peat-green focus-visible:ring-3 focus-visible:ring-peat-green/20 disabled:cursor-not-allowed disabled:opacity-60"
                 />
                 <button
                   type="button"
@@ -246,60 +225,7 @@ export function LoginForm({ demoEnabled }: LoginFormProps) {
             </button>
           </form>
 
-          {demoEnabled ? (
-            <div className="mt-7">
-              <div className="relative mb-5 flex items-center justify-center">
-                <span className="h-px flex-1 bg-border" />
-                <span className="px-3 text-xs font-medium text-muted-foreground">
-                  atau coba akun demo
-                </span>
-                <span className="h-px flex-1 bg-border" />
-              </div>
-              <div className="space-y-2.5">
-                {APP_ROLES.map((role) => {
-                  const Icon = demoRoleIcons[role];
-                  const isActive = activeDemoRole === role;
-
-                  return (
-                    <button
-                      key={role}
-                      type="button"
-                      className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-border bg-white px-4 py-2 text-left transition hover:border-peat-green hover:bg-[#f0f5e9] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={isBusy}
-                      onClick={() => void signInAsDemo(role)}
-                    >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#e9efdf] text-peat-forest">
-                        {isActive ? (
-                          <LoaderCircle
-                            className="animate-spin"
-                            aria-hidden="true"
-                            size={18}
-                          />
-                        ) : (
-                          <Icon aria-hidden="true" size={18} />
-                        )}
-                      </span>
-                      <span className="flex-1 text-sm font-semibold text-foreground">
-                        {ROLE_LABELS[role]}
-                      </span>
-                      <span
-                        aria-hidden="true"
-                        className="text-lg leading-none text-peat-green"
-                      >
-                        ›
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-                <ShieldCheck aria-hidden="true" size={14} />
-                Mode demo menggunakan data ilustratif.
-              </p>
-            </div>
-          ) : null}
-
-          <p className="mt-auto pt-8 text-center text-xs leading-5 text-muted-foreground lg:mt-8">
+          <p className="mt-auto pt-8 text-center text-xs leading-5 text-muted-foreground lg:mt-12">
             Akses diberikan oleh administrator organisasi. Pendaftaran mandiri
             tidak tersedia.
           </p>

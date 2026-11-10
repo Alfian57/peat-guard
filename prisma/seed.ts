@@ -1,13 +1,18 @@
 import "dotenv/config";
 
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "better-auth/crypto";
 import { PrismaClient } from "../lib/generated/prisma/client";
+import { DEMO_USERS } from "../lib/demo-login";
+import { API_ROUTES } from "../lib/routes";
 import {
-  demoLoginIsEnabled,
-  demoPasswordForRole,
-  DEMO_USERS,
-} from "../lib/demo-login";
+  normalizeProfileAvatar,
+  profileAvatarFileName,
+  removePrivateProfileAvatar,
+  savePrivateProfileAvatar,
+} from "../lib/server/profile/avatar";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -18,7 +23,13 @@ if (!connectionString) {
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
+const DEMO_PASSWORD = "password";
 const carbonParameterSetId = "60000000-0000-4000-8000-000000000001";
+const DEMO_AVATAR_ASSETS = {
+  RELAWAN: "relawan-demo.webp",
+  POSKO: "posko-demo.webp",
+  VERIFIKATOR: "verifikator-demo.webp",
+} as const;
 
 const demoZones = [
   {
@@ -89,83 +100,108 @@ const demoHotspots = [
 ] as const;
 
 async function seedDemoData() {
-  const demoPasswordHashes = demoLoginIsEnabled()
-    ? await Promise.all(
-        DEMO_USERS.map(async (user) => ({
-          user,
-          password: await hashPassword(demoPasswordForRole(user.role)),
-        })),
-      )
-    : [];
+  const previousUsers = await prisma.user.findMany({
+    where: { id: { in: DEMO_USERS.map((user) => user.id) } },
+    select: { id: true, image: true },
+  });
+  const uploadedAvatars = new Map<string, string>();
 
-  await prisma.$transaction(async (transaction) => {
-    await transaction.carbonParameterSet.upsert({
-      where: { name: "FigCraft demo values (illustrative)" },
-      create: {
-        id: carbonParameterSetId,
-        name: "FigCraft demo values (illustrative)",
-        biomassFactor: 50,
-        emissionFactor: 0.2,
-        co2ConversionFactor: 3.67,
-        incentivePerTonIdr: 15000,
-        isActive: true,
-        isDemoData: true,
-      },
-      update: {
-        biomassFactor: 50,
-        emissionFactor: 0.2,
-        co2ConversionFactor: 3.67,
-        incentivePerTonIdr: 15000,
-        isActive: true,
-        isDemoData: true,
-      },
-    });
-
-    for (const { user, password } of demoPasswordHashes) {
-      await transaction.user.upsert({
-        where: { id: user.id },
-        create: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          emailVerified: true,
-          role: user.role,
-          villageName: user.villageName,
-        },
-        update: {
-          name: user.name,
-          email: user.email,
-          emailVerified: true,
-          role: user.role,
-          villageName: user.villageName,
-        },
-      });
-
-      await transaction.account.upsert({
-        where: {
-          providerId_accountId: {
-            providerId: "credential",
-            accountId: user.id,
-          },
-        },
-        create: {
-          accountId: user.id,
-          providerId: "credential",
-          userId: user.id,
-          password,
-        },
-        update: {
-          password,
-          updatedAt: new Date(),
-        },
-      });
+  try {
+    for (const user of DEMO_USERS) {
+      const sourceBytes = await readFile(
+        join(
+          process.cwd(),
+          "prisma",
+          "seed-assets",
+          "profile-avatars",
+          DEMO_AVATAR_ASSETS[user.role],
+        ),
+      );
+      const normalized = await normalizeProfileAvatar(
+        sourceBytes,
+        "image/webp",
+      );
+      const fileName = await savePrivateProfileAvatar(normalized);
+      uploadedAvatars.set(user.id, fileName);
     }
 
-    for (const zone of demoZones) {
-      const halfWidth = zone.widthDegrees / 2;
-      const halfHeight = zone.heightDegrees / 2;
+    const demoPasswordHashes = await Promise.all(
+      DEMO_USERS.map(async (user) => ({
+        user,
+        password: await hashPassword(DEMO_PASSWORD),
+      })),
+    );
 
-      await transaction.$executeRaw`
+    await prisma.$transaction(async (transaction) => {
+      await transaction.carbonParameterSet.upsert({
+        where: { name: "FigCraft demo values (illustrative)" },
+        create: {
+          id: carbonParameterSetId,
+          name: "FigCraft demo values (illustrative)",
+          biomassFactor: 50,
+          emissionFactor: 0.2,
+          co2ConversionFactor: 3.67,
+          incentivePerTonIdr: 15000,
+          isActive: true,
+          isDemoData: true,
+        },
+        update: {
+          biomassFactor: 50,
+          emissionFactor: 0.2,
+          co2ConversionFactor: 3.67,
+          incentivePerTonIdr: 15000,
+          isActive: true,
+          isDemoData: true,
+        },
+      });
+
+      for (const { user, password } of demoPasswordHashes) {
+        await transaction.user.upsert({
+          where: { id: user.id },
+          create: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            emailVerified: true,
+            role: user.role,
+            villageName: user.villageName,
+            image: API_ROUTES.profile.avatar(uploadedAvatars.get(user.id)!),
+          },
+          update: {
+            name: user.name,
+            email: user.email,
+            emailVerified: true,
+            role: user.role,
+            villageName: user.villageName,
+            image: API_ROUTES.profile.avatar(uploadedAvatars.get(user.id)!),
+          },
+        });
+
+        await transaction.account.upsert({
+          where: {
+            providerId_accountId: {
+              providerId: "credential",
+              accountId: user.id,
+            },
+          },
+          create: {
+            accountId: user.id,
+            providerId: "credential",
+            userId: user.id,
+            password,
+          },
+          update: {
+            password,
+            updatedAt: new Date(),
+          },
+        });
+      }
+
+      for (const zone of demoZones) {
+        const halfWidth = zone.widthDegrees / 2;
+        const halfHeight = zone.heightDegrees / 2;
+
+        await transaction.$executeRaw`
         INSERT INTO "forest_zones" (
           "id", "slug", "zone_name", "village_name", "peat_depth_meters",
           "area_hectares", "boundary", "carbon_parameter_set_id", "is_approved", "is_demo_data", "updated_at"
@@ -190,10 +226,10 @@ async function seedDemoData() {
           "is_demo_data" = EXCLUDED."is_demo_data",
           "updated_at" = CURRENT_TIMESTAMP
       `;
-    }
+      }
 
-    for (const waterPoint of demoWaterPoints) {
-      await transaction.$executeRaw`
+      for (const waterPoint of demoWaterPoints) {
+        await transaction.$executeRaw`
         INSERT INTO "water_points" (
           "id", "zone_id", "name", "type", "latitude", "longitude", "location", "is_demo_data", "updated_at"
         )
@@ -211,10 +247,10 @@ async function seedDemoData() {
           "is_demo_data" = EXCLUDED."is_demo_data",
           "updated_at" = CURRENT_TIMESTAMP
       `;
-    }
+      }
 
-    for (const hotspot of demoHotspots) {
-      await transaction.$executeRaw`
+      for (const hotspot of demoHotspots) {
+        await transaction.$executeRaw`
         INSERT INTO "satellite_hotspots" (
           "id", "source", "external_id", "latitude", "longitude", "location",
           "brightness_kelvin", "confidence", "acquired_at", "fetched_at", "is_demo_data"
@@ -235,8 +271,23 @@ async function seedDemoData() {
           "fetched_at" = EXCLUDED."fetched_at",
           "is_demo_data" = EXCLUDED."is_demo_data"
       `;
-    }
-  });
+      }
+    });
+  } catch (error) {
+    await Promise.all(
+      [...uploadedAvatars.values()].map((fileName) =>
+        removePrivateProfileAvatar(fileName),
+      ),
+    );
+    throw error;
+  }
+
+  const previousAvatarNames = previousUsers
+    .map((user) => profileAvatarFileName(user.image))
+    .filter((fileName): fileName is string => fileName !== null);
+  await Promise.allSettled(
+    previousAvatarNames.map((fileName) => removePrivateProfileAvatar(fileName)),
+  );
 }
 
 try {

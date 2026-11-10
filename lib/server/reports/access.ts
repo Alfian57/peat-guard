@@ -1,6 +1,6 @@
 import "server-only";
 
-import { DEMO_USERS, demoLoginIsEnabled } from "@/lib/demo-login";
+import { DEMO_USERS } from "@/lib/demo-login";
 import { AuthorizationError, assertRoleAccess } from "@/lib/role-access";
 import { isAppRole, type AppRole } from "@/lib/roles";
 
@@ -45,15 +45,8 @@ export function reportReadScope(actor: ReportActor): { reporterId?: string } {
   return actor.role === "RELAWAN" ? { reporterId: actor.id } : {};
 }
 
-export function isLocalDemoVolunteer(
-  actor: ReportActor,
-  enabled = process.env.ENABLE_DEMO_LOGIN,
-  nodeEnvironment = process.env.NODE_ENV,
-): boolean {
-  if (
-    !demoLoginIsEnabled(enabled, nodeEnvironment) ||
-    actor.role !== "RELAWAN"
-  ) {
+export function isLocalDemoVolunteer(actor: ReportActor): boolean {
+  if (actor.role !== "RELAWAN") {
     return false;
   }
 

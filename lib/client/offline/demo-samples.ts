@@ -1,5 +1,5 @@
 const DEMO_VOLUNTEER_ID = "70000000-0000-4000-8000-000000000001";
-const DEMO_VOLUNTEER_EMAIL = "relawan.demo@peatguard.local";
+const DEMO_VOLUNTEER_EMAIL = "relawan@gmail.com";
 
 export function canUseDemoSamples(input: {
   demoLoginEnabled: boolean;

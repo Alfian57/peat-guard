@@ -15,10 +15,14 @@ export function ZoneEditorFormField({
     <label className="block text-sm font-semibold text-peat-forest">
       <span className="mb-1.5 flex items-center gap-2">
         {label}
-        {required ? <span className="text-red-800">Wajib</span> : null}
+        {required ? (
+          <span className="text-red-500" aria-hidden="true">
+            *
+          </span>
+        ) : null}
         {optional ? (
-          <span className="text-xs font-normal text-peat-forest/55">
-            Opsional
+          <span className="text-xs font-normal text-muted-foreground">
+            (opsional)
           </span>
         ) : null}
       </span>

@@ -1,14 +1,15 @@
-import type { FormEvent } from "react";
+"use client";
+
+import { useState, type FormEvent } from "react";
+import { Filter } from "lucide-react";
 import type { CommandZone } from "@/lib/server/zones/data";
 import type { ReportFilters } from "@/components/command/reports/report-query";
 import type { ReportStatus } from "@/components/command/reports/report-contracts";
 import { statusLabel } from "@/components/command/reports/report-status-badge";
 import { REPORT_STATUSES } from "@/components/command/reports/report-contracts";
 import { ReportQueueStatusTab } from "@/components/command/reports/report-queue-status-tab";
-import { ReportQueueFilterField } from "@/components/command/reports/report-queue-filter-field";
-
-const controlClassName =
-  "min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 text-sm text-peat-forest";
+import { ReportQueueFilterDialog } from "@/components/command/reports/report-queue-filter-dialog";
+import { ReportQueueActiveFilterTags } from "@/components/command/reports/report-queue-active-filter-tags";
 
 export type ReportStatusCounts = Record<ReportStatus | "all", number | null>;
 
@@ -35,8 +36,16 @@ export function ReportQueueFilters({
   selectedStatus: ReportStatus | null;
   zones: CommandZone[];
 }) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const activeFiltersCount =
+    (draftFilters.zoneId ? 1 : 0) +
+    (draftFilters.from ? 1 : 0) +
+    (draftFilters.to ? 1 : 0) +
+    (draftFilters.isDemoSample && draftFilters.isDemoSample !== "all" ? 1 : 0);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div
         aria-label="Filter status laporan"
         className="grid grid-cols-2 gap-2 rounded-2xl border border-peat-forest/10 bg-white p-2 sm:grid-cols-4"
@@ -59,103 +68,51 @@ export function ReportQueueFilters({
         ))}
       </div>
 
-      <form
-        className="grid items-end gap-3 rounded-2xl border border-peat-forest/10 bg-white p-4 md:grid-cols-2 xl:grid-cols-[1.1fr_1fr_1fr_0.9fr_auto]"
-        onSubmit={onApply}
-      >
-        <ReportQueueFilterField label="Zona gambut">
-          <select
-            className={controlClassName}
-            onChange={(event) =>
-              onDraftChange({
-                ...draftFilters,
-                zoneId: event.currentTarget.value,
-              })
-            }
-            value={draftFilters.zoneId}
-          >
-            <option value="">Semua zona</option>
-            {zones.map((zone) => (
-              <option key={zone.id} value={zone.id}>
-                {zone.name}
-              </option>
-            ))}
-          </select>
-        </ReportQueueFilterField>
-        <ReportQueueFilterField
-          hint="Tanggal WIB, termasuk hari itu"
-          label="Dari tanggal"
-        >
-          <input
-            className={controlClassName + " font-mono"}
-            max={draftFilters.to || undefined}
-            onChange={(event) =>
-              onDraftChange({
-                ...draftFilters,
-                from: event.currentTarget.value,
-              })
-            }
-            type="date"
-            value={draftFilters.from}
-          />
-        </ReportQueueFilterField>
-        <ReportQueueFilterField
-          hint="Tanggal WIB, termasuk hari itu"
-          label="Sampai tanggal"
-        >
-          <input
-            className={controlClassName + " font-mono"}
-            min={draftFilters.from || undefined}
-            onChange={(event) =>
-              onDraftChange({ ...draftFilters, to: event.currentTarget.value })
-            }
-            type="date"
-            value={draftFilters.to}
-          />
-        </ReportQueueFilterField>
-        <ReportQueueFilterField label="Data demonstrasi">
-          <select
-            className={controlClassName}
-            onChange={(event) =>
-              onDraftChange({
-                ...draftFilters,
-                isDemoSample: event.currentTarget
-                  .value as ReportFilters["isDemoSample"],
-              })
-            }
-            value={draftFilters.isDemoSample}
-          >
-            <option value="all">Semua data</option>
-            <option value="false">Operasional</option>
-            <option value="true">Sampel demo</option>
-          </select>
-        </ReportQueueFilterField>
-        <div className="flex gap-2 md:col-span-2 xl:col-span-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-peat-forest/10 bg-white p-3 sm:px-4">
+        <div className="flex flex-wrap items-center gap-3">
           <button
-            className="min-h-11 flex-1 rounded-xl border border-peat-forest/15 px-4 text-sm font-semibold text-peat-forest hover:bg-peat-paper disabled:opacity-60"
-            disabled={isLoading}
-            onClick={onReset}
+            aria-controls="report-queue-filter-dialog"
+            aria-expanded={isDialogOpen}
+            aria-haspopup="dialog"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-peat-forest/15 bg-white px-4 text-sm font-semibold text-peat-forest transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            onClick={() => setIsDialogOpen(true)}
             type="button"
           >
-            Atur ulang
+            <Filter aria-hidden="true" size={17} />
+            <span>Filter insiden</span>
+            {activeFiltersCount > 0 ? (
+              <span className="grid size-5 place-items-center rounded-full bg-peat-green text-[11px] font-bold text-white">
+                {activeFiltersCount}
+              </span>
+            ) : null}
           </button>
-          <button
-            className="min-h-11 flex-1 rounded-xl bg-peat-forest px-4 text-sm font-semibold text-white hover:bg-peat-green disabled:opacity-60"
-            disabled={isLoading}
-            type="submit"
-          >
-            Terapkan
-          </button>
+
+          <ReportQueueActiveFilterTags
+            filters={draftFilters}
+            onReset={onReset}
+            zones={zones}
+          />
         </div>
-        {error ? (
-          <p
-            className="text-sm text-red-800 md:col-span-2 xl:col-span-5"
-            role="alert"
-          >
-            {error}
+
+        {activeFiltersCount === 0 ? (
+          <p className="hidden text-xs text-muted-foreground sm:block">
+            Menampilkan seluruh insiden tanpa filter zona atau rentang tanggal
+            khusus.
           </p>
         ) : null}
-      </form>
+      </div>
+
+      <ReportQueueFilterDialog
+        draftFilters={draftFilters}
+        error={error}
+        isLoading={isLoading}
+        isOpen={isDialogOpen}
+        onApply={onApply}
+        onClose={() => setIsDialogOpen(false)}
+        onDraftChange={onDraftChange}
+        onReset={onReset}
+        zones={zones}
+      />
     </div>
   );
 }

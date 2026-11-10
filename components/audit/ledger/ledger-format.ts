@@ -4,6 +4,7 @@ import { API_ROUTES, APP_ROUTES } from "@/lib/routes";
 export function getLedgerQuery(filters: LedgerFilters): URLSearchParams {
   const params = new URLSearchParams();
 
+  if (filters.reportId) params.set("reportId", filters.reportId);
   if (filters.zoneId) params.set("zoneId", filters.zoneId);
   if (filters.range?.fromDate) params.set("from", filters.range.fromDate);
   if (filters.range?.toDate) params.set("to", filters.range.toDate);

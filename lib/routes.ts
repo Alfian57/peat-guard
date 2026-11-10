@@ -1,6 +1,15 @@
 export const APP_ROUTES = {
   home: "/",
+  homeSections: {
+    hero: "#hero",
+    mainContent: "#main-content",
+    monitoring: "#pantauan",
+    peatlandStory: "#cerita-gambut",
+    publicMap: "#peta-publik",
+    workflow: "#cara-kerja",
+  },
   login: "/login",
+  profile: "/profile",
   publicMap: "/peta",
 
   // Field (Relawan)
@@ -31,14 +40,21 @@ export const APP_ROUTES = {
   audit: {
     dashboard: "/audit/dashboard",
     ledger: "/audit/ledger",
+    ledgerReport: (reportId: string) =>
+      `/audit/ledger?reportId=${encodeURIComponent(reportId)}`,
     generator: "/audit/generator",
   },
 } as const;
 
 export const API_ROUTES = {
-  auth: {
-    demo: "/api/auth/demo",
+  profile: {
+    root: "/api/profile",
+    avatarPrefix: "/api/profile/avatar/",
+    avatar: (fileName: string) =>
+      `/api/profile/avatar/${encodeURIComponent(fileName)}`,
+    avatarUpload: "/api/profile/avatar",
   },
+  search: "/api/search",
   public: {
     map: "/api/public/map",
     metrics: "/api/public/metrics",

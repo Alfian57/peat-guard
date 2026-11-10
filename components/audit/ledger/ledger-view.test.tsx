@@ -29,6 +29,7 @@ const filters = {
   evidence: "all" as const,
   page: 1,
   pageSize: 25,
+  reportId: null,
   range: null,
   zoneId: null,
 };
@@ -38,6 +39,7 @@ const ledger = {
     aiState: null,
     evidence: "all" as const,
     from: null,
+    reportId: null,
     to: null,
     zoneId: null,
   },
@@ -262,10 +264,10 @@ test("filter dialog applies supported filters and restores focus on Escape", asy
   await user.click(trigger);
 
   const dialog = screen.getByRole("dialog", { name: "Filter buku besar MRV" });
-  const evidenceFilter = screen.getByLabelText("Status kelengkapan bukti");
-  const aiFilter = screen.getByLabelText("Status triase AI");
+  const evidenceFilter = screen.getByLabelText(/Status kelengkapan bukti/);
+  const aiFilter = screen.getByLabelText(/Status triase AI/);
 
-  expect(document.activeElement).toBe(screen.getByLabelText("Wilayah zona"));
+  expect(document.activeElement).toBe(screen.getByLabelText(/Wilayah zona/));
   expect(dialog.textContent).toContain("bukan keputusan verifikator");
   await user.selectOptions(evidenceFilter, "complete");
   expect(aiFilter.hasAttribute("disabled")).toBe(false);
@@ -309,7 +311,7 @@ test("filter form submits parsable defaults, evidence-only, and AI-only filters"
   expect(parseLedgerFilters(defaultParams).ok).toBe(true);
 
   await user.selectOptions(
-    screen.getByLabelText("Status kelengkapan bukti"),
+    screen.getByLabelText(/Status kelengkapan bukti/),
     "complete",
   );
   const evidenceParams = submitLedgerFilterForm(form);
@@ -317,20 +319,20 @@ test("filter form submits parsable defaults, evidence-only, and AI-only filters"
   expect(parseLedgerFilters(evidenceParams).ok).toBe(true);
 
   await user.selectOptions(
-    screen.getByLabelText("Status kelengkapan bukti"),
+    screen.getByLabelText(/Status kelengkapan bukti/),
     "all",
   );
-  await user.selectOptions(screen.getByLabelText("Status triase AI"), "FAILED");
+  await user.selectOptions(screen.getByLabelText(/Status triase AI/), "FAILED");
   const aiParams = submitLedgerFilterForm(form);
   expect(aiParams.toString()).toBe("evidence=all&aiState=FAILED");
   expect(parseLedgerFilters(aiParams).ok).toBe(true);
 
   await user.selectOptions(
-    screen.getByLabelText("Status kelengkapan bukti"),
+    screen.getByLabelText(/Status kelengkapan bukti/),
     "complete",
   );
   await user.selectOptions(
-    screen.getByLabelText("Status triase AI"),
+    screen.getByLabelText(/Status triase AI/),
     "SKIPPED",
   );
   const evidenceAndAiParams = submitLedgerFilterForm(form);
@@ -338,6 +340,41 @@ test("filter form submits parsable defaults, evidence-only, and AI-only filters"
     "evidence=complete&aiState=SKIPPED",
   );
   expect(parseLedgerFilters(evidenceAndAiParams).ok).toBe(true);
+
+  const reportParams = new URLSearchParams(
+    "reportId=61000000-0000-4000-8000-000000000001",
+  );
+  const reportFilters = parseLedgerFilters(reportParams);
+  expect(reportFilters.ok && reportFilters.value.reportId).toBe(
+    "61000000-0000-4000-8000-000000000001",
+  );
+});
+
+test("report-specific ledger search survives applying other filters", async () => {
+  const user = userEvent.setup();
+  const reportId = "61000000-0000-4000-8000-000000000001";
+
+  render(
+    <LedgerView
+      filterError={null}
+      filters={{ ...filters, reportId }}
+      from=""
+      ledger={{
+        ...ledger,
+        filters: { ...ledger.filters, reportId },
+      }}
+      to=""
+      zones={[]}
+    />,
+  );
+
+  await user.click(screen.getByRole("button", { name: "Filter buku besar" }));
+  const form = screen
+    .getByRole("button", { name: "Terapkan filter" })
+    .closest("form");
+  if (!form) throw new Error("Ledger filter form was not rendered.");
+
+  expect(submitLedgerFilterForm(form).get("reportId")).toBe(reportId);
 });
 
 test("export dialog summarizes scope and blocks results above the endpoint cap", async () => {

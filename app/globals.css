@@ -110,6 +110,8 @@
 
   html {
     @apply min-h-full font-sans;
+    scroll-behavior: smooth;
+    scroll-padding-top: 8rem;
   }
 
   body {
@@ -141,13 +143,565 @@
   }
 }
 
+.public-hero {
+  min-height: 200svh;
+}
+
+.public-hero__stage {
+  height: 100svh;
+  min-height: 560px;
+}
+
+.public-hero__media {
+  transform: scale(1);
+  will-change: transform;
+}
+
+.public-hero__panel {
+  background: linear-gradient(
+    180deg,
+    #2f7474 0%,
+    #205e60 32%,
+    #1c4f4e 68%,
+    #1f4d3d 100%
+  );
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 1.5rem;
+  box-shadow: 0 -20px 90px rgb(31 77 61 / 30%);
+  opacity: 0;
+  transform: translate3d(0, 118svh, 0) scale(0.38, 0.28);
+  transform-origin: 50% 100%;
+  will-change: opacity, transform, border-radius;
+}
+
+.public-hero__copy {
+  opacity: 0;
+  transform: translate3d(0, 86svh, 0);
+  will-change: opacity, transform;
+}
+
+.public-hero__copy:focus-within {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.public-hero__controls {
+  opacity: 1;
+}
+
+.public-hero__scroll-prompt {
+  opacity: 1;
+}
+
+.public-hero__scroll-prompt:focus-visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+@supports (animation-timeline: view()) {
+  .public-hero {
+    view-timeline-name: --public-hero;
+    view-timeline-axis: block;
+  }
+
+  .public-hero__media {
+    animation: public-hero-zoom 1s linear both;
+    animation-timeline: --public-hero;
+    animation-range: contain 0% exit 15%;
+  }
+
+  .public-hero__shade {
+    animation: public-hero-shade 1s linear both;
+    animation-timeline: --public-hero;
+    animation-range: contain 0% exit 15%;
+  }
+
+  .public-hero__panel {
+    animation: public-hero-panel-reveal 1s linear both;
+    animation-timeline: --public-hero;
+    animation-range: contain 0% exit 15%;
+  }
+
+  .public-hero__copy {
+    animation: public-hero-copy-reveal 1s linear both;
+    animation-timeline: --public-hero;
+    animation-range: contain 0% exit 15%;
+  }
+
+  .public-hero__scroll-prompt {
+    animation: public-hero-cue-fade 1s linear both;
+    animation-timeline: --public-hero;
+    animation-range: contain 0% exit 15%;
+  }
+}
+
+@keyframes public-hero-zoom {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.045);
+  }
+}
+
+@keyframes public-hero-shade {
+  from {
+    opacity: 0.22;
+  }
+
+  to {
+    opacity: 0.62;
+  }
+}
+
+@keyframes public-hero-panel-reveal {
+  0% {
+    border-radius: 1.5rem;
+    opacity: 0;
+    transform: translate3d(0, 118svh, 0) scale(0.38, 0.28);
+  }
+
+  14% {
+    opacity: 0.12;
+    transform: translate3d(0, 108svh, 0) scale(0.4, 0.3);
+  }
+
+  28% {
+    opacity: 0.27;
+    transform: translate3d(0, 92svh, 0) scale(0.46, 0.35);
+  }
+
+  45% {
+    border-radius: 1.35rem;
+    opacity: 0.52;
+    transform: translate3d(0, 70svh, 0) scale(0.56, 0.44);
+  }
+
+  60% {
+    border-radius: 1.25rem;
+    opacity: 0.74;
+    transform: translate3d(0, 46svh, 0) scale(0.7, 0.58);
+  }
+
+  72% {
+    border-radius: 1.125rem;
+    opacity: 0.88;
+    transform: translate3d(0, 26svh, 0) scale(0.84, 0.74);
+  }
+
+  84% {
+    border-radius: 0.75rem;
+    opacity: 0.96;
+    transform: translate3d(0, 10svh, 0) scale(0.96, 0.9);
+  }
+
+  92% {
+    border-radius: 0.375rem;
+    opacity: 0.99;
+    transform: translate3d(0, 4svh, 0) scale(1.02, 1);
+  }
+
+  100% {
+    border-radius: 0;
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1.08);
+  }
+}
+
+@keyframes public-hero-copy-reveal {
+  0%,
+  60% {
+    opacity: 0;
+    transform: translate3d(0, 86svh, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes public-hero-cue-fade {
+  0% {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  80% {
+    opacity: 0.2;
+    visibility: visible;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+.peatland-story {
+  min-height: 180svh;
+}
+
+.peatland-story__stage {
+  height: 100svh;
+  min-height: 650px;
+}
+
+@supports (animation-timeline: view()) {
+  .peatland-story {
+    view-timeline-name: --peatland-story;
+    view-timeline-axis: block;
+  }
+
+  .peatland-story__image-layer {
+    animation: peatland-image-rise 1s linear both;
+    animation-timeline: --peatland-story;
+    animation-range: contain 0% contain 100%;
+    will-change: opacity, transform;
+  }
+
+  .peatland-story__title {
+    animation: peatland-title-parallax 1s linear both;
+    animation-timeline: --peatland-story;
+    animation-range: contain 0% contain 82%;
+    transform-origin: 50% 50%;
+  }
+
+  .peatland-story__copy {
+    animation: peatland-copy-reveal 1s linear both;
+    animation-timeline: --peatland-story;
+    animation-range: contain 8% contain 72%;
+  }
+
+  .peatland-story__workflow {
+    animation: peatland-copy-reveal 1s linear both;
+    animation-timeline: --peatland-story;
+    animation-range: contain 22% contain 86%;
+  }
+
+  .public-scroll-reveal {
+    animation: public-scroll-reveal 1s linear both;
+    animation-timeline: view(block);
+    animation-range: entry 10% entry 78%;
+  }
+
+  .public-metric-card {
+    animation: public-scroll-reveal 1s linear both;
+    animation-timeline: view(block);
+    animation-range: entry 6% entry 75%;
+  }
+
+  .public-metric-card:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+
+  .public-metric-card:nth-child(3) {
+    animation-delay: 0.2s;
+  }
+
+  .public-metric-card:nth-child(4) {
+    animation-delay: 0.3s;
+  }
+
+  .public-metric-card:nth-child(5) {
+    animation-delay: 0.4s;
+  }
+
+  .public-map__frame {
+    animation: public-map-frame-reveal 1s linear both;
+    animation-timeline: view(block);
+    animation-range: entry 8% entry 62%;
+  }
+
+  .public-how-it-works {
+    view-timeline-name: --public-how-it-works;
+    view-timeline-axis: block;
+  }
+
+  .public-workflow__rail-fill {
+    animation: public-workflow-progress 1s linear both;
+    animation-timeline: --public-how-it-works;
+    animation-range: entry 5% entry 76%;
+  }
+
+  .public-workflow__step {
+    animation: public-scroll-reveal 1s linear both;
+    animation-timeline: view(block);
+    animation-range: entry 8% entry 72%;
+  }
+
+  .public-workflow__step:nth-child(2) {
+    animation-delay: 0.12s;
+  }
+
+  .public-workflow__step:nth-child(3) {
+    animation-delay: 0.24s;
+  }
+
+  .public-workflow__cta {
+    animation: public-scroll-reveal 1s linear both;
+    animation-timeline: view(block);
+    animation-range: entry 10% entry 72%;
+  }
+}
+
+@keyframes peatland-image-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 72svh, 0) scale(0.86);
+  }
+
+  55% {
+    opacity: 0.92;
+    transform: translate3d(0, 14svh, 0) scale(1.04);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, -5svh, 0) scale(1.12);
+  }
+}
+
+@keyframes peatland-title-parallax {
+  from {
+    opacity: 0.5;
+    transform: translate3d(0, 1.5rem, 0) scale(0.88);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1.08);
+  }
+}
+
+@keyframes peatland-copy-reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 2.5rem, 0) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes public-scroll-reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 1.75rem, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes public-map-frame-reveal {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes public-workflow-progress {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@supports not (animation-timeline: view()) {
+  .public-hero {
+    min-height: 100svh;
+  }
+
+  .public-hero__stage {
+    position: relative;
+  }
+
+  .public-hero__copy {
+    opacity: 1;
+    transform: none;
+  }
+
+  .public-hero__panel {
+    display: none;
+  }
+
+  .peatland-story {
+    min-height: auto;
+  }
+
+  .peatland-story__stage {
+    position: relative;
+    height: auto;
+    min-height: 100svh;
+  }
+}
+
+@media (max-width: 767px) {
+  .peatland-story {
+    min-height: auto;
+  }
+
+  .peatland-story__stage {
+    position: relative;
+    height: auto;
+    min-height: 100svh;
+  }
+
+  .peatland-story__image-layer {
+    inset: 0;
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  .peatland-story__copy,
+  .peatland-story__workflow,
+  .peatland-story__title {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   *,
   *::before,
   *::after {
-    scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .peatland-story__image-layer {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .public-hero {
+    min-height: 100svh;
+  }
+
+  .public-hero__stage {
+    position: relative;
+  }
+
+  .public-hero__media,
+  .public-hero__shade,
+  .public-hero__panel,
+  .public-hero__copy,
+  .public-hero__scroll-prompt,
+  .peatland-story__image-layer,
+  .peatland-story__title,
+  .peatland-story__copy,
+  .peatland-story__workflow,
+  .public-scroll-reveal,
+  .public-metric-card,
+  .public-map__frame,
+  .public-workflow__step,
+  .public-workflow__cta,
+  .public-workflow__rail-fill {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    will-change: auto;
+  }
+
+  .public-hero__shade {
+    opacity: 0.22 !important;
+  }
+
+  .public-hero__panel {
+    animation: none !important;
+    opacity: 0 !important;
+    transform: none !important;
+  }
+
+  .peatland-story {
+    min-height: auto;
+  }
+
+  .peatland-story__stage {
+    position: relative;
+    height: auto;
+    min-height: 100svh;
+  }
+}
+
+.peatland-story__copy:focus-within,
+.peatland-story__workflow:focus-within,
+.public-scroll-reveal:focus-within,
+.public-map__frame:focus-within,
+.public-workflow__cta:focus-within {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.public-workflow__rail {
+  align-items: center;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  height: 12px;
+  position: relative;
+}
+
+.public-workflow__rail-dot {
+  background: var(--peat-sun);
+  border: 2px solid var(--peat-paper);
+  border-radius: 9999px;
+  box-shadow: 0 0 0 1px rgb(31 77 61 / 14%);
+  height: 12px;
+  place-self: center;
+  position: relative;
+  width: 12px;
+  z-index: 1;
+}
+
+.public-workflow__rail-track {
+  background: rgb(31 77 61 / 16%);
+  height: 2px;
+  left: 16.667%;
+  overflow: hidden;
+  position: absolute;
+  right: 16.667%;
+  top: 5px;
+}
+
+.public-workflow__rail-fill {
+  background: var(--peat-green);
+  display: block;
+  height: 100%;
+  transform: scaleX(1);
+  transform-origin: left center;
+  width: 100%;
+}
+
+@supports (animation-timeline: view()) {
+  .public-workflow__rail-fill {
+    transform: scaleX(0);
+  }
+}
+
+@media (max-width: 767px) {
+  .public-workflow__rail {
+    display: none;
+  }
+
+  .public-workflow__steps {
+    margin-top: 2.5rem;
   }
 }

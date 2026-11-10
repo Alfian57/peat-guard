@@ -24,24 +24,26 @@ export function PublicMapPanel({
 
   return (
     <div>
-      <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+      <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <h3 className="font-heading text-3xl font-bold text-peat-forest sm:text-4xl">
+          <h3 className="font-heading text-3xl font-bold text-peat-forest sm:text-4xl lg:text-5xl">
             Peta pantauan publik
           </h3>
-          <p className="mt-2 text-sm leading-6 text-peat-forest/70">
+          <p className="mt-2 text-sm leading-6 text-peat-forest/70 sm:text-base">
             Zona disetujui dan indikasi hotspot satelit.
           </p>
         </div>
-        <p className="text-xs font-medium text-peat-forest/65">
+        <p className="text-xs font-medium text-peat-forest/65 sm:text-sm">
           Hotspot bukan konfirmasi kejadian kebakaran.
         </p>
       </div>
 
       {state === "loading" ? (
-        <MapLoadingState />
+        <div className="h-[480px] sm:h-[580px] lg:h-[640px]">
+          <MapLoadingState />
+        </div>
       ) : state === "error" ? (
-        <div className="grid min-h-80 place-items-center rounded-2xl border border-red-900/15 bg-red-50 p-6 text-center">
+        <div className="grid min-h-[480px] place-items-center rounded-2xl border border-red-900/15 bg-red-50 p-6 text-center sm:min-h-[580px] lg:min-h-[640px]">
           <div>
             <p className="font-heading text-2xl font-bold text-red-950">
               Peta belum dapat dimuat
@@ -61,7 +63,7 @@ export function PublicMapPanel({
         </div>
       ) : (
         <MapCanvasLoader
-          className="h-[420px] overflow-hidden rounded-2xl border border-peat-forest/10 shadow-sm sm:h-[520px]"
+          className="h-[480px] w-full overflow-hidden rounded-2xl border border-peat-forest/10 shadow-sm sm:h-[580px] lg:h-[640px]"
           clusterPoints={false}
           points={mapData?.hotspots ?? []}
           zones={mapData?.zones ?? []}

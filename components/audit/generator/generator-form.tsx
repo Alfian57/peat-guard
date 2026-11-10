@@ -165,6 +165,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
                   className="h-11 w-full rounded-xl border border-input bg-white px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   id="generator-from"
                   name="from"
+                  placeholder="YYYY-MM-DD"
                   type="date"
                 />
               </div>
@@ -179,6 +180,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
                   className="h-11 w-full rounded-xl border border-input bg-white px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   id="generator-to"
                   name="to"
+                  placeholder="YYYY-MM-DD"
                   type="date"
                 />
               </div>
@@ -196,7 +198,10 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
             />
             <span className="text-sm leading-6 text-foreground">
               Saya setuju AI menyusun draf narasi dari angka agregat anonim.
-              Nama, koordinat, catatan, dan foto laporan tidak dikirim ke AI.
+              Nama, koordinat, catatan, dan foto laporan tidak dikirim ke AI.{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                (opsional)
+              </span>
             </span>
           </label>
 

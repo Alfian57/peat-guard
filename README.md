@@ -65,6 +65,20 @@ docker compose -f docker/compose.dev.yaml -p peatguard-main exec web bun run db:
 docker compose -f docker/compose.dev.yaml -p peatguard-main exec web bun run db:seed
 ```
 
+For a complete local reset, run the local-only fresh command from the web
+container:
+
+```sh
+docker compose -f docker/compose.dev.yaml -p peatguard-main exec web bun run db:migrate:fresh
+```
+
+This command drops and reapplies the local `peat_guard` database, clears all
+dynamic files under `.data/uploads/`, then seeds the demo records and three
+profile avatars. It refuses production mode, non-local database hosts, and
+database names other than `peat_guard`. It is destructive; do not run it against
+a shared or production database. Deployments continue to use
+`bun run db:migrate:deploy` and must not run demo seed data.
+
 For a local schema change, use Prisma Migrate against the development database:
 
 ```sh
@@ -83,6 +97,7 @@ Do not reset or delete a shared database to create migrations. The PostGIS exten
 - `bun run db:generate` generates Prisma Client under `lib/generated/prisma`.
 - `bun run db:migrate:dev` creates and applies a development migration.
 - `bun run db:migrate:deploy` applies checked-in migrations without resetting data.
+- `bun run db:migrate:fresh` resets only the local `peat_guard` database, clears dynamic uploads, and seeds demo data again.
 - `bun run db:seed` inserts illustrative local demo data idempotently.
 - `bun run worker` starts the background worker runner.
 

@@ -3,6 +3,9 @@ import { Window } from "happy-dom";
 
 mock.module("server-only", () => ({}));
 
+// Keep map component tests independent from developer-local .env credentials.
+process.env.NEXT_PUBLIC_MAPTILER_KEY = "";
+
 const happyWindow = new Window({ url: "http://localhost/" });
 
 Object.assign(globalThis, {

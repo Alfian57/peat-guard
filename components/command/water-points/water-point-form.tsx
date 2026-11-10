@@ -112,6 +112,7 @@ export function WaterPointForm({
             className="mt-1.5 min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 text-sm text-peat-forest"
             maxLength={150}
             onChange={(event) => setName(event.currentTarget.value)}
+            placeholder="Sekat Kanal Primer A"
             required
             value={name}
           />
@@ -136,6 +137,7 @@ export function WaterPointForm({
             max="90"
             min="-90"
             onChange={(event) => setLatitude(event.currentTarget.value)}
+            placeholder="-2.319400"
             required
             step="any"
             type="number"
@@ -149,6 +151,7 @@ export function WaterPointForm({
             max="180"
             min="-180"
             onChange={(event) => setLongitude(event.currentTarget.value)}
+            placeholder="113.910200"
             required
             step="any"
             type="number"

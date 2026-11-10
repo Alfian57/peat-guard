@@ -92,7 +92,7 @@ test("filter changes submit an allowlisted source query", async () => {
   await screen.findByText(
     "Tidak ada zona disetujui atau hotspot pada rentang filter dan area ini.",
   );
-  await user.selectOptions(screen.getByLabelText("Sumber hotspot"), "demo");
+  await user.selectOptions(screen.getByLabelText(/Sumber hotspot/), "demo");
   await waitFor(() => expect(requestUrls).toHaveLength(2));
 
   expect(requestUrls[1]).toContain("source=demo");
