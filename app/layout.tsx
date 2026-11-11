@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { barlowCondensed, inter, jetBrainsMono } from "@/lib/fonts";
 import "./globals.css";
 
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
     "Pemantauan gambut, pelaporan patroli, dan transparansi dampak konservasi.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="id"

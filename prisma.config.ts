@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -10,6 +10,8 @@ export default defineConfig({
       : { seed: "bun run db:seed" }),
   },
   datasource: {
-    url: env("DATABASE_URL"),
+    url:
+      process.env.DATABASE_URL?.trim() ||
+      "postgresql://postgres:postgres@localhost:5432/peat_guard?schema=public",
   },
 });

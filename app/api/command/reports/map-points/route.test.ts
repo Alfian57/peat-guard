@@ -12,6 +12,7 @@ const mockGetPoints = mock(async (_role: unknown, filters: unknown) => {
 });
 
 mock.module("@/lib/authz", () => ({
+  AuthorizationError,
   requireRole: async () => {
     if (!allowAccess) throw new AuthorizationError(403);
     return { user: { role: "POSKO" } };

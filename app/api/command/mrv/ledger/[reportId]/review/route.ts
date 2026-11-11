@@ -1,4 +1,5 @@
-import { AuthorizationError, requireRole } from "@/lib/authz";
+import { requireRole } from "@/lib/authz";
+import { AuthorizationError } from "@/lib/role-access";
 import { isUuid } from "@/lib/server/command/http";
 import {
   isMrvSameOrigin,

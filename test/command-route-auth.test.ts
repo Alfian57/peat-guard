@@ -12,6 +12,7 @@ const approveCommandZone = mock(async () => ({
 }));
 
 mock.module("@/lib/authz", () => ({
+  AuthorizationError,
   requireRole: async (allowedRoles: readonly AppRole[]) => {
     if (activeRole === null) {
       throw new AuthorizationError(401);

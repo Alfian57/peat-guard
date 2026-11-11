@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: ["main", "test/**"]
+    branches: ["main", "fix/**", "test/**", "feat/**"]
   pull_request:
     branches: ["main"]
   workflow_dispatch:
@@ -10,6 +10,9 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: alfian57/peat-guard
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/peat_guard?schema=public
+  BETTER_AUTH_SECRET: ci-test-secret-must-be-at-least-32-chars-long
+  BETTER_AUTH_URL: http://localhost:3000
 
 jobs:
   lint-and-static-analysis:
@@ -24,6 +27,9 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bun run db:generate
 
       - name: Run ESLint
         run: bun run lint
@@ -46,6 +52,9 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bun run db:generate
 
       - name: Run Unit & Component tests
         run: bun run test:unit
@@ -164,6 +173,7 @@ jobs:
       - database-and-spatial-integration
       - e2e-playwright-shards
     runs-on: ubuntu-latest
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     permissions:
       contents: read
       packages: write
