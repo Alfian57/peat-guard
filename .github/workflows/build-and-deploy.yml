@@ -1,8 +1,8 @@
-name: Build and Deploy
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "test/**"]
   pull_request:
     branches: ["main"]
   workflow_dispatch:
@@ -12,8 +12,157 @@ env:
   IMAGE_NAME: alfian57/peat-guard
 
 jobs:
+  lint-and-static-analysis:
+    name: "Runner 1: Lint & Static Analysis"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run ESLint
+        run: bun run lint
+
+      - name: Run Prettier check
+        run: bun run format:check
+
+      - name: Run TypeScript typecheck
+        run: bun run typecheck
+
+  unit-and-component-tests:
+    name: "Runner 2: Unit & Component Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run Unit & Component tests
+        run: bun run test:unit
+
+  database-and-spatial-integration:
+    name: "Runner 3: PostGIS & DB Integration"
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:17-3.7
+        env:
+          POSTGRES_DB: peat_guard_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run DB migrations and seed
+        env:
+          DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/peat_guard_test?schema=public
+        run: |
+          bun run db:generate
+          bun run db:migrate:deploy
+          bun run db:seed
+
+      - name: Run Database & PostGIS integration tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/peat_guard_test?schema=public
+          UPLOADS_DIR: .data/uploads
+        run: bun run test:integration
+
+  e2e-playwright-shards:
+    name: "Runner 4 & 5: Playwright E2E Shard ${{ matrix.shard }}/${{ matrix.totalShards }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+        totalShards: [2]
+    services:
+      postgres:
+        image: postgis/postgis:17-3.7
+        env:
+          POSTGRES_DB: peat_guard_e2e
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Node.js for Playwright
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright Chromium with system dependencies
+        run: bunx playwright install --with-deps chromium
+
+      - name: Run DB migrations and seed
+        env:
+          DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/peat_guard_e2e?schema=public
+        run: |
+          bun run db:generate
+          bun run db:migrate:deploy
+          bun run db:seed
+
+      - name: Run Playwright E2E shard
+        env:
+          DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/peat_guard_e2e?schema=public
+          BETTER_AUTH_SECRET: ci-test-secret-must-be-at-least-32-chars-long
+          BETTER_AUTH_URL: http://localhost:3000
+          UPLOADS_DIR: .data/uploads
+          PORT: 3000
+        run: bunx playwright test --shard=${{ matrix.shard }}/${{ matrix.totalShards }}
+
+      - name: Upload Playwright report artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-shard-${{ matrix.shard }}
+          path: playwright-report/
+          retention-days: 7
+
   build:
     name: Build Docker Image
+    needs:
+      - lint-and-static-analysis
+      - unit-and-component-tests
+      - database-and-spatial-integration
+      - e2e-playwright-shards
     runs-on: ubuntu-latest
     permissions:
       contents: read
