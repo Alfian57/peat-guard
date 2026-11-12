@@ -4,6 +4,8 @@ import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
 import { Filter, X } from "lucide-react";
 import type { CommandZone } from "@/lib/server/zones/data";
 import type { ReportFilters } from "@/components/command/reports/report-query";
+import { REPORT_STATUSES } from "@/components/command/reports/report-contracts";
+import { statusLabel } from "@/components/command/reports/report-status-badge";
 import { ReportQueueFilterField } from "@/components/command/reports/report-queue-filter-field";
 
 const controlClassName =
@@ -17,7 +19,6 @@ export type ReportQueueFilterDialogProps = {
   onApply: (event: FormEvent<HTMLFormElement>) => void;
   onClose: () => void;
   onDraftChange: (filters: ReportFilters) => void;
-  onReset: () => void;
   zones: CommandZone[];
 };
 
@@ -29,7 +30,6 @@ export function ReportQueueFilterDialog({
   onApply,
   onClose,
   onDraftChange,
-  onReset,
   zones,
 }: ReportQueueFilterDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -99,7 +99,7 @@ export function ReportQueueFilterDialog({
       aria-describedby="report-queue-filter-desc"
       aria-labelledby="report-queue-filter-title"
       aria-modal="true"
-      className="m-auto max-h-[min(90vh,760px)] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-3xl border border-peat-forest/15 bg-white p-6 shadow-2xl backdrop:bg-peat-forest/50 backdrop:backdrop-blur-sm sm:p-7"
+      className="m-auto max-h-[min(90vh,760px)] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-3xl border border-peat-forest/15 bg-white p-6 shadow-2xl backdrop:bg-black/50 sm:p-7"
       id="report-queue-filter-dialog"
       onCancel={(event) => {
         event.preventDefault();
@@ -126,8 +126,8 @@ export function ReportQueueFilterDialog({
             className="mt-1 text-sm text-muted-foreground"
             id="report-queue-filter-desc"
           >
-            Saring laporan berdasarkan zona gambut, rentang tanggal kejadian,
-            atau jenis data demonstrasi.
+            Saring laporan berdasarkan status penanganan, zona gambut, rentang
+            tanggal kejadian, atau jenis data demonstrasi.
           </p>
         </div>
         <button
@@ -141,10 +141,31 @@ export function ReportQueueFilterDialog({
       </div>
 
       <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
-        <ReportQueueFilterField label="Zona gambut" optional>
+        <ReportQueueFilterField label="Status laporan" optional>
           <select
             className={controlClassName}
             data-autofocus
+            onChange={(event) =>
+              onDraftChange({
+                ...draftFilters,
+                status: (event.currentTarget.value ||
+                  null) as ReportFilters["status"],
+              })
+            }
+            value={draftFilters.status ?? ""}
+          >
+            <option value="">Semua status</option>
+            {REPORT_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {statusLabel(status)}
+              </option>
+            ))}
+          </select>
+        </ReportQueueFilterField>
+
+        <ReportQueueFilterField label="Zona gambut" optional>
+          <select
+            className={controlClassName}
             onChange={(event) =>
               onDraftChange({
                 ...draftFilters,
@@ -231,32 +252,22 @@ export function ReportQueueFilterDialog({
           </p>
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-peat-forest/10 pt-3">
+        <div className="flex items-center justify-end gap-2 border-t border-peat-forest/10 pt-3">
           <button
-            className="min-h-11 rounded-xl border border-peat-forest/15 px-4 text-sm font-semibold text-peat-forest transition hover:bg-peat-paper disabled:opacity-60"
-            disabled={isLoading}
-            onClick={onReset}
+            className="inline-flex h-9 min-h-9 items-center justify-center rounded-xl border border-border px-4 text-xs font-semibold text-peat-forest transition hover:bg-peat-paper"
+            onClick={onClose}
             type="button"
           >
-            Atur ulang
+            Batal
           </button>
-          <div className="flex items-center gap-2">
-            <button
-              className="min-h-11 rounded-xl border border-border px-4 text-sm font-semibold text-peat-forest transition hover:bg-peat-paper"
-              onClick={onClose}
-              type="button"
-            >
-              Batal
-            </button>
-            <button
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-peat-forest px-5 text-sm font-semibold text-white transition hover:bg-peat-green disabled:opacity-60"
-              disabled={isLoading}
-              type="submit"
-            >
-              <Filter aria-hidden="true" size={16} />
-              Terapkan
-            </button>
-          </div>
+          <button
+            className="inline-flex h-9 min-h-9 items-center justify-center gap-1.5 rounded-xl bg-peat-forest px-4 text-xs font-semibold text-white transition hover:bg-peat-green disabled:opacity-60"
+            disabled={isLoading}
+            type="submit"
+          >
+            <Filter aria-hidden="true" size={14} />
+            Terapkan
+          </button>
         </div>
       </form>
     </dialog>

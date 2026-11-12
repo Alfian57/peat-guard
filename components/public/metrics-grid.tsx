@@ -3,6 +3,7 @@ import { Flame, Leaf, MapPinned, Sprout } from "lucide-react";
 import { MetricCard } from "@/components/public/metric-card";
 import type { PublicLoadState } from "@/components/public/public-types";
 import type { PublicMetrics } from "@/lib/public/contracts";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const KALIMANTAN_METRICS = [
   {
@@ -47,12 +48,15 @@ export function MetricsGrid({
         ? Array.from({ length: 4 }, (_, index) => (
             <div
               aria-hidden="true"
-              className="min-h-36 animate-pulse rounded-2xl border border-peat-forest/10 bg-white p-5"
+              className="min-h-36 rounded-2xl border border-peat-forest/10 bg-white p-5 shadow-xs"
               key={index}
             >
-              <div className="h-4 w-28 rounded bg-peat-forest/10" />
-              <div className="mt-7 h-9 w-24 rounded bg-peat-forest/10" />
-              <div className="mt-3 h-3 w-36 rounded bg-peat-forest/10" />
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-4 w-28 rounded-md bg-peat-forest/10" />
+                <Skeleton className="size-8 rounded-xl bg-peat-forest/10" />
+              </div>
+              <Skeleton className="mt-5 h-8 w-24 rounded-lg bg-peat-forest/15" />
+              <Skeleton className="mt-3 h-3 w-40 rounded-md bg-peat-forest/10" />
             </div>
           ))
         : KALIMANTAN_METRICS.map((metric) => (

@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowUpRight, Leaf } from "lucide-react";
 
+import { handleSectionScroll } from "@/components/public/smooth-scroll";
 import { APP_ROUTES } from "@/lib/routes";
 
 const CURRENT_YEAR = 2026;
@@ -14,6 +17,18 @@ export function PublicFooter() {
             aria-label="PEATGUARD beranda"
             className="inline-flex items-center gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
             href={APP_ROUTES.home}
+            onClick={(e) => {
+              if (
+                typeof window !== "undefined" &&
+                (window.location.pathname === APP_ROUTES.home ||
+                  window.location.pathname === "")
+              ) {
+                handleSectionScroll(
+                  e as unknown as React.MouseEvent<HTMLAnchorElement>,
+                  APP_ROUTES.homeSections.hero,
+                );
+              }
+            }}
           >
             <span className="grid size-11 place-items-center rounded-full bg-white/10 text-peat-sun">
               <Leaf aria-hidden="true" size={21} />
@@ -40,18 +55,27 @@ export function PublicFooter() {
               <a
                 className="w-fit transition-colors hover:text-white"
                 href={APP_ROUTES.homeSections.monitoring}
+                onClick={(e) =>
+                  handleSectionScroll(e, APP_ROUTES.homeSections.monitoring)
+                }
               >
                 Ringkasan pantauan
               </a>
               <a
                 className="w-fit transition-colors hover:text-white"
                 href={APP_ROUTES.homeSections.publicMap}
+                onClick={(e) =>
+                  handleSectionScroll(e, APP_ROUTES.homeSections.publicMap)
+                }
               >
                 Peta publik
               </a>
               <a
                 className="w-fit transition-colors hover:text-white"
                 href={APP_ROUTES.homeSections.workflow}
+                onClick={(e) =>
+                  handleSectionScroll(e, APP_ROUTES.homeSections.workflow)
+                }
               >
                 Cara kerja
               </a>

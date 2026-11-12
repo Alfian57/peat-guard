@@ -6,7 +6,15 @@ export type GlobalSearchResult = {
   id: string;
   title: string;
   description: string;
-  kind: "Laporan" | "Zona" | "Titik air" | "Hotspot" | "Audit MRV";
+  kind:
+    | "Laporan"
+    | "Zona"
+    | "Titik air"
+    | "Hotspot"
+    | "Audit MRV"
+    | "Akun"
+    | "Menu";
+  group: "menu" | "data";
   href: string;
 };
 
@@ -39,35 +47,76 @@ export function buildReportSearchWhere(
   query: string,
   role: AppRole,
   userId: string,
+  matchingIds?: string[],
 ): Prisma.FieldReportWhereInput {
-  const contains = { contains: query, mode: "insensitive" as const };
-  const normalizedQuery = query
-    .trim()
+  const trimmed = query.trim();
+  const lower = trimmed.toLowerCase();
+  const contains = { contains: trimmed, mode: "insensitive" as const };
+  const normalizedQuery = trimmed
     .replace(/\s+/g, "_")
     .toLocaleUpperCase("id-ID");
+
   const OR: Prisma.FieldReportWhereInput[] = [
     { zone: { is: { zoneName: contains } } },
     { zone: { is: { villageName: contains } } },
+    { fieldNotes: contains },
+    { aiSummary: contains },
+    {
+      tags: {
+        hasSome: [
+          trimmed,
+          lower,
+          trimmed.toUpperCase(),
+          trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase(),
+        ],
+      },
+    },
   ];
-  if (UUID_QUERY.test(query)) OR.push({ id: query });
+
   if (
-    HANDLING_STATUSES.includes(
-      normalizedQuery as (typeof HANDLING_STATUSES)[number],
-    )
+    lower.includes("lapor") ||
+    lower.includes("insiden") ||
+    lower.includes("patroli") ||
+    lower.includes("report")
   ) {
-    OR.push({
-      handlingStatus: normalizedQuery as (typeof HANDLING_STATUSES)[number],
-    });
+    OR.push({ createdAt: { gt: new Date(0) } });
   }
-  if (
-    REPORT_CATEGORIES.includes(
-      normalizedQuery as (typeof REPORT_CATEGORIES)[number],
-    )
-  ) {
-    OR.push({
-      aiCategory: normalizedQuery as (typeof REPORT_CATEGORIES)[number],
-    });
+
+  if (role !== "RELAWAN") {
+    OR.push(
+      { reporter: { is: { name: contains } } },
+      { reporter: { is: { email: contains } } },
+      { reporter: { is: { villageName: contains } } },
+    );
   }
+
+  if (UUID_QUERY.test(trimmed)) {
+    OR.push({ id: trimmed }, { clientReportId: trimmed });
+  }
+
+  if (matchingIds && matchingIds.length > 0) {
+    OR.push({ id: { in: matchingIds } });
+  }
+
+  HANDLING_STATUSES.forEach((status) => {
+    const statusWords = status.toLowerCase().split("_");
+    if (
+      status === normalizedQuery ||
+      statusWords.some((w) => lower.includes(w) || w.includes(lower))
+    ) {
+      OR.push({ handlingStatus: status });
+    }
+  });
+
+  REPORT_CATEGORIES.forEach((category) => {
+    const catWords = category.toLowerCase().split("_");
+    if (
+      category === normalizedQuery ||
+      catWords.some((w) => lower.includes(w) || w.includes(lower))
+    ) {
+      OR.push({ aiCategory: category });
+    }
+  });
 
   return {
     ...(role === "RELAWAN" ? { reporterId: userId } : {}),
@@ -95,6 +144,7 @@ export function toGlobalSearchReportResult(
       .filter(Boolean)
       .join(" · "),
     kind: "Laporan",
+    group: "data",
     href:
       role === "RELAWAN"
         ? APP_ROUTES.field.reportDetail(report.id)

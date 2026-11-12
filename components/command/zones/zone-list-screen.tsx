@@ -4,10 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 
-import {
-  CommandError,
-  CommandLoading,
-} from "@/components/command/command-feedback";
+import { CommandError } from "@/components/command/command-feedback";
+import { ZoneListSkeleton } from "@/components/command/zones/zone-list-skeleton";
 import { CommandPageHeading } from "@/components/command/command-page-heading";
 import {
   isZonesResponse,
@@ -19,9 +17,10 @@ import {
   COMMAND_ROUTES,
   zoneApiRoute,
 } from "@/components/command/routes";
-import { ZoneCard } from "@/components/command/zones/zone-card";
+import { ZoneTableRow } from "@/components/command/zones/zone-table-row";
 import { ZoneDeleteDialog } from "@/components/command/zones/zone-delete-dialog";
 import { ZoneSummaryGrid } from "@/components/command/zones/zone-summary-grid";
+import { toast } from "@/components/ui/toast";
 import type { CommandZone } from "@/lib/server/zones/data";
 import type { CommandWaterPoint } from "@/lib/server/water/data";
 
@@ -99,6 +98,10 @@ export function ZoneListScreen() {
       setZones((current) =>
         current.filter((zone) => zone.id !== deleteTarget.id),
       );
+      toast.success(
+        "Zona dihapus",
+        `Zona ${deleteTarget.name} berhasil dihapus.`,
+      );
       setDeleteTarget(null);
     } catch (cause) {
       setDeleteError(
@@ -114,15 +117,14 @@ export function ZoneListScreen() {
       <CommandPageHeading
         action={
           <Link
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-peat-forest px-4 text-sm font-semibold text-white hover:bg-peat-green"
+            className="inline-flex h-8 min-h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-peat-forest px-3 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-peat-green"
             href={COMMAND_ROUTES.createZone}
           >
-            <Plus aria-hidden="true" size={17} />
+            <Plus aria-hidden="true" size={14} />
             Tambah zona
           </Link>
         }
         description="Kelola batas dan parameter zona gambut. Persetujuan zona hanya dapat dilakukan oleh Verifikator."
-        eyebrow="POSKO · WILAYAH KERJA"
         title="Zona gambut"
       />
 
@@ -136,7 +138,7 @@ export function ZoneListScreen() {
       />
 
       {state === "loading" ? (
-        <CommandLoading label="Memuat daftar zona…" />
+        <ZoneListSkeleton />
       ) : state === "error" ? (
         <CommandError message={error} onRetry={refreshData} />
       ) : zones.length === 0 ? (
@@ -156,22 +158,51 @@ export function ZoneListScreen() {
           </Link>
         </div>
       ) : (
-        <ul
-          aria-label="Daftar zona gambut"
-          className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3"
-        >
-          {zones.map((zone) => (
-            <ZoneCard
-              key={zone.id}
-              onDelete={(selectedZone) => {
-                setDeleteError("");
-                setDeleteTarget(selectedZone);
-              }}
-              waterPointCount={waterCounts.get(zone.id) ?? 0}
-              zone={zone}
-            />
-          ))}
-        </ul>
+        <div className="overflow-hidden rounded-2xl border border-peat-forest/10 bg-white shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[960px] border-collapse text-left">
+              <caption className="sr-only">Daftar zona gambut</caption>
+              <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-peat-forest/70">
+                <tr>
+                  <th className="px-4 py-3.5" scope="col">
+                    Nama Zona & Desa
+                  </th>
+                  <th className="px-4 py-3.5" scope="col">
+                    Status Verifikasi
+                  </th>
+                  <th className="px-4 py-3.5" scope="col">
+                    Luas Terhitung
+                  </th>
+                  <th className="px-4 py-3.5" scope="col">
+                    Kedalaman
+                  </th>
+                  <th className="px-4 py-3.5" scope="col">
+                    Faktor Karbon
+                  </th>
+                  <th className="px-4 py-3.5" scope="col">
+                    Sumber Air
+                  </th>
+                  <th className="px-4 py-3.5 text-right" scope="col">
+                    Aksi
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-peat-forest/10 text-sm">
+                {zones.map((zone) => (
+                  <ZoneTableRow
+                    key={zone.id}
+                    onDelete={(selectedZone) => {
+                      setDeleteError("");
+                      setDeleteTarget(selectedZone);
+                    }}
+                    waterPointCount={waterCounts.get(zone.id) ?? 0}
+                    zone={zone}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {deleteTarget ? (

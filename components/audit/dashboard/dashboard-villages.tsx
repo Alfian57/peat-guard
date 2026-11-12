@@ -25,7 +25,7 @@ export function DashboardVillages({ dashboard }: { dashboard: MrvDashboard }) {
             <caption className="sr-only">
               Laporan lapangan dan estimasi karbon per desa
             </caption>
-            <thead className="bg-peat-paper/75 text-xs font-semibold text-muted-foreground">
+            <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-peat-forest/70">
               <tr>
                 <th className="px-4 py-3 text-left" scope="col">
                   Desa
@@ -44,7 +44,7 @@ export function DashboardVillages({ dashboard }: { dashboard: MrvDashboard }) {
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-peat-forest/10 text-sm">
               {dashboard.villages.map((village) => (
                 <VillageRow key={village.villageName} village={village} />
               ))}

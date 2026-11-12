@@ -24,7 +24,7 @@ type LedgerExportDialogProps = {
 };
 
 const exportLinkClassName =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-peat-green px-4 text-sm font-semibold text-white hover:bg-peat-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+  "inline-flex h-8 min-h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-peat-forest px-3 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring";
 
 export function LedgerExportDialog({
   filters,
@@ -55,7 +55,7 @@ export function LedgerExportDialog({
         ref={triggerRef}
         type="button"
       >
-        <Download aria-hidden="true" size={17} />
+        <Download aria-hidden="true" size={14} />
         Ekspor data
       </button>
 
@@ -157,20 +157,20 @@ export function LedgerExportDialog({
             dialog ini dan persempit filter sebelum mengekspor.
           </p>
         ) : (
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div className="mt-5 flex items-center justify-end gap-2 border-t border-border pt-3">
             <a
-              className={exportLinkClassName}
-              href={getLedgerExportHref(filters, "csv")}
-            >
-              <FileSpreadsheet aria-hidden="true" size={17} />
-              Unduh CSV
-            </a>
-            <a
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold text-peat-green hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex h-9 min-h-9 items-center justify-center gap-1.5 rounded-xl border border-border bg-white px-4 text-xs font-semibold text-peat-forest transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               href={getLedgerExportHref(filters, "json")}
             >
-              <FileJson aria-hidden="true" size={17} />
+              <FileJson aria-hidden="true" size={14} />
               Unduh JSON
+            </a>
+            <a
+              className="inline-flex h-9 min-h-9 items-center justify-center gap-1.5 rounded-xl bg-peat-forest px-4 text-xs font-semibold text-white transition hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              href={getLedgerExportHref(filters, "csv")}
+            >
+              <FileSpreadsheet aria-hidden="true" size={14} />
+              Unduh CSV
             </a>
           </div>
         )}

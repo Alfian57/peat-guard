@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 
 import { zoneEditRoute } from "@/components/command/routes";
 import { ZoneCardMetric } from "@/components/command/zones/zone-card-metric";
@@ -64,14 +64,15 @@ export function ZoneCard({
 
       <div className="mt-4 flex gap-2">
         <Link
-          className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-peat-forest/15 px-3 text-sm font-semibold text-peat-forest hover:bg-peat-forest/5"
+          className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-peat-forest/15 px-3 text-sm font-semibold text-peat-forest hover:bg-peat-forest/5"
           href={zoneEditRoute(zone.id)}
         >
+          <Pencil aria-hidden="true" className="text-amber-500" size={15} />
           Ubah zona
         </Link>
         <button
           aria-label={"Hapus zona " + zone.name}
-          className="inline-grid min-h-11 min-w-11 place-items-center rounded-xl border border-red-900/15 text-red-800 hover:bg-red-50"
+          className="inline-grid min-h-11 min-w-11 place-items-center rounded-xl border border-border text-red-600 hover:bg-red-50 hover:text-red-700"
           onClick={() => onDelete(zone)}
           type="button"
         >

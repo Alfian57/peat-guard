@@ -3,6 +3,7 @@
 import { RefreshCw } from "lucide-react";
 import { ServerReportCard } from "./server-report-card";
 import { ReportCard } from "./report-card";
+import { FieldReportCardSkeleton } from "./field-report-card-skeleton";
 import {
   findLocalReportForServer,
   splitReportHistory,
@@ -57,7 +58,7 @@ export function ServerReportHistorySection({
             onClick={onRefresh}
             disabled={!isConnected || status === "loading"}
             aria-label="Muat ulang riwayat server"
-            className="grid size-11 shrink-0 place-items-center rounded-lg text-peat-green focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green disabled:opacity-60"
+            className="inline-grid size-8 h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full border border-border bg-white text-peat-forest shadow-xs transition-colors hover:bg-peat-paper hover:text-peat-green focus-visible:outline-2 focus-visible:outline-peat-green disabled:opacity-60"
           >
             <RefreshCw
               aria-hidden="true"
@@ -66,7 +67,7 @@ export function ServerReportHistorySection({
                   ? "animate-spin motion-reduce:animate-none"
                   : ""
               }
-              size={18}
+              size={14}
             />
           </button>
         ) : null}
@@ -81,12 +82,10 @@ export function ServerReportHistorySection({
         </p>
       ) : null}
       {status === "loading" ? (
-        <p
-          className="mt-3 rounded-xl border border-border bg-white p-4 text-sm text-muted-foreground"
-          role="status"
-        >
-          Memuat riwayat server…
-        </p>
+        <div className="mt-3 space-y-3">
+          <FieldReportCardSkeleton />
+          <FieldReportCardSkeleton />
+        </div>
       ) : null}
       {error ? (
         <p

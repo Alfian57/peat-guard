@@ -3,6 +3,7 @@
 import { ArrowLeft } from "lucide-react";
 import { ownerStatusMessage, useFieldShell } from "./field-app-shell";
 import { FieldReportForm } from "./field-report-form";
+import { toast } from "@/components/ui/toast";
 import { saveQueuedReport } from "@/lib/client/offline/report-store";
 import type { NewFieldReport } from "@/lib/client/offline/types";
 import { useOwnedReport } from "./use-owned-report";
@@ -38,11 +39,11 @@ export function EditReport({ reportId }: { reportId: string }) {
       ownerId,
     );
     await refreshQueue();
-    setNotice(
-      data.aiConsent
-        ? "Perubahan laporan tersimpan di perangkat."
-        : "Perubahan tersimpan. Analisis AI dilewati sesuai pilihan Anda.",
-    );
+    const noticeText = data.aiConsent
+      ? "Perubahan laporan tersimpan di perangkat."
+      : "Perubahan tersimpan. Analisis AI dilewati sesuai pilihan Anda.";
+    setNotice(noticeText);
+    toast.flash("Laporan diperbarui", noticeText);
     if (isConnected) {
       window.location.assign(
         `${APP_ROUTES.field.report}?reportId=${encodeURIComponent(reportId)}`,
@@ -79,26 +80,23 @@ export function EditReport({ reportId }: { reportId: string }) {
         </p>
         <a
           href={`${APP_ROUTES.field.report}?reportId=${encodeURIComponent(reportId)}`}
-          className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-peat-green"
+          className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-peat-forest hover:underline"
         >
-          <ArrowLeft aria-hidden="true" size={17} /> Kembali ke laporan
+          <ArrowLeft aria-hidden="true" size={17} /> Kembali ke detail laporan
         </a>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl px-4 pt-5">
+    <div className="mx-auto w-full max-w-xl px-4 pt-4 lg:max-w-4xl lg:px-0 lg:pt-0">
       <a
         href={`${APP_ROUTES.field.report}?reportId=${encodeURIComponent(reportId)}`}
-        className="inline-flex min-h-11 items-center gap-2 rounded-lg pr-3 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
+        className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-peat-forest hover:underline focus-visible:outline-2 focus-visible:outline-peat-green"
       >
-        <ArrowLeft aria-hidden="true" size={17} /> Batal
+        <ArrowLeft aria-hidden="true" size={17} /> Kembali ke detail laporan
       </a>
-      <p className="mt-3 text-sm text-muted-foreground">
-        Perbarui laporan tersimpan
-      </p>
-      <h1 className="mt-1 mb-5 font-heading text-4xl leading-none font-bold text-peat-forest">
+      <h1 className="mb-5 font-heading text-4xl leading-none font-bold text-peat-forest">
         Edit laporan
       </h1>
       <FieldReportForm

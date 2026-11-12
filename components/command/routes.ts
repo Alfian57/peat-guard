@@ -5,7 +5,11 @@ export const COMMAND_ROUTES = {
   reports: APP_ROUTES.command.reports,
   zones: APP_ROUTES.command.zones,
   createZone: APP_ROUTES.command.createZone,
+  editZone: (zoneId: string) => APP_ROUTES.command.editZone(zoneId),
   waterPoints: APP_ROUTES.command.waterPoints,
+  createWaterPoint: APP_ROUTES.command.createWaterPoint,
+  editWaterPoint: (pointId: string) =>
+    APP_ROUTES.command.editWaterPoint(pointId),
   login: APP_ROUTES.login,
 } as const;
 
@@ -21,6 +25,10 @@ export const COMMAND_API_ROUTES = {
 
 export function zoneEditRoute(zoneId: string): string {
   return APP_ROUTES.command.editZone(zoneId);
+}
+
+export function waterPointEditRoute(waterPointId: string): string {
+  return APP_ROUTES.command.editWaterPoint(waterPointId);
 }
 
 export function reportDetailRoute(reportId: string): string {

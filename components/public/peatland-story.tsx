@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import { ArrowDown, ClipboardCheck, Eye, Waves } from "lucide-react";
 
+import { handleSectionScroll } from "@/components/public/smooth-scroll";
 import { APP_ROUTES } from "@/lib/routes";
 
 const storySteps = [
@@ -33,7 +36,7 @@ export function PeatlandStory() {
       className="peatland-story relative isolate bg-peat-forest text-white"
       id="cerita-gambut"
     >
-      <div className="peatland-story__stage sticky top-0 flex min-h-[100svh] items-center overflow-hidden">
+      <div className="peatland-story__stage relative flex items-center overflow-hidden">
         <div
           aria-hidden="true"
           className="absolute inset-0 -z-10 overflow-hidden"
@@ -67,6 +70,9 @@ export function PeatlandStory() {
             <a
               className="mt-8 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-peat-sun transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
               href={APP_ROUTES.homeSections.publicMap}
+              onClick={(e) =>
+                handleSectionScroll(e, APP_ROUTES.homeSections.publicMap)
+              }
             >
               Lihat informasi pantauan
               <ArrowDown aria-hidden="true" size={16} />

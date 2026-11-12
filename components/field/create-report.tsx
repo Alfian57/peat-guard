@@ -3,6 +3,7 @@
 import { ArrowLeft } from "lucide-react";
 import { ownerStatusMessage, useFieldShell } from "./field-app-shell";
 import { FieldReportForm } from "./field-report-form";
+import { toast } from "@/components/ui/toast";
 import { createQueuedReport } from "@/lib/client/offline/report-contract";
 import { saveQueuedReport } from "@/lib/client/offline/report-store";
 import { APP_ROUTES } from "@/lib/routes";
@@ -29,11 +30,11 @@ export function CreateReport() {
     const report = createQueuedReport(data, ownerId);
     await saveQueuedReport(report, ownerId);
     await refreshQueue();
-    setNotice(
-      data.aiConsent
-        ? "Laporan tersimpan di perangkat. Analisis AI menunggu pemrosesan posko."
-        : "Laporan tersimpan. Analisis AI dilewati sesuai pilihan Anda.",
-    );
+    const noticeText = data.aiConsent
+      ? "Laporan tersimpan di perangkat. Analisis AI menunggu pemrosesan posko."
+      : "Laporan tersimpan. Analisis AI dilewati sesuai pilihan Anda.";
+    setNotice(noticeText);
+    toast.flash("Laporan berhasil dibuat", noticeText);
     if (isConnected) {
       window.location.assign(
         `${APP_ROUTES.field.report}?reportId=${encodeURIComponent(report.clientReportId)}`,
@@ -44,17 +45,14 @@ export function CreateReport() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl px-4 pt-5">
+    <div className="mx-auto w-full max-w-xl px-4 pt-4 lg:max-w-4xl lg:px-0 lg:pt-0">
       <a
         href={APP_ROUTES.field.home}
-        className="inline-flex min-h-11 items-center gap-2 rounded-lg pr-3 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
+        className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-peat-forest hover:underline focus-visible:outline-2 focus-visible:outline-peat-green"
       >
-        <ArrowLeft aria-hidden="true" size={17} /> Kembali
+        <ArrowLeft aria-hidden="true" size={17} /> Kembali ke beranda
       </a>
-      <p className="mt-3 text-sm text-muted-foreground">
-        Catatan patroli lapangan
-      </p>
-      <h1 className="mt-1 font-heading text-4xl leading-none font-bold text-peat-forest">
+      <h1 className="font-heading text-4xl leading-none font-bold text-peat-forest">
         Lapor temuan
       </h1>
       <p className="mt-2 mb-5 text-sm leading-5 text-muted-foreground">

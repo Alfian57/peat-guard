@@ -7,7 +7,7 @@ export function VillageRow({ village }: { village: DashboardVillage }) {
     village.aiTriagedFieldReportCount + village.demoAiTriagedFieldReportCount;
 
   return (
-    <tr className="border-t border-border">
+    <tr className="border-t border-border transition-colors hover:bg-peat-forest/[0.02]">
       <th
         className="px-4 py-4 text-left font-semibold text-peat-forest"
         scope="row"

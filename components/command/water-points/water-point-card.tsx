@@ -42,12 +42,12 @@ export function WaterPointCard({
           onClick={() => onEdit(point)}
           type="button"
         >
-          <Pencil aria-hidden="true" size={15} />
+          <Pencil aria-hidden="true" className="text-amber-500" size={15} />
           Ubah
         </button>
         <button
           aria-label={"Hapus titik " + point.name}
-          className="inline-grid min-h-11 min-w-11 place-items-center rounded-xl border border-red-900/15 text-red-800 hover:bg-red-50"
+          className="inline-grid min-h-11 min-w-11 place-items-center rounded-xl border border-border text-red-600 hover:bg-red-50 hover:text-red-700"
           onClick={() => onDelete(point)}
           type="button"
         >

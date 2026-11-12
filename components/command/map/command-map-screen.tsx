@@ -309,17 +309,16 @@ export function CommandMapScreen() {
       <CommandPageHeading
         action={
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-peat-forest px-4 text-sm font-semibold text-white hover:bg-peat-green disabled:cursor-wait disabled:opacity-70"
+            className="inline-flex h-8 min-h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-peat-forest px-3 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-peat-green disabled:cursor-wait disabled:opacity-70"
             disabled={syncing || firmsStatus?.configured === false}
             onClick={() => void syncHotspots()}
             type="button"
           >
-            <Satellite aria-hidden="true" size={17} />
+            <Satellite aria-hidden="true" size={14} />
             {syncing ? "Menyinkronkan…" : "Sinkronkan NASA FIRMS"}
           </button>
         }
         description="Pantau zona gambut, titik sumber air, dan indikasi hotspot satelit di wilayah kerja."
-        eyebrow="POSKO · PANTAUAN LAPANGAN"
         title="Peta komando"
       />
 

@@ -63,8 +63,12 @@ export function PublicMapPanel({
         </div>
       ) : (
         <MapCanvasLoader
+          autoFit
           className="h-[480px] w-full overflow-hidden rounded-2xl border border-peat-forest/10 shadow-sm sm:h-[580px] lg:h-[640px]"
           clusterPoints={false}
+          initialCenter={[113.9, -2.01]}
+          initialZoom={6.5}
+          maxAutoFitZoom={6.5}
           points={mapData?.hotspots ?? []}
           zones={mapData?.zones ?? []}
         />

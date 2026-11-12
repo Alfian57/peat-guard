@@ -23,17 +23,11 @@ export function DashboardView({
   to,
 }: DashboardViewProps) {
   return (
-    <main
-      className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
-      id="audit-content"
-    >
+    <div className="flex flex-col gap-5" id="audit-content">
       <header className="rounded-3xl bg-[#eaf1e2] px-5 py-6 sm:px-8 sm:py-7">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold tracking-wide text-peat-green uppercase">
-              Audit karbon · ringkasan
-            </p>
-            <h1 className="mt-1 font-heading text-4xl leading-tight font-bold text-peat-forest sm:text-5xl">
+            <h1 className="font-heading text-4xl leading-tight font-bold text-peat-forest sm:text-5xl">
               Jejak patroli, dampak yang terukur.
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
@@ -42,7 +36,7 @@ export function DashboardView({
             </p>
           </div>
           {dashboard.totals.containsIllustrativeData ? (
-            <span className="inline-flex min-h-9 items-center gap-2 rounded-full bg-white px-3 text-sm font-semibold text-peat-forest shadow-sm">
+            <span className="inline-flex h-8 min-h-8 items-center gap-1.5 rounded-full border border-border bg-white px-3 text-xs font-semibold text-peat-forest shadow-xs">
               <span
                 aria-hidden="true"
                 className="size-2 rounded-full bg-peat-sun"
@@ -109,6 +103,6 @@ export function DashboardView({
         Aktivitas patroli tidak dijumlahkan berulang sebagai emisi yang dicegah.
         Estimasi karbon hanya mengikuti luas dan parameter zona yang disetujui.
       </p>
-    </main>
+    </div>
   );
 }

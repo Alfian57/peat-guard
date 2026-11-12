@@ -127,8 +127,72 @@
     font: inherit;
   }
 
+  input[type="search"]::-webkit-search-decoration,
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-results-button,
+  input[type="search"]::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+  }
+
   button {
     min-block-size: 2.75rem;
+  }
+
+  button:is([class*="min-h-"], [class*="h-"], [class*="size-"]) {
+    min-block-size: auto;
+  }
+
+  /* Interactive clickable elements cursor styling */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]):not([disabled]),
+  [type="button"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [role="tab"]:not([aria-disabled="true"]):not([disabled]),
+  [role="link"]:not([aria-disabled="true"]):not([disabled]),
+  [role="menuitem"]:not([aria-disabled="true"]):not([disabled]),
+  [role="checkbox"]:not([aria-disabled="true"]):not([disabled]),
+  [role="radio"]:not([aria-disabled="true"]):not([disabled]),
+  [role="switch"]:not([aria-disabled="true"]):not([disabled]),
+  a,
+  summary,
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled),
+  label,
+  label:not(:has(input:disabled)):not(:has(select:disabled)) {
+    cursor: pointer;
+  }
+
+  /* Text inputs inside labels keep text cursor */
+  label
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(
+      [type="submit"]
+    ):not([type="button"]):not([type="reset"]),
+  label textarea {
+    cursor: text;
+  }
+
+  /* Disabled states */
+  button:disabled,
+  [role="button"][aria-disabled="true"],
+  [role="button"]:disabled,
+  [type="button"]:disabled,
+  [type="reset"]:disabled,
+  [type="submit"]:disabled,
+  [role="tab"][aria-disabled="true"],
+  [role="tab"]:disabled,
+  [aria-disabled="true"],
+  select:disabled,
+  input[type="checkbox"]:disabled,
+  input[type="radio"]:disabled,
+  input[type="file"]:disabled,
+  label:has(input:disabled),
+  label:has(select:disabled) {
+    cursor: not-allowed;
   }
 
   :where(a, button, input, select, textarea, [tabindex]):focus-visible {
@@ -143,241 +207,19 @@
   }
 }
 
-.public-hero {
-  min-height: 200svh;
-}
-
-.public-hero__stage {
-  height: 100svh;
-  min-height: 560px;
-}
-
-.public-hero__media {
-  transform: scale(1);
-  will-change: transform;
-}
-
-.public-hero__panel {
-  background: linear-gradient(
-    180deg,
-    #2f7474 0%,
-    #205e60 32%,
-    #1c4f4e 68%,
-    #1f4d3d 100%
-  );
-  border: 1px solid rgb(255 255 255 / 20%);
-  border-radius: 1.5rem;
-  box-shadow: 0 -20px 90px rgb(31 77 61 / 30%);
-  opacity: 0;
-  transform: translate3d(0, 118svh, 0) scale(0.38, 0.28);
-  transform-origin: 50% 100%;
-  will-change: opacity, transform, border-radius;
-}
-
-.public-hero__copy {
-  opacity: 0;
-  transform: translate3d(0, 86svh, 0);
-  will-change: opacity, transform;
-}
-
-.public-hero__copy:focus-within {
-  opacity: 1 !important;
-  transform: none !important;
-}
-
-.public-hero__controls {
-  opacity: 1;
-}
-
-.public-hero__scroll-prompt {
-  opacity: 1;
-}
-
-.public-hero__scroll-prompt:focus-visible {
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-@supports (animation-timeline: view()) {
-  .public-hero {
-    view-timeline-name: --public-hero;
-    view-timeline-axis: block;
-  }
-
-  .public-hero__media {
-    animation: public-hero-zoom 1s linear both;
-    animation-timeline: --public-hero;
-    animation-range: contain 0% exit 15%;
-  }
-
-  .public-hero__shade {
-    animation: public-hero-shade 1s linear both;
-    animation-timeline: --public-hero;
-    animation-range: contain 0% exit 15%;
-  }
-
-  .public-hero__panel {
-    animation: public-hero-panel-reveal 1s linear both;
-    animation-timeline: --public-hero;
-    animation-range: contain 0% exit 15%;
-  }
-
-  .public-hero__copy {
-    animation: public-hero-copy-reveal 1s linear both;
-    animation-timeline: --public-hero;
-    animation-range: contain 0% exit 15%;
-  }
-
-  .public-hero__scroll-prompt {
-    animation: public-hero-cue-fade 1s linear both;
-    animation-timeline: --public-hero;
-    animation-range: contain 0% exit 15%;
-  }
-}
-
-@keyframes public-hero-zoom {
-  from {
-    transform: scale(1);
-  }
-
-  to {
-    transform: scale(1.045);
-  }
-}
-
-@keyframes public-hero-shade {
-  from {
-    opacity: 0.22;
-  }
-
-  to {
-    opacity: 0.62;
-  }
-}
-
-@keyframes public-hero-panel-reveal {
-  0% {
-    border-radius: 1.5rem;
-    opacity: 0;
-    transform: translate3d(0, 118svh, 0) scale(0.38, 0.28);
-  }
-
-  14% {
-    opacity: 0.12;
-    transform: translate3d(0, 108svh, 0) scale(0.4, 0.3);
-  }
-
-  28% {
-    opacity: 0.27;
-    transform: translate3d(0, 92svh, 0) scale(0.46, 0.35);
-  }
-
-  45% {
-    border-radius: 1.35rem;
-    opacity: 0.52;
-    transform: translate3d(0, 70svh, 0) scale(0.56, 0.44);
-  }
-
-  60% {
-    border-radius: 1.25rem;
-    opacity: 0.74;
-    transform: translate3d(0, 46svh, 0) scale(0.7, 0.58);
-  }
-
-  72% {
-    border-radius: 1.125rem;
-    opacity: 0.88;
-    transform: translate3d(0, 26svh, 0) scale(0.84, 0.74);
-  }
-
-  84% {
-    border-radius: 0.75rem;
-    opacity: 0.96;
-    transform: translate3d(0, 10svh, 0) scale(0.96, 0.9);
-  }
-
-  92% {
-    border-radius: 0.375rem;
-    opacity: 0.99;
-    transform: translate3d(0, 4svh, 0) scale(1.02, 1);
-  }
-
-  100% {
-    border-radius: 0;
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1.08);
-  }
-}
-
-@keyframes public-hero-copy-reveal {
-  0%,
-  60% {
-    opacity: 0;
-    transform: translate3d(0, 86svh, 0);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes public-hero-cue-fade {
-  0% {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  80% {
-    opacity: 0.2;
-    visibility: visible;
-  }
-
-  100% {
-    opacity: 0;
-    visibility: hidden;
-  }
-}
-
 .peatland-story {
-  min-height: 180svh;
+  min-height: 100dvh;
 }
 
 .peatland-story__stage {
-  height: 100svh;
-  min-height: 650px;
+  min-height: 100dvh;
 }
 
 @supports (animation-timeline: view()) {
-  .peatland-story {
-    view-timeline-name: --peatland-story;
-    view-timeline-axis: block;
-  }
-
   .peatland-story__image-layer {
-    animation: peatland-image-rise 1s linear both;
-    animation-timeline: --peatland-story;
-    animation-range: contain 0% contain 100%;
-    will-change: opacity, transform;
-  }
-
-  .peatland-story__title {
-    animation: peatland-title-parallax 1s linear both;
-    animation-timeline: --peatland-story;
-    animation-range: contain 0% contain 82%;
-    transform-origin: 50% 50%;
-  }
-
-  .peatland-story__copy {
-    animation: peatland-copy-reveal 1s linear both;
-    animation-timeline: --peatland-story;
-    animation-range: contain 8% contain 72%;
-  }
-
-  .peatland-story__workflow {
-    animation: peatland-copy-reveal 1s linear both;
-    animation-timeline: --peatland-story;
-    animation-range: contain 22% contain 86%;
+    animation: peatland-image-drift 1s linear both;
+    animation-timeline: view(block);
+    animation-range: entry 0% exit 100%;
   }
 
   .public-scroll-reveal {
@@ -446,44 +288,13 @@
   }
 }
 
-@keyframes peatland-image-rise {
+@keyframes peatland-image-drift {
   from {
-    opacity: 0;
-    transform: translate3d(0, 72svh, 0) scale(0.86);
-  }
-
-  55% {
-    opacity: 0.92;
-    transform: translate3d(0, 14svh, 0) scale(1.04);
+    transform: translate3d(0, 3%, 0);
   }
 
   to {
-    opacity: 1;
-    transform: translate3d(0, -5svh, 0) scale(1.12);
-  }
-}
-
-@keyframes peatland-title-parallax {
-  from {
-    opacity: 0.5;
-    transform: translate3d(0, 1.5rem, 0) scale(0.88);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1.08);
-  }
-}
-
-@keyframes peatland-copy-reveal {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 2.5rem, 0) scale(0.98);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
+    transform: translate3d(0, -3%, 0);
   }
 }
 
@@ -520,23 +331,6 @@
 }
 
 @supports not (animation-timeline: view()) {
-  .public-hero {
-    min-height: 100svh;
-  }
-
-  .public-hero__stage {
-    position: relative;
-  }
-
-  .public-hero__copy {
-    opacity: 1;
-    transform: none;
-  }
-
-  .public-hero__panel {
-    display: none;
-  }
-
   .peatland-story {
     min-height: auto;
   }
@@ -544,7 +338,7 @@
   .peatland-story__stage {
     position: relative;
     height: auto;
-    min-height: 100svh;
+    min-height: 100dvh;
   }
 }
 
@@ -556,7 +350,7 @@
   .peatland-story__stage {
     position: relative;
     height: auto;
-    min-height: 100svh;
+    min-height: 100dvh;
   }
 
   .peatland-story__image-layer {
@@ -593,19 +387,6 @@
     transform: none !important;
   }
 
-  .public-hero {
-    min-height: 100svh;
-  }
-
-  .public-hero__stage {
-    position: relative;
-  }
-
-  .public-hero__media,
-  .public-hero__shade,
-  .public-hero__panel,
-  .public-hero__copy,
-  .public-hero__scroll-prompt,
   .peatland-story__image-layer,
   .peatland-story__title,
   .peatland-story__copy,
@@ -622,16 +403,6 @@
     will-change: auto;
   }
 
-  .public-hero__shade {
-    opacity: 0.22 !important;
-  }
-
-  .public-hero__panel {
-    animation: none !important;
-    opacity: 0 !important;
-    transform: none !important;
-  }
-
   .peatland-story {
     min-height: auto;
   }
@@ -639,7 +410,7 @@
   .peatland-story__stage {
     position: relative;
     height: auto;
-    min-height: 100svh;
+    min-height: 100dvh;
   }
 }
 
@@ -694,6 +465,29 @@
   .public-workflow__rail-fill {
     transform: scaleX(0);
   }
+}
+
+/* Custom scrollbar for dark sidebars */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 @media (max-width: 767px) {

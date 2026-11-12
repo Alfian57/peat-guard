@@ -1,36 +1,38 @@
+import Link from "next/link";
 import { ArrowLeft, ArrowRight, FileText } from "lucide-react";
 
 import type { ReportListResponse } from "@/components/command/reports/report-contracts";
 import { ReportQueueRow } from "@/components/command/reports/report-queue-row";
+import { ReportQueueSkeleton } from "@/components/command/reports/report-queue-skeleton";
+import {
+  buildPageHref,
+  type ReportFilters,
+} from "@/components/command/reports/report-query";
+import { APP_ROUTES } from "@/lib/routes";
 
 export function ReportQueueResults({
   currentPage,
+  filters,
   isLoading,
   onPageChange,
   onResetFilters,
   pageSize,
+  resetHref,
   response,
   zones,
 }: {
   currentPage: number;
+  filters?: ReportFilters;
   isLoading: boolean;
   onPageChange: (page: number) => void;
   onResetFilters: () => void;
   pageSize: number;
+  resetHref?: string;
   response: ReportListResponse | null;
   zones: ReadonlyMap<string, string>;
 }) {
   if (isLoading) {
-    return (
-      <div
-        aria-busy="true"
-        aria-label="Memuat antrean laporan"
-        className="grid min-h-64 place-items-center rounded-2xl border border-peat-forest/10 bg-white text-sm text-peat-forest/70"
-        role="status"
-      >
-        Memuat antrean laporan…
-      </div>
-    );
+    return <ReportQueueSkeleton />;
   }
 
   if (!response || response.reports.length === 0) {
@@ -49,13 +51,14 @@ export function ReportQueueResults({
             Ubah status atau rentang tanggal, atau tampilkan kembali semua
             laporan.
           </p>
-          <button
-            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-peat-forest px-4 text-sm font-semibold text-white hover:bg-peat-green"
+          <Link
+            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-peat-forest px-4 text-sm font-semibold text-white transition-colors hover:bg-peat-green"
+            href={resetHref ?? APP_ROUTES.command.reports}
             onClick={onResetFilters}
-            type="button"
+            role="button"
           >
             Tampilkan semua laporan
-          </button>
+          </Link>
         </div>
       </div>
     );
@@ -65,46 +68,112 @@ export function ReportQueueResults({
   const firstItem = (currentPage - 1) * pageSize + 1;
   const lastItem = Math.min(currentPage * pageSize, response.total);
 
+  const previousHref = filters
+    ? buildPageHref(filters, Math.max(1, currentPage - 1))
+    : "#";
+  const nextHref = filters
+    ? buildPageHref(filters, Math.min(pageCount, currentPage + 1))
+    : "#";
+
   return (
     <section aria-label="Hasil antrean laporan">
       <p aria-live="polite" className="mb-3 text-sm text-peat-forest/70">
         Menampilkan {formatNumber(firstItem)}–{formatNumber(lastItem)} dari{" "}
         {formatNumber(response.total)} laporan
       </p>
-      <ul className="space-y-3">
-        {response.reports.map((report) => (
-          <ReportQueueRow key={report.id} report={report} zones={zones} />
-        ))}
-      </ul>
+      <div className="overflow-hidden rounded-2xl border border-peat-forest/10 bg-white shadow-xs">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[960px] border-collapse text-left">
+            <caption className="sr-only">
+              Antrean laporan patroli gambut
+            </caption>
+            <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-peat-forest/70">
+              <tr>
+                <th className="px-4 py-3.5" scope="col">
+                  ID Laporan
+                </th>
+                <th className="px-4 py-3.5" scope="col">
+                  Zona & Lokasi
+                </th>
+                <th className="px-4 py-3.5" scope="col">
+                  Klasifikasi AI
+                </th>
+                <th className="px-4 py-3.5" scope="col">
+                  Urgensi
+                </th>
+                <th className="px-4 py-3.5" scope="col">
+                  Status
+                </th>
+                <th className="px-4 py-3.5 text-right" scope="col">
+                  Aksi
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-peat-forest/10 text-sm">
+              {response.reports.map((report) => (
+                <ReportQueueRow key={report.id} report={report} zones={zones} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
       {pageCount > 1 ? (
         <nav
           aria-label="Halaman antrean laporan"
           className="mt-4 flex items-center justify-between rounded-2xl border border-peat-forest/10 bg-white p-3"
         >
-          <button
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-peat-forest/15 px-3 text-sm font-semibold text-peat-forest disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={currentPage <= 1}
-            onClick={() => onPageChange(currentPage - 1)}
-            type="button"
-          >
-            <ArrowLeft aria-hidden="true" size={15} />
-            Sebelumnya
-          </button>
+          {currentPage > 1 ? (
+            <Link
+              aria-label="Halaman sebelumnya"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-peat-forest/15 px-3 text-sm font-semibold text-peat-forest transition hover:bg-peat-paper"
+              href={previousHref}
+              onClick={() => onPageChange(currentPage - 1)}
+              role="button"
+              scroll={false}
+            >
+              <ArrowLeft aria-hidden="true" size={15} />
+              Sebelumnya
+            </Link>
+          ) : (
+            <button
+              aria-disabled="true"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-peat-forest/15 px-3 text-sm font-semibold text-peat-forest disabled:cursor-not-allowed disabled:opacity-50"
+              disabled
+              type="button"
+            >
+              <ArrowLeft aria-hidden="true" size={15} />
+              Sebelumnya
+            </button>
+          )}
           <p
             aria-current="page"
             className="font-mono text-xs text-peat-forest/65"
           >
             {currentPage} / {pageCount}
           </p>
-          <button
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-peat-forest/15 px-3 text-sm font-semibold text-peat-forest disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={currentPage >= pageCount}
-            onClick={() => onPageChange(currentPage + 1)}
-            type="button"
-          >
-            Berikutnya
-            <ArrowRight aria-hidden="true" size={15} />
-          </button>
+          {currentPage < pageCount ? (
+            <Link
+              aria-label="Halaman berikutnya"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-peat-forest/15 px-3 text-sm font-semibold text-peat-forest transition hover:bg-peat-paper"
+              href={nextHref}
+              onClick={() => onPageChange(currentPage + 1)}
+              role="button"
+              scroll={false}
+            >
+              Berikutnya
+              <ArrowRight aria-hidden="true" size={15} />
+            </Link>
+          ) : (
+            <button
+              aria-disabled="true"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-peat-forest/15 px-3 text-sm font-semibold text-peat-forest disabled:cursor-not-allowed disabled:opacity-50"
+              disabled
+              type="button"
+            >
+              Berikutnya
+              <ArrowRight aria-hidden="true" size={15} />
+            </button>
+          )}
         </nav>
       ) : null}
     </section>

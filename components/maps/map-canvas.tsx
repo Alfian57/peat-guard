@@ -3,6 +3,7 @@
 import {
   Map as MapLibreMap,
   NavigationControl,
+  setWorkerUrl,
   type GeoJSONSource,
 } from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
@@ -22,7 +23,39 @@ import { addMapInteractions } from "@/components/maps/map-interactions";
 import { addMapLayers } from "@/components/maps/map-layers";
 import type { MapPoint, MapViewport, MapZone } from "@/lib/maps/types";
 
+if (typeof window !== "undefined") {
+  setWorkerUrl("/maplibre-gl-worker.mjs");
+}
+
 const DEFAULT_CENTER: [number, number] = [113.9, -2.01];
+const DEFAULT_ZOOM = 6.5;
+const DEFAULT_MAX_AUTOFIT_ZOOM = 6.5;
+
+const FALLBACK_BASEMAP_STYLE = {
+  version: 8 as const,
+  sources: {
+    "osm-tiles": {
+      type: "raster" as const,
+      tiles: [
+        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      ],
+      tileSize: 256,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
+    },
+  },
+  layers: [
+    {
+      id: "osm-tiles-layer",
+      type: "raster" as const,
+      source: "osm-tiles",
+      minzoom: 0,
+      maxzoom: 19,
+    },
+  ],
+};
 
 type MapData = {
   zones: MapZone[];
@@ -36,6 +69,7 @@ export type MapCanvasProps = {
   interactive?: boolean;
   clusterPoints?: boolean;
   autoFit?: boolean;
+  maxAutoFitZoom?: number;
   initialCenter?: [longitude: number, latitude: number];
   initialZoom?: number;
   onMapClick?: (coordinates: [longitude: number, latitude: number]) => void;
@@ -52,8 +86,9 @@ export default function MapCanvas({
   interactive = true,
   clusterPoints = true,
   autoFit = true,
+  maxAutoFitZoom = DEFAULT_MAX_AUTOFIT_ZOOM,
   initialCenter = DEFAULT_CENTER,
-  initialZoom = 8,
+  initialZoom = DEFAULT_ZOOM,
   onMapClick,
   draftEditing = false,
   onViewportChange,
@@ -70,6 +105,7 @@ export default function MapCanvas({
   const latestDataRef = useRef<MapData>({ zones, points });
   const clusterPointsRef = useRef(clusterPoints);
   const autoFitRef = useRef(autoFit);
+  const maxAutoFitZoomRef = useRef(maxAutoFitZoom);
   const initialCenterRef = useRef(initialCenter);
   const initialZoomRef = useRef(initialZoom);
   const loadedRef = useRef(false);
@@ -86,6 +122,7 @@ export default function MapCanvas({
     onZoneSelectRef.current = onZoneSelect;
     clusterPointsRef.current = clusterPoints;
     autoFitRef.current = autoFit;
+    maxAutoFitZoomRef.current = maxAutoFitZoom;
     initialCenterRef.current = initialCenter;
     initialZoomRef.current = initialZoom;
   }, [
@@ -94,6 +131,7 @@ export default function MapCanvas({
     draftEditing,
     initialCenter,
     initialZoom,
+    maxAutoFitZoom,
     onMapClick,
     onPointSelect,
     onViewportChange,
@@ -140,7 +178,9 @@ export default function MapCanvas({
     };
     map.on("moveend", publishViewport);
 
-    map.once("load", () => {
+    let isRecoveringWithFallback = false;
+
+    const initializeMapLayers = () => {
       if (disposed || loadedRef.current) {
         return;
       }
@@ -159,7 +199,11 @@ export default function MapCanvas({
         : null;
 
       if (bounds) {
-        map.fitBounds(bounds, { padding: 44, maxZoom: 12, duration: 0 });
+        map.fitBounds(bounds, {
+          padding: 44,
+          maxZoom: maxAutoFitZoomRef.current,
+          duration: 0,
+        });
         hasFitBoundsRef.current = true;
       }
 
@@ -178,9 +222,24 @@ export default function MapCanvas({
 
       loadedRef.current = true;
       setMapIsReady(true);
-    });
+    };
+
+    map.once("load", initializeMapLayers);
 
     map.on("error", () => {
+      if (disposed) {
+        return;
+      }
+
+      // If the primary basemap fails (e.g. MapTiler 403 origin restrictions or network failure),
+      // gracefully fall back to OpenStreetMap raster tiles so zones and hotspots remain fully interactive.
+      if (!loadedRef.current && !isRecoveringWithFallback) {
+        isRecoveringWithFallback = true;
+        map.setStyle(FALLBACK_BASEMAP_STYLE, { diff: false });
+        map.once("style.load", initializeMapLayers);
+        return;
+      }
+
       if (!loadedRef.current) {
         loadedRef.current = true;
         setMapError(true);
@@ -218,7 +277,7 @@ export default function MapCanvas({
       if (bounds) {
         mapRef.current.fitBounds(bounds, {
           padding: 44,
-          maxZoom: 12,
+          maxZoom: maxAutoFitZoomRef.current,
           duration: 0,
         });
         hasFitBoundsRef.current = true;

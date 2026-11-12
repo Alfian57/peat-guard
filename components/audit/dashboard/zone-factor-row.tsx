@@ -8,7 +8,7 @@ import {
 
 export function ZoneFactorRow({ zone }: { zone: ZoneImpact }) {
   return (
-    <tr className="border-t border-border text-sm">
+    <tr className="border-t border-border text-sm transition-colors hover:bg-peat-forest/[0.02]">
       <th
         className="px-3 py-3 text-left font-semibold text-peat-forest"
         scope="row"

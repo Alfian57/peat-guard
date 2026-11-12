@@ -2,6 +2,17 @@ import { afterEach, expect, mock, test } from "bun:test";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+const router = {
+  push: mock(() => undefined),
+  replace: mock(() => undefined),
+};
+
+mock.module("next/navigation", () => ({
+  useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/command/reports",
+}));
+
 const originalFetch = globalThis.fetch;
 const { ReportQueueScreen } =
   await import("@/components/command/reports/report-queue-screen");
@@ -23,7 +34,8 @@ test("shows filter controls and the empty state when no reports match", async ()
   render(<ReportQueueScreen />);
 
   expect(await screen.findByText("Tidak ada laporan yang sesuai")).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Filter insiden" }));
+  await user.click(screen.getByRole("button", { name: /Filter/ }));
+  expect(screen.getByLabelText(/Status laporan/)).toBeTruthy();
   expect(screen.getByLabelText(/Zona gambut/)).toBeTruthy();
   expect(screen.getByLabelText(/Dari tanggal/)).toBeTruthy();
   expect(screen.getByLabelText(/Sampai tanggal/)).toBeTruthy();
@@ -74,18 +86,19 @@ test("applies status and zone filters and shows the requested page", async () =>
   render(<ReportQueueScreen />);
   await screen.findByRole("link", { name: "Lihat detail laporan PG-AAAAAAAA" });
 
-  await user.click(screen.getByRole("button", { name: "Filter insiden" }));
+  await user.click(screen.getByRole("button", { name: /Filter/ }));
+  await user.selectOptions(
+    screen.getByLabelText(/Status laporan/),
+    "DALAM_PENANGANAN",
+  );
   await user.selectOptions(screen.getByLabelText(/Zona gambut/), zone.id);
   await user.click(screen.getByRole("button", { name: /Terapkan/ }));
+  expect(await screen.findByText("Status: Dalam penanganan")).toBeTruthy();
   expect(await screen.findByText("Zona: Zona Utara")).toBeTruthy();
   expect(requestedUrls.some((url) => url.includes(`zoneId=${zone.id}`))).toBe(
     true,
   );
 
-  await user.click(screen.getByRole("button", { name: /Dalam penanganan/ }));
-  await screen.findByRole("link", {
-    name: "Lihat detail laporan PG-AAAAAAAA",
-  });
   await user.click(screen.getByRole("button", { name: "Berikutnya" }));
   await screen.findByText("2 / 2");
   expect(await screen.findByText("PG-BBBBBBBB")).toBeTruthy();

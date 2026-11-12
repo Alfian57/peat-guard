@@ -1,7 +1,8 @@
 import "server-only";
 
+import type { Prisma } from "@/lib/generated/prisma/client";
 import { APP_ROUTES } from "@/lib/routes";
-import type { AppRole } from "@/lib/roles";
+import { ROLE_LABELS, type AppRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import {
   buildReportSearchWhere,
@@ -9,6 +10,7 @@ import {
   toGlobalSearchReportResult,
   type GlobalSearchResult,
 } from "@/lib/server/search/contracts";
+import { searchMenuCatalog } from "@/lib/server/search/menu-catalog";
 
 const SEARCH_LIMIT = 10;
 const UUID_QUERY =
@@ -19,13 +21,41 @@ export async function searchWorkspace(
   role: AppRole,
   userId: string,
 ): Promise<GlobalSearchResult[]> {
-  const contains = { contains: query, mode: "insensitive" as const };
-  const normalizedQuery = query
-    .trim()
+  const trimmed = query.trim();
+  const lower = trimmed.toLowerCase();
+  const contains = { contains: trimmed, mode: "insensitive" as const };
+  const normalizedQuery = trimmed
     .replace(/\s+/g, "_")
     .toLocaleUpperCase("id-ID");
+
+  let matchingReportIds: string[] = [];
+  let matchingZoneIds: string[] = [];
+  let matchingWaterPointIds: string[] = [];
+
+  if (/^[0-9a-f-]{3,36}$/i.test(trimmed)) {
+    const clean = trimmed.toLowerCase();
+    try {
+      const [reportRows, zoneRows, pointRows] = await Promise.all([
+        prisma.$queryRaw<{ id: string }[]>`
+          SELECT id FROM field_reports WHERE id::text ILIKE ${clean + "%"} LIMIT 10
+        `,
+        prisma.$queryRaw<{ id: string }[]>`
+          SELECT id FROM forest_zones WHERE id::text ILIKE ${clean + "%"} LIMIT 10
+        `,
+        prisma.$queryRaw<{ id: string }[]>`
+          SELECT id FROM water_points WHERE id::text ILIKE ${clean + "%"} LIMIT 10
+        `,
+      ]);
+      matchingReportIds = reportRows.map((r) => r.id);
+      matchingZoneIds = zoneRows.map((r) => r.id);
+      matchingWaterPointIds = pointRows.map((r) => r.id);
+    } catch {
+      // Raw query fallback
+    }
+  }
+
   const reports = await prisma.fieldReport.findMany({
-    where: buildReportSearchWhere(query, role, userId),
+    where: buildReportSearchWhere(query, role, userId, matchingReportIds),
     orderBy: [{ capturedAt: "desc" }, { id: "desc" }],
     take: role === "RELAWAN" ? SEARCH_LIMIT : 4,
     select: {
@@ -42,16 +72,79 @@ export async function searchWorkspace(
   );
 
   if (canSearchScope(role, "command-data")) {
+    const isZoneGeneric =
+      lower.includes("zona") ||
+      lower.includes("gambut") ||
+      lower.includes("hutan") ||
+      lower.includes("wilayah");
+
+    const isWaterQuery =
+      lower.includes("titik") ||
+      lower.includes("air") ||
+      lower.includes("water");
+    const isSekatQuery = lower.includes("sekat") || lower.includes("kanal");
+    const isEmbungQuery = lower.includes("embung");
+    const isSumberQuery = lower.includes("sumber");
+
+    const isHotspotQuery =
+      lower.includes("hotspot") ||
+      lower.includes("panas") ||
+      lower.includes("satelit") ||
+      lower.includes("firms");
+
+    const zoneOr: Prisma.ForestZoneWhereInput[] = [
+      { zoneName: contains },
+      { villageName: contains },
+      { slug: contains },
+    ];
+    if (matchingZoneIds.length > 0) {
+      zoneOr.push({ id: { in: matchingZoneIds } });
+    }
+    if (UUID_QUERY.test(query)) {
+      zoneOr.push({ id: query });
+    }
+    if (isZoneGeneric) {
+      zoneOr.push({ createdAt: { gt: new Date(0) } });
+    }
+
+    const waterPointOr: Prisma.WaterPointWhereInput[] = [
+      { name: contains },
+      { zone: { is: { zoneName: contains } } },
+    ];
+    if (matchingWaterPointIds.length > 0) {
+      waterPointOr.push({ id: { in: matchingWaterPointIds } });
+    }
+    if (UUID_QUERY.test(query)) {
+      waterPointOr.push({ id: query });
+    }
+    if (isWaterQuery) {
+      waterPointOr.push({ createdAt: { gt: new Date(0) } });
+    }
+    if (isSekatQuery) {
+      waterPointOr.push({ type: "SEKAT_KANAL" });
+    }
+    if (isEmbungQuery) {
+      waterPointOr.push({ type: "EMBUNG" });
+    }
+    if (isSumberQuery) {
+      waterPointOr.push({ type: "SUMBER_AIR" });
+    }
+
+    const hotspotOr: Prisma.SatelliteHotspotWhereInput[] = [
+      { source: contains },
+      { externalId: contains },
+      { confidence: contains },
+    ];
+    if (UUID_QUERY.test(query)) {
+      hotspotOr.push({ id: query });
+    }
+    if (isHotspotQuery) {
+      hotspotOr.push({ fetchedAt: { gt: new Date(0) } });
+    }
+
     const [zones, waterPoints, hotspots] = await Promise.all([
       prisma.forestZone.findMany({
-        where: {
-          OR: [
-            { zoneName: contains },
-            { villageName: contains },
-            { slug: contains },
-            ...(UUID_QUERY.test(query) ? [{ id: query }] : []),
-          ],
-        },
+        where: { OR: zoneOr },
         orderBy: { zoneName: "asc" },
         take: 3,
         select: {
@@ -62,25 +155,9 @@ export async function searchWorkspace(
         },
       }),
       prisma.waterPoint.findMany({
-        where: {
-          OR: [
-            { name: contains },
-            { zone: { is: { zoneName: contains } } },
-            ...(UUID_QUERY.test(query) ? [{ id: query }] : []),
-            ...(normalizedQuery === "SEKAT_KANAL" ||
-            normalizedQuery === "EMBUNG" ||
-            normalizedQuery === "SUMBER_AIR"
-              ? [
-                  {
-                    type: normalizedQuery as
-                      "SEKAT_KANAL" | "EMBUNG" | "SUMBER_AIR",
-                  },
-                ]
-              : []),
-          ],
-        },
+        where: { OR: waterPointOr },
         orderBy: { name: "asc" },
-        take: 2,
+        take: 3,
         select: {
           id: true,
           name: true,
@@ -89,16 +166,9 @@ export async function searchWorkspace(
         },
       }),
       prisma.satelliteHotspot.findMany({
-        where: {
-          OR: [
-            { source: contains },
-            { externalId: contains },
-            { confidence: contains },
-            ...(UUID_QUERY.test(query) ? [{ id: query }] : []),
-          ],
-        },
+        where: { OR: hotspotOr },
         orderBy: { acquiredAt: "desc" },
-        take: 1,
+        take: 2,
         select: {
           id: true,
           source: true,
@@ -115,6 +185,7 @@ export async function searchWorkspace(
         title: zone.zoneName,
         description: `${zone.villageName ?? "Desa belum ditentukan"} · ${zone.isApproved ? "Terverifikasi" : "Menunggu verifikasi"}`,
         kind: "Zona" as const,
+        group: "data" as const,
         href: APP_ROUTES.command.editZone(zone.id),
       })),
       ...waterPoints.map((point) => ({
@@ -122,19 +193,85 @@ export async function searchWorkspace(
         title: point.name,
         description: `${point.type.replaceAll("_", " ")} · ${point.zone?.zoneName ?? "Tanpa zona"}`,
         kind: "Titik air" as const,
-        href: APP_ROUTES.command.waterPoints,
+        group: "data" as const,
+        href: APP_ROUTES.command.editWaterPoint(point.id),
       })),
       ...hotspots.map((hotspot) => ({
         id: `hotspot-${hotspot.id}`,
         title: `Hotspot ${hotspot.source}`,
         description: `${hotspot.confidence ?? "Keyakinan tidak tersedia"} · ${hotspot.isDemoData ? "Data ilustratif" : "Data satelit"} · ${hotspot.acquiredAt.toLocaleString("id-ID")}`,
         kind: "Hotspot" as const,
+        group: "data" as const,
         href: APP_ROUTES.command.map,
       })),
     );
   }
 
+  // Account / User search
+  const isAccountQuery =
+    lower.includes("akun") ||
+    lower.includes("profil") ||
+    lower.includes("user") ||
+    lower.includes("profile") ||
+    lower.includes("password");
+
+  const userOr: Prisma.UserWhereInput[] = [
+    { name: contains },
+    { email: contains },
+    { villageName: contains },
+  ];
+
+  if (isAccountQuery) {
+    userOr.push({ id: userId });
+  }
+
+  if (
+    normalizedQuery === "RELAWAN" ||
+    normalizedQuery === "POSKO" ||
+    normalizedQuery === "VERIFIKATOR"
+  ) {
+    userOr.push({ role: normalizedQuery });
+  }
+
+  const users = await prisma.user.findMany({
+    where: {
+      OR: userOr,
+      ...(role === "RELAWAN" ? { id: userId } : {}),
+    },
+    take: 2,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      villageName: true,
+    },
+  });
+
+  results.push(
+    ...users.map((u) => ({
+      id: `user-${u.id}`,
+      title: u.name,
+      description: `${ROLE_LABELS[u.role]} · ${u.email}${u.villageName ? ` · ${u.villageName}` : ""}`,
+      kind: "Akun" as const,
+      group: "data" as const,
+      href:
+        u.id === userId
+          ? APP_ROUTES.profile
+          : role === "POSKO"
+            ? APP_ROUTES.command.reports
+            : APP_ROUTES.profile,
+    })),
+  );
+
   if (canSearchScope(role, "audit-data")) {
+    const isAuditGeneric =
+      lower.includes("audit") ||
+      lower.includes("mrv") ||
+      lower.includes("ledger") ||
+      lower.includes("buku") ||
+      lower.includes("verif");
+
     const auditEvents = await prisma.auditEvent.findMany({
       where: {
         reportId: { not: null },
@@ -154,6 +291,7 @@ export async function searchWorkspace(
           ...(UUID_QUERY.test(query)
             ? [{ aggregateId: query }, { reportId: query }]
             : []),
+          ...(isAuditGeneric ? [{ createdAt: { gt: new Date(0) } }] : []),
         ],
       },
       orderBy: { createdAt: "desc" },
@@ -173,6 +311,7 @@ export async function searchWorkspace(
         title: event.eventType.replaceAll("_", " "),
         description: `ID referensi ${event.aggregateId.slice(0, 8)} · ${event.createdAt.toLocaleString("id-ID")}`,
         kind: "Audit MRV" as const,
+        group: "data" as const,
         href: APP_ROUTES.audit.ledgerReport(
           event.reportId ?? event.aggregateId,
         ),
@@ -180,5 +319,6 @@ export async function searchWorkspace(
     );
   }
 
-  return results.slice(0, SEARCH_LIMIT);
+  const menuResults = searchMenuCatalog(query, role);
+  return [...menuResults, ...results].slice(0, 16);
 }

@@ -54,7 +54,7 @@ export function DashboardCarbonDetails({
             <caption className="sr-only">
               Parameter dan estimasi karbon untuk setiap zona yang disetujui
             </caption>
-            <thead className="bg-peat-paper/75 text-xs font-semibold text-muted-foreground">
+            <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-peat-forest/70">
               <tr>
                 <th className="px-3 py-3 text-left" scope="col">
                   Zona
@@ -79,7 +79,7 @@ export function DashboardCarbonDetails({
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-peat-forest/10 text-sm">
               {dashboard.zones.map((zone) => (
                 <ZoneFactorRow key={zone.zoneId} zone={zone} />
               ))}

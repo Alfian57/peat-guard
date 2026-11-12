@@ -8,6 +8,7 @@ import {
 } from "@/components/public/public-map-filters";
 import { PublicMapFreshness } from "@/components/public/public-map-freshness";
 import { PublicMapResults } from "@/components/public/public-map-results";
+import { PublicMapResultsSkeleton } from "@/components/public/public-map-results-skeleton";
 import type { MapViewport } from "@/lib/maps/types";
 import type { PublicMapViewData } from "@/lib/public/client-contracts";
 import { APP_ROUTES } from "@/lib/routes";
@@ -88,14 +89,7 @@ export function PublicMapScreen({
             onSearchViewport={onSearchViewport}
           />
 
-          {loadState === "loading" ? (
-            <p
-              className="mt-4 rounded-xl bg-white px-3 py-2.5 text-sm text-peat-forest/70"
-              role="status"
-            >
-              Memuat data untuk filter terpilih…
-            </p>
-          ) : null}
+          {loadState === "loading" ? <PublicMapResultsSkeleton /> : null}
 
           {loadState === "error" && errorMessage ? (
             <div
@@ -135,7 +129,8 @@ export function PublicMapScreen({
             className="absolute inset-0 h-full min-h-[22rem] overflow-hidden"
             clusterPoints={false}
             initialCenter={INITIAL_CENTER}
-            initialZoom={7}
+            initialZoom={6.5}
+            maxAutoFitZoom={6.5}
             onViewportChange={onViewportChange}
             points={data?.hotspots ?? []}
             zones={data?.zones ?? []}

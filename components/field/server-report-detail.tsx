@@ -34,19 +34,16 @@ export function ServerReportDetail({
       : "Temuan lapangan";
 
   return (
-    <article className="mx-auto w-full max-w-xl px-4 pt-5">
+    <article className="mx-auto w-full max-w-xl px-4 pt-4 lg:max-w-4xl lg:px-0 lg:pt-0">
       <a
         href={APP_ROUTES.field.queue}
-        className="inline-flex min-h-11 items-center gap-2 rounded-lg pr-3 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
+        className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-peat-forest hover:underline focus-visible:outline-2 focus-visible:outline-peat-green"
       >
         <ArrowLeft aria-hidden="true" size={17} /> Kembali ke antrean
       </a>
-      <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm text-muted-foreground">
-            Detail laporan patroli
-          </p>
-          <h1 className="mt-1 font-heading text-4xl leading-none font-bold text-peat-forest">
+          <h1 className="font-heading text-4xl leading-none font-bold text-peat-forest">
             {title}
           </h1>
         </div>

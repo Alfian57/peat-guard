@@ -4,10 +4,8 @@ import Link from "next/link";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import {
-  CommandError,
-  CommandLoading,
-} from "@/components/command/command-feedback";
+import { CommandError } from "@/components/command/command-feedback";
+import { ReportDetailSkeleton } from "@/components/command/reports/report-detail-skeleton";
 import { CommandPageHeading } from "@/components/command/command-page-heading";
 import {
   isZonesResponse,
@@ -27,6 +25,7 @@ import {
 } from "@/components/command/reports/report-detail-sections";
 import { ReportStatusBadge } from "@/components/command/reports/report-status-badge";
 import { ReportStatusDialog } from "@/components/command/reports/report-status-dialog";
+import { toast } from "@/components/ui/toast";
 import {
   COMMAND_API_ROUTES,
   COMMAND_ROUTES,
@@ -119,6 +118,10 @@ export function ReportDetailScreen({ reportId }: { reportId: string }) {
       );
       setStatusDialogOpen(false);
       setUpdateMessage("Status laporan berhasil diperbarui.");
+      toast.success(
+        "Status laporan diperbarui",
+        "Status penanganan insiden berhasil disimpan.",
+      );
 
       try {
         const refreshed = await requestCommandJson(reportApiRoute(report.id), {
@@ -177,7 +180,7 @@ export function ReportDetailScreen({ reportId }: { reportId: string }) {
     : null;
 
   if (state === "loading") {
-    return <CommandLoading label="Memuat detail laporan…" />;
+    return <ReportDetailSkeleton />;
   }
 
   if (state === "error" || !report) {
@@ -216,19 +219,18 @@ export function ReportDetailScreen({ reportId }: { reportId: string }) {
       <CommandPageHeading
         action={
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-peat-forest px-4 text-sm font-semibold text-white hover:bg-peat-green"
+            className="inline-flex h-8 min-h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-peat-forest px-3 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-peat-green"
             onClick={() => {
               setStatusError("");
               setStatusDialogOpen(true);
             }}
             type="button"
           >
-            <RefreshCw aria-hidden="true" size={16} />
+            <RefreshCw aria-hidden="true" size={14} />
             Update status
           </button>
         }
         description="Tinjau bukti, lokasi, analisis, dan riwayat penanganan laporan lapangan."
-        eyebrow="POSKO · TRIASE LAPORAN"
         title={`Insiden ${displayId}`}
       />
 

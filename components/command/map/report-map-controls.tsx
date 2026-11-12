@@ -7,6 +7,7 @@ import { LayerCheckbox } from "@/components/command/map/layer-checkbox";
 import { ReportMapLegendItem } from "@/components/command/map/report-map-legend-item";
 import { ReportMapFilterDialog } from "@/components/command/map/report-map-filter-dialog";
 import { ReportMapActiveFilterTags } from "@/components/command/map/report-map-active-filter-tags";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { ReportMapFilters } from "@/components/command/reports/report-map-query";
 
 export type ReportMapLoadState = "idle" | "loading" | "ready" | "error";
@@ -71,25 +72,36 @@ export function ReportMapControls({
         />
       </div>
 
-      <div className="mt-3.5 space-y-2.5">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          {activeFiltersCount > 0 ? (
+            <ReportMapActiveFilterTags
+              filters={draftFilters}
+              onReset={onReset}
+            />
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              Semua pin laporan
+            </span>
+          )}
+        </div>
+
         <button
           aria-controls="report-map-filter-dialog"
           aria-expanded={isDialogOpen}
           aria-haspopup="dialog"
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-peat-forest/15 bg-white px-3 text-sm font-semibold text-peat-forest transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="inline-flex h-8 min-h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-peat-forest/15 bg-white px-3 text-xs font-semibold text-peat-forest shadow-xs transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-peat-green"
           onClick={() => setIsDialogOpen(true)}
           type="button"
         >
-          <Filter aria-hidden="true" size={17} />
-          <span>Filter pin laporan</span>
+          <Filter aria-hidden="true" size={14} />
+          <span>Filter</span>
           {activeFiltersCount > 0 ? (
-            <span className="grid size-5 place-items-center rounded-full bg-peat-green text-[11px] font-bold text-white">
+            <span className="grid size-4.5 min-w-4.5 place-items-center rounded-full bg-peat-green text-[10px] font-bold text-white">
               {activeFiltersCount}
             </span>
           ) : null}
         </button>
-
-        <ReportMapActiveFilterTags filters={draftFilters} onReset={onReset} />
       </div>
 
       <div
@@ -120,9 +132,15 @@ export function ReportMapControls({
             Laporan akan dimuat untuk area yang terlihat pada peta.
           </p>
         ) : loadState === "loading" ? (
-          <p className="text-sm text-peat-forest/65" role="status">
-            Memuat laporan pada area peta…
-          </p>
+          <div
+            aria-busy="true"
+            aria-label="Memuat laporan pada area peta"
+            className="space-y-2 py-1"
+            role="status"
+          >
+            <Skeleton className="h-4 w-44 rounded-md bg-peat-forest/10" />
+            <Skeleton className="h-3 w-32 rounded-md bg-peat-forest/10" />
+          </div>
         ) : loadState === "error" ? (
           <div className="space-y-2">
             <p className="text-sm leading-5 text-red-800" role="alert">
@@ -164,7 +182,6 @@ export function ReportMapControls({
         onApply={onApply}
         onClose={() => setIsDialogOpen(false)}
         onDraftChange={onDraftChange}
-        onReset={onReset}
       />
     </section>
   );

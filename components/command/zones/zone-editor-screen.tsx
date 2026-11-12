@@ -5,10 +5,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
-import {
-  CommandError,
-  CommandLoading,
-} from "@/components/command/command-feedback";
+import { CommandError } from "@/components/command/command-feedback";
+import { ZoneEditorSkeleton } from "@/components/command/zones/zone-editor-skeleton";
 import { CommandPageHeading } from "@/components/command/command-page-heading";
 import {
   isCommandMapData,
@@ -24,6 +22,7 @@ import {
 import { ZoneApprovalResetDialog } from "@/components/command/zones/zone-approval-reset-dialog";
 import { ZoneEditorForm } from "@/components/command/zones/zone-editor-form";
 import { ZoneMapPanel } from "@/components/command/zones/zone-map-panel";
+import { toast } from "@/components/ui/toast";
 import {
   polygonFromVertices,
   polygonWithUpdatedOuterRing,
@@ -268,6 +267,12 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
           area +
           " ha.",
       );
+      toast.success(
+        isCreate ? "Zona dibuat" : "Zona diperbarui",
+        isCreate
+          ? `Zona ${savedZone.name} berhasil dibuat (${area} ha).`
+          : `Perubahan zona ${savedZone.name} berhasil disimpan (${area} ha).`,
+      );
       if (isCreate) {
         router.replace(zoneEditRoute(savedZone.id));
       } else if (approvalSensitiveChange) {
@@ -293,30 +298,39 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
   }
 
   if (screenState === "loading") {
-    return <CommandLoading label="Memuat detail zona…" />;
+    return <ZoneEditorSkeleton />;
   }
   if (screenState === "error") {
-    return <CommandError message={loadError} onRetry={retryLoad} />;
+    return (
+      <div className="space-y-4">
+        <Link
+          className="inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-peat-forest hover:underline"
+          href={COMMAND_ROUTES.zones}
+        >
+          <ArrowLeft aria-hidden="true" size={17} />
+          Kembali ke daftar zona
+        </Link>
+        <CommandError message={loadError} onRetry={retryLoad} />
+      </div>
+    );
   }
 
   return (
     <div>
+      <Link
+        className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-peat-forest hover:underline"
+        href={COMMAND_ROUTES.zones}
+      >
+        <ArrowLeft aria-hidden="true" size={17} />
+        Kembali ke daftar zona
+      </Link>
+
       <CommandPageHeading
-        action={
-          <Link
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-peat-forest/15 px-4 text-sm font-semibold text-peat-forest hover:bg-white"
-            href={COMMAND_ROUTES.zones}
-          >
-            <ArrowLeft aria-hidden="true" size={16} />
-            Daftar zona
-          </Link>
-        }
         description={
           isCreate
             ? "Tentukan informasi dasar, lalu gambar batas zona pada peta."
             : "Perbarui data dasar atau pindahkan titik batas zona yang sudah tersimpan."
         }
-        eyebrow="POSKO · ZONA GAMBUT"
         title={isCreate ? "Buat zona" : "Ubah zona"}
       />
 

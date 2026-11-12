@@ -1,24 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import {
-  ArrowDown,
-  ArrowRight,
-  Pause,
-  Play,
-  Volume2,
-  VolumeX,
-} from "lucide-react";
+import { ArrowDown, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { PublicHeroHeadline } from "@/components/public/public-hero-headline";
+import { PublicHeroIntro } from "@/components/public/public-hero-intro";
+import { handleSectionScroll } from "@/components/public/smooth-scroll";
 import { APP_ROUTES } from "@/lib/routes";
+import "./public-hero.css";
 
 const HERO_VIDEO_PATH = "/videos/peatland-hero.mp4";
 const HERO_POSTER_PATH = "/images/peatland-hero-poster.png";
 
 export function PublicHero() {
-  const sectionRef = useRef<HTMLElement>(null);
+  const videoWindowRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(true);
   const [isInView, setIsInView] = useState(false);
@@ -37,9 +33,9 @@ export function PublicHero() {
   }, []);
 
   useEffect(() => {
-    const section = sectionRef.current;
+    const videoWindow = videoWindowRef.current;
 
-    if (!section || !("IntersectionObserver" in window)) {
+    if (!videoWindow || !("IntersectionObserver" in window)) {
       setIsInView(true);
       return;
     }
@@ -49,7 +45,7 @@ export function PublicHero() {
       { threshold: 0.01 },
     );
 
-    observer.observe(section);
+    observer.observe(videoWindow);
     return () => observer.disconnect();
   }, []);
 
@@ -98,11 +94,15 @@ export function PublicHero() {
   return (
     <section
       aria-labelledby="hero-title"
-      className="public-hero relative isolate min-h-[200svh] bg-peat-forest text-white"
+      className="public-hero relative isolate bg-peat-forest text-white"
       id="hero"
-      ref={sectionRef}
     >
-      <div className="public-hero__stage sticky top-0 isolate h-svh overflow-hidden bg-peat-forest">
+      <div
+        aria-hidden="true"
+        className="public-hero__video-window pointer-events-none absolute inset-x-0 top-0"
+        ref={videoWindowRef}
+      />
+      <div className="public-hero__stage sticky top-0 isolate overflow-hidden bg-peat-forest">
         <div
           aria-hidden="true"
           className="public-hero__media absolute inset-0 -z-10 overflow-hidden"
@@ -139,52 +139,10 @@ export function PublicHero() {
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-t from-[#0b2119]/70 via-transparent to-[#0b2119]/45"
         />
-        <div
-          aria-hidden="true"
-          className="public-hero__panel pointer-events-none absolute inset-0 z-[1]"
+        <PublicHeroHeadline
+          markerRef={videoWindowRef}
+          prefersReducedMotion={prefersReducedMotion}
         />
-
-        <div className="public-hero__copy absolute inset-0 z-10 flex items-center justify-center px-5 pt-48 pb-24 text-center sm:px-8 lg:pt-20">
-          <div className="mx-auto max-w-4xl">
-            <h1
-              className="font-heading text-5xl leading-[.95] font-bold tracking-tight text-balance sm:text-7xl lg:text-[6.5rem]"
-              id="hero-title"
-            >
-              Pantau lebih awal.
-              <br />
-              <span className="text-peat-sun">Lindungi bentang gambut.</span>
-            </h1>
-            <p className="mx-auto mt-7 max-w-3xl text-base leading-7 text-white/90 sm:text-lg sm:leading-8">
-              Platform{" "}
-              <strong className="font-semibold text-white">PEATGUARD</strong>{" "}
-              berbasis sistem{" "}
-              <span className="font-medium text-peat-sun">
-                Peatland Early-Warning & Audit Tracking (PEAT)
-              </span>{" "}
-              yang menyatukan deteksi dini hotspot satelit, pelaporan patroli
-              lapangan relawan, serta transparansi audit karbon dalam satu peta
-              terbuka.
-            </p>
-
-            <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-              <Link
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-peat-sun px-6 font-semibold text-peat-forest transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-                href={APP_ROUTES.publicMap}
-              >
-                Buka peta pantauan
-                <ArrowRight aria-hidden="true" size={17} />
-              </Link>
-              <a
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/60 bg-white/10 px-6 font-semibold text-white transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-                href={APP_ROUTES.homeSections.workflow}
-              >
-                Kenali cara kerjanya
-                <ArrowDown aria-hidden="true" size={16} />
-              </a>
-            </div>
-          </div>
-        </div>
-
         <div className="public-hero__controls pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-4 px-5 pb-5 sm:px-8 lg:px-14">
           <div className="public-hero__video-controls pointer-events-auto flex shrink-0 items-center gap-2 rounded-full border border-white/20 bg-black/20 px-2 py-2 text-xs text-white/90 backdrop-blur-sm md:gap-3 md:px-3">
             <span className="hidden md:inline">
@@ -198,7 +156,7 @@ export function PublicHero() {
                   aria-label={
                     isPlaying ? "Jeda video latar" : "Putar video latar"
                   }
-                  className="grid aspect-square size-9 min-h-0 min-w-0 shrink-0 place-items-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="grid size-11 shrink-0 place-items-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={togglePlayback}
                   type="button"
                 >
@@ -212,7 +170,7 @@ export function PublicHero() {
                   aria-label={
                     isMuted ? "Aktifkan suara video" : "Matikan suara video"
                   }
-                  className="grid aspect-square size-9 min-h-0 min-w-0 shrink-0 place-items-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25"
+                  className="grid size-11 shrink-0 place-items-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25"
                   onClick={toggleMuted}
                   type="button"
                 >
@@ -229,6 +187,9 @@ export function PublicHero() {
           <a
             className="public-hero__scroll-prompt pointer-events-auto inline-flex items-center gap-2 rounded-full px-3 py-2 text-[10px] font-bold tracking-[.18em] text-white/90 uppercase transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             href={APP_ROUTES.homeSections.peatlandStory}
+            onClick={(e) =>
+              handleSectionScroll(e, APP_ROUTES.homeSections.peatlandStory)
+            }
           >
             <span className="hidden md:inline">
               Gulir untuk mengenal gambut
@@ -236,6 +197,14 @@ export function PublicHero() {
             <span className="md:hidden">Gulir</span>
             <ArrowDown aria-hidden="true" size={15} />
           </a>
+        </div>
+      </div>
+      <div className="public-hero__intro-track">
+        <div className="public-hero__intro-stage">
+          <PublicHeroIntro
+            prefersReducedMotion={prefersReducedMotion}
+            revealMarkerRef={videoWindowRef}
+          />
         </div>
       </div>
     </section>

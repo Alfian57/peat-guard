@@ -114,7 +114,7 @@ export function LedgerDialog({
       aria-describedby={describedBy}
       aria-labelledby={titleId}
       aria-modal="true"
-      className="m-auto max-h-[min(90vh,760px)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl border border-border bg-white p-5 shadow-xl backdrop:bg-peat-forest/55 sm:p-6"
+      className="m-auto max-h-[min(90vh,760px)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl border border-border bg-white p-5 shadow-xl backdrop:bg-black/50 sm:p-6"
       id={id}
       onCancel={(event) => {
         event.preventDefault();

@@ -6,6 +6,7 @@ import { ownerStatusMessage, useFieldShell } from "./field-app-shell";
 import { FieldOutboxSection } from "./field-outbox-section";
 import { ServerReportHistorySection } from "./server-report-history-section";
 import { useFieldReportHistory } from "./use-field-report-history";
+import { toast } from "@/components/ui/toast";
 import { splitReportHistory } from "@/lib/client/offline/server-report-client";
 import { removeQueuedReport } from "@/lib/client/offline/report-store";
 
@@ -59,6 +60,12 @@ export function FieldQueue() {
         ownerId,
       );
       setDeleteReportId(null);
+      if (removed) {
+        toast.success(
+          "Draf dihapus",
+          "Draf lokal berhasil dihapus dari perangkat.",
+        );
+      }
       setNotice(
         removed
           ? "Draf lokal dihapus dari perangkat. Laporan yang sudah terkirim tidak dapat dihapus di sini."
@@ -73,11 +80,8 @@ export function FieldQueue() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl px-4 pt-5">
-      <p className="text-sm text-muted-foreground">
-        Penyimpanan pada perangkat dan laporan di posko
-      </p>
-      <h1 className="mt-1 font-heading text-4xl leading-none font-bold text-peat-forest">
+    <div className="mx-auto w-full max-w-xl px-4 pt-4 lg:max-w-5xl lg:px-0 lg:pt-0">
+      <h1 className="font-heading text-4xl leading-none font-bold text-peat-forest">
         Antrean laporan
       </h1>
       <p className="mt-2 text-sm leading-5 text-muted-foreground">
@@ -206,13 +210,13 @@ export function FieldQueue() {
           Foto dan data draf ini akan dihapus dari perangkat. Laporan yang sudah
           terkirim ke posko tidak dapat dihapus dari sini.
         </p>
-        <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="mt-5 flex items-center justify-end gap-2 border-t border-border pt-3">
           <button
             type="button"
             autoFocus
             disabled={isDeleting}
             onClick={() => setDeleteReportId(null)}
-            className="min-h-11 rounded-xl border border-border px-4 text-sm font-semibold text-peat-forest focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green disabled:opacity-60"
+            className="inline-flex h-9 min-h-9 items-center justify-center rounded-xl border border-border px-4 text-xs font-semibold text-peat-forest transition hover:bg-peat-paper focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green disabled:opacity-60"
           >
             Batal
           </button>
@@ -220,7 +224,7 @@ export function FieldQueue() {
             type="button"
             disabled={isDeleting || !pendingReport}
             onClick={() => void confirmDeleteDraft()}
-            className="min-h-11 rounded-xl bg-destructive px-4 text-sm font-semibold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-forest disabled:opacity-60"
+            className="inline-flex h-9 min-h-9 items-center justify-center rounded-xl bg-destructive px-4 text-xs font-semibold text-white transition hover:bg-destructive/90 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-forest disabled:opacity-60"
           >
             {isDeleting ? "Menghapus…" : "Hapus draf"}
           </button>

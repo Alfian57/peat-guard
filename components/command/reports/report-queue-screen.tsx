@@ -1,60 +1,64 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-import {
-  CommandError,
-  CommandLoading,
-} from "@/components/command/command-feedback";
+import { CommandError } from "@/components/command/command-feedback";
+import { ReportQueueSkeleton } from "@/components/command/reports/report-queue-skeleton";
 import { CommandPageHeading } from "@/components/command/command-page-heading";
 import {
   isReportListResponse,
-  REPORT_STATUSES,
   type ReportListResponse,
-  type ReportStatus,
 } from "@/components/command/reports/report-contracts";
-import {
-  ReportQueueFilters,
-  type ReportStatusCounts,
-} from "@/components/command/reports/report-queue-filters";
+import { ReportQueueFilters } from "@/components/command/reports/report-queue-filters";
 import { ReportQueueResults } from "@/components/command/reports/report-queue-results";
 import {
+  buildPageHref,
   buildReportQuery,
+  buildReportQueueHref,
+  DEFAULT_REPORT_FILTERS,
+  parseReportQueryParams,
   type ReportFilters,
 } from "@/components/command/reports/report-query";
 import { COMMAND_API_ROUTES } from "@/components/command/routes";
 import { isZonesResponse } from "@/components/command/command-api";
-import { isRecord, requestCommandJson } from "@/components/command/command-api";
+import { requestCommandJson } from "@/components/command/command-api";
+import { APP_ROUTES } from "@/lib/routes";
 import type { CommandZone } from "@/lib/server/zones/data";
 
 const PAGE_SIZE = 25;
-const DEFAULT_FILTERS: ReportFilters = {
-  status: null,
-  zoneId: "",
-  from: "",
-  to: "",
-  isDemoSample: "all",
-};
-
-type LoadState = "loading" | "ready" | "error";
 
 export function ReportQueueScreen() {
-  const [state, setState] = useState<LoadState>("loading");
-  const [retryKey, setRetryKey] = useState(0);
-  const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState<ReportFilters>(DEFAULT_FILTERS);
-  const [draftFilters, setDraftFilters] =
-    useState<ReportFilters>(DEFAULT_FILTERS);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const urlParams = useMemo(
+    () => parseReportQueryParams(searchParams),
+    [searchParams],
+  );
+
+  const page = urlParams.page;
+  const filters = urlParams.filters;
+
+  const [draftFilters, setDraftFilters] = useState<ReportFilters>(
+    urlParams.filters,
+  );
+  const [syncedParams, setSyncedParams] = useState(searchParams);
+  if (syncedParams !== searchParams) {
+    setSyncedParams(searchParams);
+    setDraftFilters(urlParams.filters);
+  }
+
   const [filterError, setFilterError] = useState("");
   const [loadError, setLoadError] = useState("");
   const [response, setResponse] = useState<ReportListResponse | null>(null);
   const [zones, setZones] = useState<CommandZone[]>([]);
-  const [counts, setCounts] = useState<ReportStatusCounts>({
-    all: null,
-    [REPORT_STATUSES[0]]: null,
-    [REPORT_STATUSES[1]]: null,
-    [REPORT_STATUSES[2]]: null,
-  });
+  const [retryKey, setRetryKey] = useState(0);
+
+  const currentKey = `${JSON.stringify(filters)}-${page}-${retryKey}`;
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const isLoading = loadedKey !== currentKey;
+  const isError = Boolean(loadError) && !isLoading;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -62,26 +66,20 @@ export function ReportQueueScreen() {
       cache: "no-store",
       signal: controller.signal,
     } satisfies RequestInit;
-    const allFilters = { ...filters, status: null };
+
     const reportRequest = requestCommandJson(
       COMMAND_API_ROUTES.reports +
         "?" +
         buildReportQuery(filters, page, PAGE_SIZE),
       requestOptions,
     );
-    const countRequests = Promise.all([
-      fetchReportCount(allFilters, null, requestOptions),
-      ...REPORT_STATUSES.map((status) =>
-        fetchReportCount(allFilters, status, requestOptions),
-      ),
-    ]);
     const zoneRequest = requestCommandJson(COMMAND_API_ROUTES.zones, {
       cache: "no-store",
       signal: controller.signal,
     });
 
-    Promise.all([reportRequest, countRequests, zoneRequest])
-      .then(([reportPayload, countValues, zonePayload]) => {
+    Promise.all([reportRequest, zoneRequest])
+      .then(([reportPayload, zonePayload]) => {
         if (!isReportListResponse(reportPayload)) {
           throw new Error("Daftar laporan dari server tidak sesuai format.");
         }
@@ -90,14 +88,8 @@ export function ReportQueueScreen() {
         }
         setResponse(reportPayload);
         setZones(zonePayload.zones);
-        setCounts({
-          all: countValues[0],
-          [REPORT_STATUSES[0]]: countValues[1],
-          [REPORT_STATUSES[1]]: countValues[2],
-          [REPORT_STATUSES[2]]: countValues[3],
-        });
         setLoadError("");
-        setState("ready");
+        setLoadedKey(currentKey);
       })
       .catch((cause: unknown) => {
         if (controller.signal.aborted) return;
@@ -106,11 +98,11 @@ export function ReportQueueScreen() {
             ? cause.message
             : "Antrean laporan belum dapat dimuat.",
         );
-        setState("error");
+        setLoadedKey(currentKey);
       });
 
     return () => controller.abort();
-  }, [filters, page, retryKey]);
+  }, [currentKey, filters, page, retryKey]);
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -123,28 +115,28 @@ export function ReportQueueScreen() {
       setFilterError("Tanggal awal tidak boleh setelah tanggal akhir.");
       return;
     }
-    setState("loading");
-    setPage(1);
-    setFilters({ ...draftFilters, status: filters.status });
+    const href = buildReportQueueHref(draftFilters, 1);
+    router.push(href, { scroll: false });
   }
 
-  function changeStatus(status: ReportStatus | null) {
-    setState("loading");
-    setPage(1);
-    setFilters((current) => ({ ...current, status }));
-    setDraftFilters((current) => ({ ...current, status }));
+  function handlePageChange(nextPage: number) {
+    const href = buildPageHref(filters, nextPage);
+    router.push(href, { scroll: false });
   }
 
   function resetFilters() {
-    setState("loading");
     setFilterError("");
-    setPage(1);
-    setDraftFilters(DEFAULT_FILTERS);
-    setFilters(DEFAULT_FILTERS);
+    setDraftFilters(DEFAULT_REPORT_FILTERS);
+    router.push(APP_ROUTES.command.reports, { scroll: false });
+  }
+
+  function resetAll() {
+    setFilterError("");
+    setDraftFilters(DEFAULT_REPORT_FILTERS);
+    router.push(APP_ROUTES.command.reports, { scroll: false });
   }
 
   function retryLoad() {
-    setState("loading");
     setLoadError("");
     setRetryKey((current) => current + 1);
   }
@@ -155,39 +147,35 @@ export function ReportQueueScreen() {
     <div>
       <CommandPageHeading
         description="Tinjau bukti lapangan, nilai urgensi AI, dan koordinasikan penanganan POSKO."
-        eyebrow="POSKO · OPERASI"
         title="Daftar insiden"
       />
       <ReportQueueFilters
-        counts={counts}
         draftFilters={draftFilters}
         error={filterError}
-        isLoading={state === "loading"}
+        isLoading={isLoading}
         onApply={applyFilters}
         onDraftChange={setDraftFilters}
         onReset={resetFilters}
-        onStatusChange={changeStatus}
-        selectedStatus={filters.status}
+        resetFiltersHref={APP_ROUTES.command.reports}
         zones={zones}
       />
-      {state === "error" ? (
+      {isError ? (
         <div className="mt-4">
           <CommandError message={loadError} onRetry={retryLoad} />
         </div>
       ) : null}
       <div className="mt-5">
-        {state === "loading" ? (
-          <CommandLoading label="Memuat antrean laporan…" />
-        ) : state === "error" ? null : (
+        {isLoading ? (
+          <ReportQueueSkeleton />
+        ) : isError ? null : (
           <ReportQueueResults
             currentPage={page}
+            filters={filters}
             isLoading={false}
-            onPageChange={(nextPage) => {
-              setState("loading");
-              setPage(nextPage);
-            }}
-            onResetFilters={resetFilters}
+            onPageChange={handlePageChange}
+            onResetFilters={resetAll}
             pageSize={PAGE_SIZE}
+            resetHref={APP_ROUTES.command.reports}
             response={response}
             zones={zoneNames}
           />
@@ -195,25 +183,4 @@ export function ReportQueueScreen() {
       </div>
     </div>
   );
-}
-
-async function fetchReportCount(
-  filters: ReportFilters,
-  status: ReportStatus | null,
-  init: RequestInit,
-): Promise<number> {
-  const query = buildReportQuery({ ...filters, status }, 1, 1);
-  const payload = await requestCommandJson(
-    COMMAND_API_ROUTES.reports + "?" + query,
-    init,
-  );
-  if (
-    !isRecord(payload) ||
-    typeof payload.total !== "number" ||
-    !Number.isSafeInteger(payload.total) ||
-    payload.total < 0
-  ) {
-    throw new Error("Jumlah laporan dari server tidak sesuai format.");
-  }
-  return payload.total;
 }

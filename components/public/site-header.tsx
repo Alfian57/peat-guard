@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { ArrowUpRight, Leaf } from "lucide-react";
-import { type MouseEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { APP_ROUTES } from "@/lib/routes";
+import { handleSectionScroll } from "@/components/public/smooth-scroll";
 
 const NAV_ITEMS = [
   {
@@ -37,192 +38,102 @@ const NAV_ITEMS = [
 export function SiteHeader() {
   const [activeSection, setActiveSection] = useState<string>("hero");
   const [isHeroSurface, setIsHeroSurface] = useState(true);
-  const isManualScrollingRef = useRef(false);
-  const activeAnimationRef = useRef<number | null>(null);
-
-  function smoothScrollTo(targetY: number, duration = 650) {
-    if (activeAnimationRef.current !== null) {
-      cancelAnimationFrame(activeAnimationRef.current);
-      activeAnimationRef.current = null;
-    }
-
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      isManualScrollingRef.current = false;
-      window.scrollTo(0, targetY);
-      return;
-    }
-
-    const startY = window.scrollY || window.pageYOffset;
-    const distance = targetY - startY;
-
-    if (Math.abs(distance) < 2) {
-      isManualScrollingRef.current = false;
-      return;
-    }
-
-    isManualScrollingRef.current = true;
-    let startTime: number | null = null;
-
-    const easeInOutCubic = (t: number) =>
-      t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-
-    const step = (currentTime: number) => {
-      startTime ??= currentTime;
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const ease = easeInOutCubic(progress);
-
-      window.scrollTo(0, startY + distance * ease);
-
-      if (progress < 1) {
-        activeAnimationRef.current = requestAnimationFrame(step);
-      } else {
-        activeAnimationRef.current = null;
-        isManualScrollingRef.current = false;
-      }
-    };
-
-    activeAnimationRef.current = requestAnimationFrame(step);
-  }
+  const headerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const cancelOnUserInteraction = () => {
-      if (activeAnimationRef.current !== null) {
-        cancelAnimationFrame(activeAnimationRef.current);
-        activeAnimationRef.current = null;
-        isManualScrollingRef.current = false;
-      }
-    };
-
-    window.addEventListener("wheel", cancelOnUserInteraction, {
-      passive: true,
-    });
-    window.addEventListener("touchmove", cancelOnUserInteraction, {
-      passive: true,
-    });
-
-    return () => {
-      window.removeEventListener("wheel", cancelOnUserInteraction);
-      window.removeEventListener("touchmove", cancelOnUserInteraction);
-      if (activeAnimationRef.current !== null) {
-        cancelAnimationFrame(activeAnimationRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const updateHeroSurface = () => {
-      const hero = document.getElementById("hero");
-      const header = document.querySelector("header");
-      const headerHeight = header?.getBoundingClientRect().height ?? 72;
-      setIsHeroSurface(
-        Boolean(hero && hero.getBoundingClientRect().bottom > headerHeight),
-      );
-    };
-
-    const handleScroll = () => {
-      updateHeroSurface();
-
-      if (isManualScrollingRef.current) {
-        return;
-      }
-      if (window.scrollY < 200) {
-        setActiveSection("hero");
-      }
-    };
-
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll);
-
+    const hero = document.getElementById("hero");
+    const introduction = document.querySelector(".public-hero__panel");
     const elements = NAV_ITEMS.map((item) =>
       document.getElementById(item.id),
     ).filter((el): el is HTMLElement => Boolean(el));
+    let frameId: number | null = null;
+    let surfaceObserver: IntersectionObserver | null = null;
 
-    if (elements.length === 0) {
-      return () => {
-        window.removeEventListener("scroll", handleScroll);
-        window.removeEventListener("resize", handleScroll);
-      };
-    }
+    const updateSurface = () => {
+      frameId = null;
+      const headerHeight = headerRef.current?.offsetHeight ?? 72;
+      const sectionMarker = headerHeight + window.innerHeight * 0.16;
+      let currentSection = "hero";
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (isManualScrollingRef.current) {
-          return;
+      for (const element of elements) {
+        if (element.getBoundingClientRect().top <= sectionMarker) {
+          currentSection = element.id;
         }
+      }
 
-        for (const entry of entries) {
-          if (entry.isIntersecting && window.scrollY >= 200) {
-            setActiveSection(entry.target.id);
-          }
-        }
-      },
-      {
-        rootMargin: "-25% 0px -55% 0px",
+      setActiveSection(currentSection);
+      setIsHeroSurface(
+        Boolean(
+          hero &&
+          hero.getBoundingClientRect().bottom > headerHeight &&
+          introduction &&
+          introduction.getBoundingClientRect().top > headerHeight / 2 + 1,
+        ),
+      );
+    };
+
+    const scheduleUpdate = () => {
+      frameId ??= requestAnimationFrame(updateSurface);
+    };
+
+    const observeSurface = () => {
+      surfaceObserver?.disconnect();
+      if (!introduction || !("IntersectionObserver" in window)) return;
+
+      const probe = (headerRef.current?.offsetHeight ?? 72) / 2;
+      surfaceObserver = new IntersectionObserver(scheduleUpdate, {
+        rootMargin: `-${probe}px 0px -${Math.max(0, window.innerHeight - probe - 1)}px 0px`,
         threshold: 0,
-      },
-    );
+      });
+      surfaceObserver.observe(introduction);
+    };
 
-    elements.forEach((el) => observer.observe(el));
+    const handleResize = () => {
+      observeSurface();
+      scheduleUpdate();
+    };
+
+    updateSurface();
+    observeSurface();
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("hashchange", scheduleUpdate);
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
-      observer.disconnect();
+      window.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("hashchange", scheduleUpdate);
+      surfaceObserver?.disconnect();
+      if (frameId !== null) cancelAnimationFrame(frameId);
     };
   }, []);
 
-  function handleSectionClick(
-    event: MouseEvent<HTMLAnchorElement>,
-    sectionId: string,
-  ) {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    if (sectionId === "hero") {
-      event.preventDefault();
-      setActiveSection("hero");
-      smoothScrollTo(0, 600);
-      window.history.pushState(null, "", APP_ROUTES.homeSections.hero);
-      return;
-    }
-
-    const targetElement = document.getElementById(sectionId);
-    if (!targetElement) {
-      return;
-    }
-
-    event.preventDefault();
-    setActiveSection(sectionId);
-
-    const header = document.querySelector("header");
-    const headerHeight = header ? header.getBoundingClientRect().height : 80;
-    const elementPosition =
-      targetElement.getBoundingClientRect().top + window.scrollY;
-    const targetScrollPosition = Math.max(
-      0,
-      elementPosition - headerHeight - 16,
-    );
-
-    smoothScrollTo(targetScrollPosition, 650);
-    window.history.pushState(null, "", `#${sectionId}`);
-  }
-
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
+      className={`fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300 ${
         isHeroSurface
           ? "border-transparent bg-transparent text-white shadow-none backdrop-blur-none"
-          : "border-peat-forest/10 bg-peat-paper/95 text-peat-forest shadow-[0_8px_30px_rgba(20,54,39,.08)] backdrop-blur-xl"
+          : "border-peat-forest/10 bg-peat-paper/95 text-peat-forest shadow-[0_8px_30px_rgba(20,54,39,.08)] backdrop-blur-md"
       }`}
+      ref={headerRef}
     >
       <div className="mx-auto flex min-h-[72px] max-w-[1440px] items-center justify-between gap-5 px-5 sm:px-8 lg:px-14">
         <Link
           aria-label="PEATGUARD beranda"
           className={`flex shrink-0 items-center gap-2.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 ${isHeroSurface ? "focus-visible:outline-white" : "focus-visible:outline-peat-green"}`}
           href={APP_ROUTES.home}
+          onClick={(e) => {
+            if (
+              typeof window !== "undefined" &&
+              (window.location.pathname === APP_ROUTES.home ||
+                window.location.pathname === "")
+            ) {
+              handleSectionScroll(
+                e as unknown as React.MouseEvent<HTMLAnchorElement>,
+                APP_ROUTES.homeSections.hero,
+              );
+            }
+          }}
         >
           <span className="grid size-10 place-items-center rounded-full bg-peat-forest text-peat-sun">
             <Leaf aria-hidden="true" size={21} strokeWidth={2.2} />
@@ -242,6 +153,7 @@ export function SiteHeader() {
             const isActive = activeSection === item.id;
             return (
               <a
+                aria-current={isActive ? "location" : undefined}
                 className={`relative py-1 transition-colors duration-200 ${
                   isActive
                     ? isHeroSurface
@@ -249,17 +161,17 @@ export function SiteHeader() {
                       : "font-bold text-peat-forest"
                     : isHeroSurface
                       ? "text-white/80 hover:text-white"
-                      : "text-peat-forest/75 hover:text-peat-green"
+                      : "text-peat-forest/80 hover:text-peat-forest"
                 }`}
                 href={item.href}
                 key={item.id}
-                onClick={(e) => handleSectionClick(e, item.id)}
+                onClick={(e) => handleSectionScroll(e, item.href)}
               >
                 {item.label}
                 {isActive ? (
                   <span
                     aria-hidden="true"
-                    className={`absolute inset-x-0 -bottom-1 h-0.5 rounded-full transition-all duration-300 ${isHeroSurface ? "bg-peat-sun" : "bg-peat-green"}`}
+                    className="absolute inset-x-0 -bottom-1 h-0.5 rounded-full bg-peat-sun transition-all duration-300"
                   />
                 ) : null}
               </a>
@@ -275,7 +187,11 @@ export function SiteHeader() {
             Masuk
           </Link>
           <Link
-            className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-3 sm:px-5 ${isHeroSurface ? "bg-peat-sun text-peat-forest hover:bg-white focus-visible:outline-white" : "bg-peat-forest text-white hover:bg-peat-green focus-visible:outline-peat-green"}`}
+            className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-peat-sun px-4 text-sm font-semibold text-peat-forest transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-3 sm:px-5 ${
+              isHeroSurface
+                ? "focus-visible:outline-white"
+                : "shadow-sm focus-visible:outline-peat-green"
+            }`}
             href={APP_ROUTES.publicMap}
           >
             Buka peta
@@ -286,24 +202,25 @@ export function SiteHeader() {
 
       <nav
         aria-label="Navigasi bagian"
-        className={`flex gap-6 overflow-x-auto border-t px-5 py-2.5 text-xs font-semibold sm:px-8 lg:hidden ${isHeroSurface ? "border-white/15 text-white/80" : "border-peat-forest/10 text-peat-forest/70"}`}
+        className={`flex gap-6 overflow-x-auto border-t px-5 py-2.5 text-xs font-semibold sm:px-8 lg:hidden ${isHeroSurface ? "border-white/15 text-white/80" : "border-peat-forest/10 text-peat-forest/80"}`}
       >
         {NAV_ITEMS.map((item) => {
           const isActive = activeSection === item.id;
           return (
             <a
+              aria-current={isActive ? "location" : undefined}
               className={`shrink-0 transition-colors duration-200 ${
                 isActive
                   ? isHeroSurface
                     ? "font-bold text-peat-sun"
-                    : "font-bold text-peat-green"
+                    : "font-bold text-peat-forest underline decoration-peat-sun decoration-2 underline-offset-4"
                   : isHeroSurface
                     ? "text-white/80 hover:text-white"
-                    : "hover:text-peat-green"
+                    : "hover:text-peat-forest"
               }`}
               href={item.href}
               key={item.id}
-              onClick={(e) => handleSectionClick(e, item.id)}
+              onClick={(e) => handleSectionScroll(e, item.href)}
             >
               {item.label}
             </a>

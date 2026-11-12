@@ -34,16 +34,10 @@ export function LedgerView({
     zones.find((zone) => zone.zoneId === filters.zoneId)?.zoneName ?? null;
 
   return (
-    <main
-      className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
-      id="audit-content"
-    >
+    <div className="flex flex-col gap-5" id="audit-content">
       <header className="flex flex-wrap items-end justify-between gap-5">
         <div>
-          <p className="text-sm font-semibold tracking-wide text-peat-green uppercase">
-            Audit karbon · bukti lapangan
-          </p>
-          <h1 className="mt-1 font-heading text-4xl leading-tight font-bold text-peat-forest sm:text-5xl">
+          <h1 className="font-heading text-4xl leading-tight font-bold text-peat-forest sm:text-5xl">
             Buku besar audit MRV
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
@@ -89,7 +83,7 @@ export function LedgerView({
                 Log laporan lapangan, bukti GPS/foto, triase AI, dan konteks
                 zona karbon
               </caption>
-              <thead className="bg-peat-paper/70 text-xs font-semibold text-muted-foreground">
+              <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-peat-forest/70">
                 <tr>
                   <th className="px-4 py-3 text-left" scope="col">
                     Audit ID
@@ -149,6 +143,6 @@ export function LedgerView({
         dijumlahkan menjadi tambahan emisi yang dicegah. Koordinat tercatat
         belum diverifikasi secara independen.
       </p>
-    </main>
+    </div>
   );
 }

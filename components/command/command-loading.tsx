@@ -1,3 +1,5 @@
+import { Skeleton } from "@/components/ui/skeleton";
+
 export function CommandLoading({
   label = "Memuat data POSKO…",
 }: {
@@ -7,10 +9,17 @@ export function CommandLoading({
     <div
       aria-busy="true"
       aria-label={label}
-      className="grid min-h-52 place-items-center rounded-2xl border border-peat-forest/10 bg-white px-5 text-center text-sm text-peat-forest/75"
+      className="space-y-4 rounded-2xl border border-peat-forest/10 bg-white p-6 shadow-xs"
       role="status"
     >
-      <span>{label}</span>
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-6 w-40 rounded-md bg-peat-forest/15" />
+        <Skeleton className="h-4 w-24 rounded-md bg-peat-forest/10" />
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-12 w-full rounded-xl bg-muted/60" />
+        <Skeleton className="h-12 w-full rounded-xl bg-muted/60" />
+      </div>
     </div>
   );
 }

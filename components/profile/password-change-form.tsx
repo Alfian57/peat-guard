@@ -3,13 +3,16 @@
 import { Eye, EyeOff, LoaderCircle, LockKeyhole } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
+import { toast } from "@/components/ui/toast";
 import { authClient } from "@/lib/auth-client";
 
 export function PasswordChangeForm() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPasswords, setShowPasswords] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +49,10 @@ export function PasswordChangeForm() {
       setMessage(
         "Kata sandi berhasil diperbarui. Sesi di perangkat lain sudah ditutup.",
       );
+      toast.success(
+        "Kata sandi diperbarui",
+        "Kata sandi berhasil diperbarui. Sesi di perangkat lain sudah ditutup.",
+      );
     } catch {
       setError("Kata sandi belum dapat diperbarui. Coba lagi.");
     } finally {
@@ -55,56 +62,123 @@ export function PasswordChangeForm() {
 
   return (
     <form className="space-y-4" onSubmit={submit}>
-      <label className="block text-sm font-semibold text-peat-forest">
-        Kata sandi saat ini
-        <input
-          autoComplete="current-password"
-          className="mt-2 min-h-12 w-full rounded-xl border border-peat-forest/15 bg-white px-3.5 font-normal transition outline-none focus:border-peat-green focus:ring-3 focus:ring-peat-green/10"
-          onChange={(event) => setCurrentPassword(event.currentTarget.value)}
-          required
-          type={showPasswords ? "text" : "password"}
-          value={currentPassword}
-        />
-      </label>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm font-semibold text-peat-forest">
-          Kata sandi baru
-          <input
-            autoComplete="new-password"
-            className="mt-2 min-h-12 w-full rounded-xl border border-peat-forest/15 bg-white px-3.5 font-normal transition outline-none focus:border-peat-green focus:ring-3 focus:ring-peat-green/10"
-            minLength={10}
-            onChange={(event) => setNewPassword(event.currentTarget.value)}
-            required
-            type={showPasswords ? "text" : "password"}
-            value={newPassword}
-          />
+      <div>
+        <label
+          className="block text-sm font-semibold text-peat-forest"
+          htmlFor="current-password"
+        >
+          Kata sandi saat ini
         </label>
-        <label className="block text-sm font-semibold text-peat-forest">
-          Ulangi kata sandi baru
+        <div className="relative mt-2">
           <input
-            autoComplete="new-password"
-            className="mt-2 min-h-12 w-full rounded-xl border border-peat-forest/15 bg-white px-3.5 font-normal transition outline-none focus:border-peat-green focus:ring-3 focus:ring-peat-green/10"
-            minLength={10}
-            onChange={(event) => setConfirmPassword(event.currentTarget.value)}
+            autoComplete="current-password"
+            className="min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white pr-10 pl-3.5 text-sm font-normal transition outline-none placeholder:text-peat-forest/35 focus:border-peat-green focus:ring-3 focus:ring-peat-green/10"
+            id="current-password"
+            onChange={(event) => setCurrentPassword(event.currentTarget.value)}
+            placeholder="Masukkan kata sandi saat ini"
             required
-            type={showPasswords ? "text" : "password"}
-            value={confirmPassword}
+            type={showCurrent ? "text" : "password"}
+            value={currentPassword}
           />
-        </label>
+          <button
+            aria-label={
+              showCurrent
+                ? "Sembunyikan kata sandi saat ini"
+                : "Tampilkan kata sandi saat ini"
+            }
+            className="absolute top-1/2 right-2.5 -translate-y-1/2 rounded-lg p-1 text-peat-forest/50 transition hover:bg-peat-forest/5 hover:text-peat-forest focus-visible:outline-2 focus-visible:outline-peat-green"
+            onClick={() => setShowCurrent((prev) => !prev)}
+            type="button"
+          >
+            {showCurrent ? (
+              <EyeOff aria-hidden="true" size={16} />
+            ) : (
+              <Eye aria-hidden="true" size={16} />
+            )}
+          </button>
+        </div>
       </div>
-      <button
-        aria-pressed={showPasswords}
-        className="inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-xs font-semibold text-peat-green hover:bg-peat-green/5 focus-visible:outline-2 focus-visible:outline-peat-green"
-        onClick={() => setShowPasswords((value) => !value)}
-        type="button"
-      >
-        {showPasswords ? (
-          <EyeOff aria-hidden="true" size={15} />
-        ) : (
-          <Eye aria-hidden="true" size={15} />
-        )}
-        {showPasswords ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-      </button>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label
+            className="block text-sm font-semibold text-peat-forest"
+            htmlFor="new-password"
+          >
+            Kata sandi baru
+          </label>
+          <div className="relative mt-2">
+            <input
+              autoComplete="new-password"
+              className="min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white pr-10 pl-3.5 text-sm font-normal transition outline-none placeholder:text-peat-forest/35 focus:border-peat-green focus:ring-3 focus:ring-peat-green/10"
+              id="new-password"
+              minLength={10}
+              onChange={(event) => setNewPassword(event.currentTarget.value)}
+              placeholder="Minimal 10 karakter"
+              required
+              type={showNew ? "text" : "password"}
+              value={newPassword}
+            />
+            <button
+              aria-label={
+                showNew
+                  ? "Sembunyikan kata sandi baru"
+                  : "Tampilkan kata sandi baru"
+              }
+              className="absolute top-1/2 right-2.5 -translate-y-1/2 rounded-lg p-1 text-peat-forest/50 transition hover:bg-peat-forest/5 hover:text-peat-forest focus-visible:outline-2 focus-visible:outline-peat-green"
+              onClick={() => setShowNew((prev) => !prev)}
+              type="button"
+            >
+              {showNew ? (
+                <EyeOff aria-hidden="true" size={16} />
+              ) : (
+                <Eye aria-hidden="true" size={16} />
+              )}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label
+            className="block text-sm font-semibold text-peat-forest"
+            htmlFor="confirm-password"
+          >
+            Ulangi kata sandi baru
+          </label>
+          <div className="relative mt-2">
+            <input
+              autoComplete="new-password"
+              className="min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white pr-10 pl-3.5 text-sm font-normal transition outline-none placeholder:text-peat-forest/35 focus:border-peat-green focus:ring-3 focus:ring-peat-green/10"
+              id="confirm-password"
+              minLength={10}
+              onChange={(event) =>
+                setConfirmPassword(event.currentTarget.value)
+              }
+              placeholder="Ulangi kata sandi baru"
+              required
+              type={showConfirm ? "text" : "password"}
+              value={confirmPassword}
+            />
+            <button
+              aria-label={
+                showConfirm
+                  ? "Sembunyikan konfirmasi kata sandi"
+                  : "Tampilkan konfirmasi kata sandi"
+              }
+              className="absolute top-1/2 right-2.5 -translate-y-1/2 rounded-lg p-1 text-peat-forest/50 transition hover:bg-peat-forest/5 hover:text-peat-forest focus-visible:outline-2 focus-visible:outline-peat-green"
+              onClick={() => setShowConfirm((prev) => !prev)}
+              type="button"
+            >
+              {showConfirm ? (
+                <EyeOff aria-hidden="true" size={16} />
+              ) : (
+                <Eye aria-hidden="true" size={16} />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {error ? (
         <p className="text-sm text-critical" role="alert">
           {error}
@@ -115,18 +189,25 @@ export function PasswordChangeForm() {
           {message}
         </p>
       ) : null}
-      <button
-        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-peat-forest px-5 text-sm font-bold text-white transition hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green disabled:cursor-wait disabled:opacity-60"
-        disabled={busy}
-        type="submit"
-      >
-        {busy ? (
-          <LoaderCircle aria-hidden="true" className="animate-spin" size={16} />
-        ) : (
-          <LockKeyhole aria-hidden="true" size={16} />
-        )}
-        {busy ? "Memperbarui…" : "Perbarui kata sandi"}
-      </button>
+
+      <div className="flex items-center justify-end border-t border-peat-forest/10 pt-4">
+        <button
+          className="inline-flex h-9 min-h-9 items-center justify-center gap-1.5 rounded-xl bg-peat-forest px-4 text-xs font-semibold text-white transition hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green disabled:cursor-wait disabled:opacity-60"
+          disabled={busy}
+          type="submit"
+        >
+          {busy ? (
+            <LoaderCircle
+              aria-hidden="true"
+              className="animate-spin"
+              size={14}
+            />
+          ) : (
+            <LockKeyhole aria-hidden="true" size={14} />
+          )}
+          {busy ? "Memperbarui…" : "Perbarui kata sandi"}
+        </button>
+      </div>
     </form>
   );
 }

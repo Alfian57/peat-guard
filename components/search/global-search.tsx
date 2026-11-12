@@ -1,7 +1,7 @@
 "use client";
 
 import { Dialog } from "@base-ui/react/dialog";
-import { LoaderCircle, Search } from "lucide-react";
+import { Compass, Database, LoaderCircle, Search, X } from "lucide-react";
 import Link from "next/link";
 import {
   useCallback,
@@ -18,6 +18,7 @@ type SearchResult = {
   title: string;
   description: string;
   kind: string;
+  group?: "menu" | "data";
   href: string;
 };
 
@@ -65,6 +66,10 @@ export function GlobalSearch({
   const inputRef = useRef<HTMLInputElement>(null);
   const normalizedQuery = query.trim();
   const results = resultSet?.query === normalizedQuery ? resultSet.results : [];
+  const menuResults = results.filter((r) => r.group === "menu");
+  const dataResults = results.filter((r) => r.group !== "menu");
+  const orderedResults = [...menuResults, ...dataResults];
+
   const error =
     searchError?.query === normalizedQuery ? searchError.message : null;
   const loading =
@@ -102,7 +107,14 @@ export function GlobalSearch({
         });
         const payload: unknown = await response.json();
         if (!response.ok || !isSearchPayload(payload)) {
-          throw new Error("Pencarian belum tersedia.");
+          const errorMessage =
+            typeof payload === "object" &&
+            payload !== null &&
+            "error" in payload &&
+            typeof (payload as { error: unknown }).error === "string"
+              ? (payload as { error: string }).error
+              : "Pencarian belum tersedia.";
+          throw new Error(errorMessage);
         }
         setResultSet({ query: searchQuery, results: payload.results });
         setActiveIndex(0);
@@ -132,14 +144,16 @@ export function GlobalSearch({
   }, [open, query]);
 
   function onInputKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
-    if (event.key === "ArrowDown" && results.length > 0) {
+    if (event.key === "ArrowDown" && orderedResults.length > 0) {
       event.preventDefault();
-      setActiveIndex((index) => (index + 1) % results.length);
-    } else if (event.key === "ArrowUp" && results.length > 0) {
+      setActiveIndex((index) => (index + 1) % orderedResults.length);
+    } else if (event.key === "ArrowUp" && orderedResults.length > 0) {
       event.preventDefault();
-      setActiveIndex((index) => (index - 1 + results.length) % results.length);
-    } else if (event.key === "Enter" && results[activeIndex]) {
-      window.location.assign(results[activeIndex].href);
+      setActiveIndex(
+        (index) => (index - 1 + orderedResults.length) % orderedResults.length,
+      );
+    } else if (event.key === "Enter" && orderedResults[activeIndex]) {
+      window.location.assign(orderedResults[activeIndex].href);
     }
   }
 
@@ -158,7 +172,9 @@ export function GlobalSearch({
         <Search aria-hidden="true" size={18} />
         {variant === "bar" ? (
           <>
-            <span className="flex-1">Cari laporan, zona, atau data…</span>
+            <span className="flex-1">
+              Cari fitur, menu, laporan, atau data…
+            </span>
             <span className="hidden items-center rounded-md border border-peat-forest/10 px-1.5 py-0.5 text-[10px] font-semibold text-peat-forest/45 md:flex">
               ⌘ / Ctrl K
             </span>
@@ -167,11 +183,11 @@ export function GlobalSearch({
       </Dialog.Trigger>
 
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-[70] bg-[#172b22]/45 backdrop-blur-[2px] transition-opacity data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+        <Dialog.Backdrop className="fixed inset-0 z-[70] bg-black/50 transition-opacity data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
         <Dialog.Popup className="fixed top-[12vh] left-1/2 z-[71] w-[min(44rem,calc(100%-1.5rem))] -translate-x-1/2 overflow-hidden rounded-2xl border border-white/70 bg-[#fbfcf8] shadow-[0_28px_100px_rgba(10,28,20,0.35)] outline-none sm:top-[15vh] sm:rounded-[1.65rem]">
           <Dialog.Title className="sr-only">Pencarian ruang kerja</Dialog.Title>
           <Dialog.Description className="sr-only">
-            Cari data yang tersedia untuk peran akun ini.
+            Cari menu, fitur, dan data yang tersedia untuk peran akun ini.
           </Dialog.Description>
           <div className="flex items-center gap-3 border-b border-peat-forest/10 px-4 sm:px-6">
             <Search
@@ -190,11 +206,26 @@ export function GlobalSearch({
                 setSearchError(null);
               }}
               onKeyDown={onInputKeyDown}
-              placeholder="Cari laporan, zona, titik air…"
+              placeholder="Cari fitur, menu, laporan, zona, titik air…"
               ref={inputRef}
               type="search"
               value={query}
             />
+            {query.length > 0 ? (
+              <button
+                aria-label="Hapus kata kunci pencarian"
+                className="inline-grid size-7 shrink-0 place-items-center rounded-lg text-peat-forest/70 transition hover:bg-peat-forest/10 hover:text-peat-forest focus-visible:outline-2 focus-visible:outline-peat-green"
+                onClick={() => {
+                  setQuery("");
+                  setActiveIndex(0);
+                  setSearchError(null);
+                  inputRef.current?.focus();
+                }}
+                type="button"
+              >
+                <X aria-hidden="true" size={17} strokeWidth={2.25} />
+              </button>
+            ) : null}
             <Dialog.Close
               aria-label="Tutup pencarian"
               className="rounded-lg border border-peat-forest/10 px-2 py-1 text-xs font-semibold text-peat-forest/50 hover:bg-peat-forest/5 focus-visible:outline-2 focus-visible:outline-peat-green"
@@ -208,7 +239,8 @@ export function GlobalSearch({
           >
             {query.trim().length < 2 ? (
               <p className="px-4 py-8 text-center text-sm text-peat-forest/55">
-                Ketik minimal 2 karakter untuk mulai mencari.
+                Ketik minimal 2 karakter untuk mulai mencari menu, fitur, atau
+                data.
               </p>
             ) : loading ? (
               <p
@@ -220,7 +252,7 @@ export function GlobalSearch({
                   className="animate-spin"
                   size={17}
                 />
-                Mencari data…
+                Mencari menu dan data…
               </p>
             ) : error ? (
               <p
@@ -229,43 +261,116 @@ export function GlobalSearch({
               >
                 {error}
               </p>
-            ) : results.length === 0 ? (
+            ) : orderedResults.length === 0 ? (
               <p
                 className="px-4 py-8 text-center text-sm text-peat-forest/55"
                 role="status"
               >
-                Tidak ada hasil yang cocok dengan kata kunci ini.
+                Tidak ada menu atau data yang cocok dengan kata kunci ini.
               </p>
             ) : (
-              <ul aria-label="Hasil pencarian" className="space-y-1">
-                {results.map((result, index) => (
-                  <li key={result.id}>
-                    <Link
-                      className={`block rounded-xl px-3 py-3 transition sm:px-4 ${index === activeIndex ? "bg-[#eaf1e8]" : "hover:bg-peat-forest/5"}`}
-                      data-selected={index === activeIndex}
-                      href={result.href}
-                      onClick={close}
+              <div className="space-y-4">
+                {menuResults.length > 0 ? (
+                  <div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold tracking-wider text-peat-green uppercase">
+                      <Compass aria-hidden="true" size={13} />
+                      <span>Menu & Fitur</span>
+                      <span className="ml-auto rounded-full bg-peat-green/10 px-1.5 py-0.5 text-[10px] font-semibold text-peat-green">
+                        {menuResults.length}
+                      </span>
+                    </div>
+                    <ul aria-label="Menu dan fitur" className="mt-1 space-y-1">
+                      {menuResults.map((result, idx) => {
+                        const isSelected = activeIndex === idx;
+                        return (
+                          <li key={result.id}>
+                            <Link
+                              className={`flex items-start justify-between gap-3 rounded-xl px-3 py-2.5 transition sm:px-4 ${
+                                isSelected
+                                  ? "bg-[#eaf1e8]"
+                                  : "hover:bg-peat-forest/5"
+                              }`}
+                              data-selected={isSelected}
+                              href={result.href}
+                              onClick={close}
+                              onMouseEnter={() => setActiveIndex(idx)}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="truncate text-sm font-bold text-peat-forest">
+                                    {result.title}
+                                  </span>
+                                </div>
+                                <p className="mt-0.5 truncate text-xs text-peat-forest/65">
+                                  {result.description}
+                                </p>
+                              </div>
+                              <span className="shrink-0 rounded-full bg-peat-green/15 px-2 py-0.5 text-[10px] font-bold tracking-wide text-peat-forest uppercase">
+                                {result.kind}
+                              </span>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {dataResults.length > 0 ? (
+                  <div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold tracking-wider text-peat-forest/60 uppercase">
+                      <Database aria-hidden="true" size={13} />
+                      <span>Data & Catatan</span>
+                      <span className="ml-auto rounded-full bg-peat-forest/10 px-1.5 py-0.5 text-[10px] font-semibold text-peat-forest/70">
+                        {dataResults.length}
+                      </span>
+                    </div>
+                    <ul
+                      aria-label="Data dan catatan"
+                      className="mt-1 space-y-1"
                     >
-                      <span className="flex items-center justify-between gap-3">
-                        <span className="truncate text-sm font-bold text-peat-forest">
-                          {result.title}
-                        </span>
-                        <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-bold tracking-wide text-peat-green uppercase">
-                          {result.kind}
-                        </span>
-                      </span>
-                      <span className="mt-1 block truncate text-xs text-peat-forest/60">
-                        {result.description}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+                      {dataResults.map((result, idx) => {
+                        const flatIndex = menuResults.length + idx;
+                        const isSelected = activeIndex === flatIndex;
+                        return (
+                          <li key={result.id}>
+                            <Link
+                              className={`flex items-start justify-between gap-3 rounded-xl px-3 py-2.5 transition sm:px-4 ${
+                                isSelected
+                                  ? "bg-[#eaf1e8]"
+                                  : "hover:bg-peat-forest/5"
+                              }`}
+                              data-selected={isSelected}
+                              href={result.href}
+                              onClick={close}
+                              onMouseEnter={() => setActiveIndex(flatIndex)}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="truncate text-sm font-bold text-peat-forest">
+                                    {result.title}
+                                  </span>
+                                </div>
+                                <p className="mt-0.5 truncate text-xs text-peat-forest/65">
+                                  {result.description}
+                                </p>
+                              </div>
+                              <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold tracking-wide text-peat-green uppercase shadow-xs">
+                                {result.kind}
+                              </span>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
             )}
           </div>
           <p aria-live="polite" className="sr-only">
-            {results[activeIndex]
-              ? `Hasil terpilih ${activeIndex + 1} dari ${results.length}: ${results[activeIndex].title}`
+            {orderedResults[activeIndex]
+              ? `Hasil terpilih ${activeIndex + 1} dari ${orderedResults.length}: ${orderedResults[activeIndex].title}`
               : ""}
           </p>
           <div className="flex items-center justify-between border-t border-peat-forest/10 px-4 py-3 text-[10px] font-medium text-peat-forest/45 sm:px-6">

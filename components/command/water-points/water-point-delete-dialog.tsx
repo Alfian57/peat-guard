@@ -15,13 +15,13 @@ export function WaterPointDeleteDialog({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-peat-forest/55 p-4"
+      className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4"
       role="presentation"
     >
       <section
         aria-labelledby="delete-water-heading"
         aria-modal="true"
-        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+        className="w-full max-w-md rounded-2xl border border-border bg-white p-6 shadow-xl"
         role="alertdialog"
       >
         <h2
@@ -39,9 +39,9 @@ export function WaterPointDeleteDialog({
             {error}
           </p>
         ) : null}
-        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <div className="mt-5 flex items-center justify-end gap-2 border-t border-peat-forest/10 pt-3">
           <button
-            className="min-h-11 rounded-xl border border-peat-forest/20 px-4 text-sm font-semibold text-peat-forest"
+            className="inline-flex h-9 min-h-9 items-center justify-center rounded-xl border border-border px-4 text-xs font-semibold text-peat-forest transition hover:bg-peat-paper"
             disabled={deleting}
             onClick={onCancel}
             type="button"
@@ -49,7 +49,7 @@ export function WaterPointDeleteDialog({
             Batal
           </button>
           <button
-            className="min-h-11 rounded-xl bg-red-800 px-4 text-sm font-semibold text-white hover:bg-red-900 disabled:opacity-60"
+            className="inline-flex h-9 min-h-9 items-center justify-center rounded-xl bg-red-800 px-4 text-xs font-semibold text-white transition hover:bg-red-900 disabled:opacity-60"
             disabled={deleting}
             onClick={onConfirm}
             type="button"

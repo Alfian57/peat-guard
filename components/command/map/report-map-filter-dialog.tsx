@@ -27,7 +27,6 @@ export type ReportMapFilterDialogProps = {
   onApply: (event: FormEvent<HTMLFormElement>) => void;
   onClose: () => void;
   onDraftChange: (filters: ReportMapFilters) => void;
-  onReset: () => void;
 };
 
 export function ReportMapFilterDialog({
@@ -38,7 +37,6 @@ export function ReportMapFilterDialog({
   onApply,
   onClose,
   onDraftChange,
-  onReset,
 }: ReportMapFilterDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -107,7 +105,7 @@ export function ReportMapFilterDialog({
       aria-describedby="report-map-filter-desc"
       aria-labelledby="report-map-filter-title"
       aria-modal="true"
-      className="m-auto max-h-[min(90vh,760px)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-3xl border border-peat-forest/15 bg-white p-6 shadow-2xl backdrop:bg-peat-forest/50 backdrop:backdrop-blur-sm sm:p-7"
+      className="m-auto max-h-[min(90vh,760px)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-3xl border border-peat-forest/15 bg-white p-6 shadow-2xl backdrop:bg-black/50 sm:p-7"
       id="report-map-filter-dialog"
       onCancel={(event) => {
         event.preventDefault();
@@ -243,32 +241,22 @@ export function ReportMapFilterDialog({
           </p>
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-peat-forest/10 pt-3">
+        <div className="flex items-center justify-end gap-2 border-t border-peat-forest/10 pt-3">
           <button
-            className="min-h-11 rounded-xl border border-peat-forest/15 px-4 text-sm font-semibold text-peat-forest transition hover:bg-peat-paper disabled:opacity-60"
-            disabled={isLoading}
-            onClick={onReset}
+            className="inline-flex h-9 min-h-9 items-center justify-center rounded-xl border border-border px-4 text-xs font-semibold text-peat-forest transition hover:bg-peat-paper"
+            onClick={onClose}
             type="button"
           >
-            Atur ulang
+            Batal
           </button>
-          <div className="flex items-center gap-2">
-            <button
-              className="min-h-11 rounded-xl border border-border px-4 text-sm font-semibold text-peat-forest transition hover:bg-peat-paper"
-              onClick={onClose}
-              type="button"
-            >
-              Batal
-            </button>
-            <button
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-peat-forest px-5 text-sm font-semibold text-white transition hover:bg-peat-green disabled:opacity-60"
-              disabled={isLoading}
-              type="submit"
-            >
-              <Filter aria-hidden="true" size={16} />
-              Terapkan
-            </button>
-          </div>
+          <button
+            className="inline-flex h-9 min-h-9 items-center justify-center gap-1.5 rounded-xl bg-peat-forest px-4 text-xs font-semibold text-white transition hover:bg-peat-green disabled:opacity-60"
+            disabled={isLoading}
+            type="submit"
+          >
+            <Filter aria-hidden="true" size={14} />
+            Terapkan
+          </button>
         </div>
       </form>
     </dialog>

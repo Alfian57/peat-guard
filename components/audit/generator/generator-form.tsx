@@ -11,6 +11,7 @@ import type {
 
 import { GeneratorReportPreview } from "./generator-report-preview";
 import { DocumentTypeSelector } from "./document-type-selector";
+import { toast } from "@/components/ui/toast";
 import { API_ROUTES } from "@/lib/routes";
 
 function errorMessage(payload: unknown, fallback: string): string {
@@ -98,6 +99,10 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
         }
 
         setReport(payload as MrvGeneratedReport);
+        toast.success(
+          "Laporan berhasil dibuat",
+          "Rangkuman audit MRV siap ditinjau atau dicetak.",
+        );
       } catch {
         setError("Layanan laporan belum dapat dihubungi. Coba lagi sebentar.");
       }
@@ -111,10 +116,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.28fr)]">
       <section className="audit-hide-on-print h-fit rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-6">
-        <p className="text-xs font-semibold tracking-wide text-peat-green uppercase">
-          Parameter laporan
-        </p>
-        <h2 className="mt-1 font-heading text-2xl font-bold text-peat-forest">
+        <h2 className="font-heading text-2xl font-bold text-peat-forest">
           Pilih data yang dirangkum
         </h2>
         <form className="mt-5 space-y-5" onSubmit={submitReport}>

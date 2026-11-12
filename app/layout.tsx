@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { barlowCondensed, inter, jetBrainsMono } from "@/lib/fonts";
 import "./globals.css";
 
@@ -18,7 +20,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="id"
       className={`${inter.variable} ${barlowCondensed.variable} ${jetBrainsMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <TooltipProvider>
+          {children}
+          <Toaster />
+        </TooltipProvider>
+      </body>
     </html>
   );
 }

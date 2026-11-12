@@ -34,6 +34,9 @@ export const APP_ROUTES = {
     editZone: (zoneId: string) =>
       `/command/zones/${encodeURIComponent(zoneId)}/edit`,
     waterPoints: "/command/water-points",
+    createWaterPoint: "/command/water-points/create",
+    editWaterPoint: (pointId: string) =>
+      `/command/water-points/${encodeURIComponent(pointId)}/edit`,
   },
 
   // Audit (Verifikator)

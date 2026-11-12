@@ -21,17 +21,13 @@ export function CommandShell({
 
   return (
     <div className="min-h-dvh bg-[#fbfaf6] lg:flex">
-      <aside className="relative hidden w-72 shrink-0 flex-col overflow-hidden border-r border-[#49483f] bg-gradient-to-b from-[#292b29] via-[#32312d] to-[#3c3930] px-6 py-7 shadow-[8px_0_28px_rgba(0,0,0,0.12)] lg:flex">
+      <aside className="sidebar-scroll sticky top-0 z-30 hidden h-dvh w-72 shrink-0 flex-col overflow-x-hidden overflow-y-auto overscroll-contain border-r border-[#49483f] bg-gradient-to-b from-[#292b29] via-[#32312d] to-[#3c3930] px-6 py-7 shadow-[8px_0_28px_rgba(0,0,0,0.12)] lg:flex">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -top-24 -left-24 size-64 rounded-full bg-peat-sun/15 blur-3xl"
         />
-        <div className="relative">
+        <div className="relative flex min-h-full flex-col">
           <CommandBrand tone="dark" />
-          <div className="mt-10 flex items-center gap-2 text-[10px] font-bold tracking-[0.2em] text-[#e9c36f]">
-            <span className="size-1.5 rounded-full bg-peat-sun shadow-[0_0_10px_rgba(242,190,76,0.6)]" />
-            PUSAT KOORDINASI
-          </div>
           <CommandNavigation
             dark
             pathname={pathname}

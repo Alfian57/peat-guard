@@ -76,7 +76,7 @@ export function DashboardDateFilterDialog({
       aria-describedby="dashboard-date-filter-desc"
       aria-labelledby="dashboard-date-filter-title"
       aria-modal="true"
-      className="m-auto max-h-[min(90vh,700px)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-3xl border border-border bg-white p-6 shadow-2xl backdrop:bg-peat-forest/50 backdrop:backdrop-blur-sm sm:p-7"
+      className="m-auto max-h-[min(90vh,700px)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-3xl border border-border bg-white p-6 shadow-2xl backdrop:bg-black/50 sm:p-7"
       id="dashboard-date-filter-dialog"
       onCancel={(event) => {
         event.preventDefault();

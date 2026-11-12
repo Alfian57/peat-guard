@@ -4,6 +4,7 @@ import { ClipboardList, CloudUpload, Plus, ShieldCheck } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ownerStatusMessage, useFieldShell } from "./field-app-shell";
 import { ReportCard } from "./report-card";
+import { FieldReportCardSkeleton } from "./field-report-card-skeleton";
 import { listQueuedReports } from "@/lib/client/offline/report-store";
 import type { QueuedFieldReport } from "@/lib/client/offline/types";
 import { APP_ROUTES } from "@/lib/routes";
@@ -64,11 +65,10 @@ export function FieldHome() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-xl px-4 pt-5">
+    <div className="mx-auto w-full max-w-xl px-4 pt-4 lg:max-w-5xl lg:px-0 lg:pt-0">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm text-muted-foreground">Ruang kerja lapangan</p>
-          <h1 className="mt-1 font-heading text-4xl leading-none font-bold text-peat-forest">
+          <h1 className="font-heading text-4xl leading-none font-bold text-peat-forest">
             Beranda relawan
           </h1>
         </div>
@@ -133,7 +133,7 @@ export function FieldHome() {
         </h2>
         <a
           href={APP_ROUTES.field.queue}
-          className="min-h-11 rounded-lg px-3 py-2 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-peat-green"
+          className="inline-flex h-8 min-h-8 items-center justify-center rounded-full border border-border bg-white px-3 text-xs font-semibold text-peat-forest shadow-xs transition-colors hover:bg-peat-paper hover:text-peat-green focus-visible:outline-2 focus-visible:outline-peat-green"
         >
           Lihat antrean
         </a>
@@ -147,11 +147,9 @@ export function FieldHome() {
           {ownerStatusMessage(ownerStatus)}
         </section>
       ) : isLoading ? (
-        <div
-          className="mt-3 rounded-2xl border border-border bg-white p-5 text-sm text-muted-foreground"
-          role="status"
-        >
-          Membuka laporan tersimpan…
+        <div className="mt-3 space-y-3">
+          <FieldReportCardSkeleton />
+          <FieldReportCardSkeleton />
         </div>
       ) : reports.length ? (
         <div className="mt-3 space-y-3">

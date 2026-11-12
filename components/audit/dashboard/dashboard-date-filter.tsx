@@ -30,34 +30,15 @@ export function DashboardDateFilter({
   }
 
   return (
-    <div className="audit-hide-on-print flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-white p-3.5 shadow-sm sm:px-4">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <button
-          aria-controls="dashboard-date-filter-dialog"
-          aria-expanded={isOpen}
-          aria-haspopup="dialog"
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold text-peat-green transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          onClick={handleOpen}
-          type="button"
-        >
-          <Filter aria-hidden="true" size={17} />
-          <span>
-            {hasActiveFilter ? "Ubah filter tanggal" : "Filter periode tanggal"}
-          </span>
-          {hasActiveFilter ? (
-            <span className="grid size-5 place-items-center rounded-full bg-peat-green text-[11px] font-bold text-white">
-              {(from ? 1 : 0) + (to ? 1 : 0)}
-            </span>
-          ) : null}
-        </button>
-
+    <div className="audit-hide-on-print flex flex-wrap items-center justify-between gap-3 pt-1">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
         {hasActiveFilter ? (
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-peat-green/20 bg-peat-paper px-2.5 py-1.5 font-medium text-peat-forest">
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-peat-green/20 bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
               <CalendarDays
                 aria-hidden="true"
                 className="text-peat-green"
-                size={14}
+                size={13}
               />
               <span>
                 {from ? `Dari ${from}` : "Awal waktu"} –{" "}
@@ -65,10 +46,10 @@ export function DashboardDateFilter({
               </span>
             </span>
             <Link
-              className="inline-flex min-h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted-foreground transition hover:text-red-700"
+              className="inline-flex min-h-7 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted-foreground transition hover:text-red-700"
               href={APP_ROUTES.audit.dashboard}
             >
-              <X aria-hidden="true" size={14} />
+              <X aria-hidden="true" size={13} />
               Hapus filter
             </Link>
           </div>
@@ -78,6 +59,23 @@ export function DashboardDateFilter({
           </p>
         )}
       </div>
+
+      <button
+        aria-controls="dashboard-date-filter-dialog"
+        aria-expanded={isOpen}
+        aria-haspopup="dialog"
+        className="inline-flex h-8 min-h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-border bg-white px-3 text-xs font-semibold text-peat-forest shadow-xs transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+        onClick={handleOpen}
+        type="button"
+      >
+        <Filter aria-hidden="true" size={14} />
+        <span>Filter</span>
+        {hasActiveFilter ? (
+          <span className="grid size-4.5 min-w-4.5 place-items-center rounded-full bg-peat-green text-[10px] font-bold text-white">
+            {(from ? 1 : 0) + (to ? 1 : 0)}
+          </span>
+        ) : null}
+      </button>
 
       <DashboardDateFilterDialog isOpen={isOpen} onClose={handleClose}>
         <form
@@ -130,19 +128,19 @@ export function DashboardDateFilter({
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2.5 border-t border-border pt-3">
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-3">
             <button
-              className="min-h-11 rounded-xl border border-border px-4 text-sm font-semibold text-peat-forest transition hover:bg-peat-paper"
+              className="inline-flex h-9 min-h-9 items-center justify-center rounded-xl border border-border px-4 text-xs font-semibold text-peat-forest transition hover:bg-peat-paper"
               onClick={handleClose}
               type="button"
             >
               Batal
             </button>
             <button
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-peat-forest px-5 text-sm font-semibold text-white transition hover:bg-peat-green"
+              className="inline-flex h-9 min-h-9 items-center justify-center gap-1.5 rounded-xl bg-peat-forest px-4 text-xs font-semibold text-white transition hover:bg-peat-green"
               type="submit"
             >
-              <CalendarDays aria-hidden="true" size={16} />
+              <CalendarDays aria-hidden="true" size={14} />
               Terapkan tanggal
             </button>
           </div>

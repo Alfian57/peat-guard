@@ -10,6 +10,7 @@ import {
   type FormEvent,
 } from "react";
 import { compressPhoto } from "@/lib/client/offline/compress-photo";
+import { MapCoordinatePicker } from "@/components/maps/map-coordinate-picker";
 import type {
   NewFieldReport,
   QueuedFieldReport,
@@ -506,6 +507,31 @@ export function FieldReportForm({
             Laporan ini memakai foto sampel demo, bukan bukti kejadian nyata.
           </p>
         ) : null}
+        <div className="mt-4">
+          <MapCoordinatePicker
+            heightClassName="h-56 sm:h-64"
+            hint="Klik pada peta untuk menempatkan atau memindahkan titik koordinat laporan."
+            latitude={
+              latitude.trim() === "" || Number.isNaN(Number(latitude))
+                ? null
+                : Number(latitude)
+            }
+            longitude={
+              longitude.trim() === "" || Number.isNaN(Number(longitude))
+                ? null
+                : Number(longitude)
+            }
+            onChange={({ latitude: nextLat, longitude: nextLng }) => {
+              manualLocationEditedRef.current = true;
+              setLatitude(nextLat.toFixed(6));
+              setLongitude(nextLng.toFixed(6));
+              setInvalidField(null);
+            }}
+            pointKind="report"
+            showCurrentLocationButton={false}
+            title="Tentukan titik laporan di peta"
+          />
+        </div>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <label className="text-xs font-semibold text-peat-forest">
             Lintang{" "}

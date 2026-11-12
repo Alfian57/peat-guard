@@ -45,6 +45,9 @@ export function ZoneMapPanel({
       <MapCanvasLoader
         className="h-[min(68vh,760px)] min-h-[480px] overflow-hidden rounded-xl"
         draftEditing={draftEditing}
+        initialCenter={[113.9, -2.01]}
+        initialZoom={6.5}
+        maxAutoFitZoom={6.5}
         onMapClick={onMapClick}
         points={points}
         zones={zones}

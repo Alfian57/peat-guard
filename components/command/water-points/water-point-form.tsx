@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import type { CommandWaterPoint } from "@/lib/server/water/data";
 import type { CommandZone } from "@/lib/server/zones/data";
+import { MapCoordinatePicker } from "@/components/maps/map-coordinate-picker";
 import { WaterPointFormField } from "@/components/command/water-points/water-point-form-field";
 
 export type WaterPointInput = {
@@ -79,31 +80,12 @@ export function WaterPointForm({
   return (
     <form
       aria-labelledby="water-form-heading"
-      className="rounded-2xl border border-peat-forest/10 bg-white p-5 shadow-sm"
+      className="rounded-2xl border border-peat-forest/10 bg-white p-5 shadow-xs sm:p-6"
       onSubmit={submit}
     >
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h2
-            className="font-heading text-2xl font-bold text-peat-forest"
-            id="water-form-heading"
-          >
-            {initialPoint ? "Ubah titik air" : "Tambah titik air"}
-          </h2>
-          <p className="mt-1 text-xs leading-5 text-peat-forest/65">
-            Koordinat tersimpan sebagai titik geospasial.
-          </p>
-        </div>
-        <button
-          aria-label="Tutup formulir"
-          className="grid min-h-11 min-w-11 place-items-center rounded-lg text-sm text-peat-forest hover:bg-peat-paper"
-          disabled={isSaving}
-          onClick={onCancel}
-          type="button"
-        >
-          Tutup
-        </button>
-      </div>
+      <h2 className="sr-only" id="water-form-heading">
+        {initialPoint ? "Ubah titik air" : "Tambah titik air"}
+      </h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <WaterPointFormField label="Nama titik" required>
@@ -130,6 +112,30 @@ export function WaterPointForm({
             <option value="SEKAT_KANAL">Sekat kanal</option>
           </select>
         </WaterPointFormField>
+        <div className="sm:col-span-2">
+          <MapCoordinatePicker
+            heightClassName="h-64 sm:h-72"
+            hint="Klik pada peta untuk menempatkan atau memindahkan titik koordinat air."
+            latitude={
+              latitude.trim() === "" || Number.isNaN(Number(latitude))
+                ? null
+                : Number(latitude)
+            }
+            longitude={
+              longitude.trim() === "" || Number.isNaN(Number(longitude))
+                ? null
+                : Number(longitude)
+            }
+            onChange={({ latitude: nextLat, longitude: nextLng }) => {
+              setLatitude(nextLat.toFixed(6));
+              setLongitude(nextLng.toFixed(6));
+              setValidationError("");
+            }}
+            pointKind="water"
+            title="Tentukan lokasi titik air di peta"
+            zones={zones}
+          />
+        </div>
         <WaterPointFormField hint="-90 sampai 90" label="Lintang" required>
           <input
             className="mt-1.5 min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 font-mono text-sm text-peat-forest"
@@ -192,9 +198,9 @@ export function WaterPointForm({
           {error}
         </p>
       ) : null}
-      <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button
-          className="min-h-11 rounded-xl border border-peat-forest/20 px-4 text-sm font-semibold text-peat-forest"
+          className="inline-flex h-9 min-h-9 cursor-pointer items-center justify-center rounded-xl border border-peat-forest/20 px-4 text-xs font-semibold text-peat-forest transition-colors hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-peat-green disabled:opacity-60"
           disabled={isSaving}
           onClick={onCancel}
           type="button"
@@ -202,7 +208,7 @@ export function WaterPointForm({
           Batal
         </button>
         <button
-          className="min-h-11 rounded-xl bg-peat-forest px-4 text-sm font-semibold text-white hover:bg-peat-green disabled:cursor-wait disabled:opacity-60"
+          className="inline-flex h-9 min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-peat-forest px-4 text-xs font-semibold text-white transition-colors hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-peat-green disabled:cursor-wait disabled:opacity-60"
           disabled={isSaving}
           type="submit"
         >

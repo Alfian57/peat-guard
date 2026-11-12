@@ -42,6 +42,7 @@ describe("global search access and result contracts", () => {
     );
     expect(Object.keys(result).sort()).toEqual([
       "description",
+      "group",
       "href",
       "id",
       "kind",

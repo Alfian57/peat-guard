@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, ListChecks, TreeDeciduous, Wifi, WifiOff } from "lucide-react";
+import { Wifi, WifiOff } from "lucide-react";
 import { usePathname } from "next/navigation";
 import {
   createContext,
@@ -17,6 +17,10 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { UserAccountMenu } from "@/components/auth/user-account-menu";
 import { GlobalSearch } from "@/components/search/global-search";
+import { FieldBrand } from "@/components/field/field-brand";
+import { FieldNavigation } from "@/components/field/field-navigation";
+import { FieldStatusWidget } from "@/components/field/field-status-widget";
+import { FieldBottomNav } from "@/components/field/field-bottom-nav";
 import { canUseDemoSamples as canUseLocalDemoSamples } from "@/lib/client/offline/demo-samples";
 import {
   clearLastKnownOwner,
@@ -565,165 +569,191 @@ export function FieldAppShell({
 
   return (
     <FieldShellContext.Provider value={contextValue}>
-      <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col border-x border-border bg-background shadow-sm">
-        <header className="sticky top-0 z-30">
-          <div className="flex h-8 items-center justify-between bg-peat-forest px-5 text-[11px] font-semibold text-white">
-            <span aria-label="Waktu perangkat">{deviceTime}</span>
-            <span className="flex items-center gap-2" aria-live="polite">
-              {isConnected ? (
-                <Wifi aria-hidden="true" size={15} />
-              ) : (
-                <WifiOff aria-hidden="true" size={15} />
-              )}
-              <span>
-                {ownerStatus === "signed-out"
-                  ? "Masuk untuk menyimpan laporan"
-                  : ownerStatus === "loading"
-                    ? "Memeriksa sesi relawan…"
-                    : ownerStatus === "unavailable"
-                      ? "Akun perangkat belum dikenali"
-                      : ownerStatus === "offline-known"
-                        ? "Offline · akun terakhir dikenali"
-                        : isConnected
-                          ? "Online · terhubung ke posko"
-                          : "Offline · tersimpan di perangkat"}
-              </span>
-            </span>
+      <div className="min-h-dvh bg-[#fbfaf6] lg:flex">
+        {/* Desktop Sidebar (lg:flex, hidden on mobile) */}
+        <aside className="sidebar-scroll sticky top-0 z-30 hidden h-dvh w-72 shrink-0 flex-col justify-between overflow-x-hidden overflow-y-auto overscroll-contain border-r border-[#49483f] bg-gradient-to-b from-[#292b29] via-[#32312d] to-[#3c3930] px-6 py-7 shadow-[8px_0_28px_rgba(0,0,0,0.12)] lg:flex">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-24 -left-24 size-64 rounded-full bg-peat-sun/15 blur-3xl"
+          />
+          <div className="relative">
+            <FieldBrand tone="dark" />
+            <FieldNavigation dark pathname={pathname} queueCount={queueCount} />
           </div>
-          <div className="flex h-10 items-center justify-between bg-peat-forest/90 px-4 text-xs text-white">
-            <span className="flex min-w-0 items-center gap-2">
-              <span
-                aria-hidden="true"
-                className={`size-2 shrink-0 rounded-full ${isConnected ? "bg-peat-leaf" : "bg-offline"}`}
-              />
-              <span className="truncate">
-                {ownerStatus === "authenticated"
-                  ? isConnected
-                    ? "Sesi relawan aktif"
-                    : "Antrean tersimpan"
-                  : ownerStatus === "offline-known"
-                    ? "Draf terkait akun terakhir"
-                    : "Akun belum diverifikasi"}
+          <div className="relative mt-auto pt-6">
+            <FieldStatusWidget
+              isConnected={isConnected}
+              isSyncing={isSyncing}
+              ownerStatus={ownerStatus}
+              queueCount={queueCount}
+              simulatedOffline={simulatedOffline}
+              syncNow={syncNow}
+              toggleSimulatedOffline={toggleSimulatedOffline}
+            />
+          </div>
+        </aside>
+
+        {/* Main layout area */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Desktop Sticky Header (hidden on mobile) */}
+          <header className="sticky top-0 z-20 hidden border-b border-[#e7e6dd] bg-[#fbfaf6]/90 backdrop-blur-xl lg:block">
+            <div className="mx-auto flex min-h-[4.5rem] max-w-[1600px] items-center justify-between gap-3 px-4 sm:px-7 xl:px-9">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <GlobalSearch variant="bar" />
+              </div>
+
+              <div className="flex shrink-0 items-center gap-3">
+                <div className="flex items-center gap-2 rounded-full border border-peat-forest/15 bg-white px-3 py-1.5 text-xs font-semibold text-peat-forest">
+                  <span
+                    aria-hidden="true"
+                    className={`size-2 shrink-0 rounded-full ${isConnected ? "bg-peat-leaf" : "bg-offline"}`}
+                  />
+                  <span>
+                    {ownerStatus === "authenticated"
+                      ? isConnected
+                        ? "Online · Terhubung"
+                        : "Offline · Tersimpan"
+                      : ownerStatus === "offline-known"
+                        ? "Offline · Draf lokal"
+                        : "Belum diverifikasi"}
+                  </span>
+                </div>
+
+                {sessionUser ? (
+                  <UserAccountMenu
+                    email={sessionUser.email}
+                    image={sessionUser.image ?? null}
+                    name={sessionUser.name}
+                    role="RELAWAN"
+                  />
+                ) : (
+                  <span className="rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+                    {ownerStatus === "loading" ? "Memeriksa…" : "Belum masuk"}
+                  </span>
+                )}
+              </div>
+            </div>
+          </header>
+
+          {/* Mobile Top Status Bars & Mobile Header (hidden on desktop) */}
+          <header className="sticky top-0 z-30 lg:hidden">
+            <div className="flex h-8 items-center justify-between bg-peat-forest px-5 text-[11px] font-semibold text-white">
+              <span aria-label="Waktu perangkat">{deviceTime}</span>
+              <span className="flex items-center gap-2" aria-live="polite">
+                {isConnected ? (
+                  <Wifi aria-hidden="true" size={15} />
+                ) : (
+                  <WifiOff aria-hidden="true" size={15} />
+                )}
+                <span>
+                  {ownerStatus === "signed-out"
+                    ? "Masuk untuk menyimpan laporan"
+                    : ownerStatus === "loading"
+                      ? "Memeriksa sesi relawan…"
+                      : ownerStatus === "unavailable"
+                        ? "Akun perangkat belum dikenali"
+                        : ownerStatus === "offline-known"
+                          ? "Offline · akun terakhir dikenali"
+                          : isConnected
+                            ? "Online · terhubung ke posko"
+                            : "Offline · tersimpan di perangkat"}
+                </span>
               </span>
-            </span>
-            <span className="flex items-center gap-2">
-              <span>Simulasi</span>
-              <button
-                type="button"
-                aria-label="Simulasikan mode offline"
-                aria-pressed={simulatedOffline}
-                onClick={toggleSimulatedOffline}
-                className={`relative h-7 w-12 rounded-full transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-white ${simulatedOffline ? "bg-offline" : "bg-white/35"}`}
-              >
+            </div>
+            <div className="flex h-10 items-center justify-between bg-peat-forest/90 px-4 text-xs text-white">
+              <span className="flex min-w-0 items-center gap-2">
                 <span
                   aria-hidden="true"
-                  className={`absolute top-1 size-5 rounded-full bg-white shadow transition-transform ${simulatedOffline ? "translate-x-6" : "translate-x-1"}`}
+                  className={`size-2 shrink-0 rounded-full ${isConnected ? "bg-peat-leaf" : "bg-offline"}`}
                 />
-              </button>
-              {queueCount > 0 ? (
-                <span className="rounded-full bg-white px-2 py-0.5 font-semibold text-peat-forest">
-                  Antrean {queueCount}
-                </span>
-              ) : null}
-            </span>
-          </div>
-          <div className="flex h-[58px] items-center justify-between border-b border-border bg-background px-5">
-            <a
-              href={APP_ROUTES.field.home}
-              className="flex items-center gap-2 text-peat-forest"
-              aria-label="PEATGUARD, beranda relawan"
-            >
-              <span
-                aria-hidden="true"
-                className="grid size-8 place-items-center rounded-full bg-secondary text-peat-green"
-              >
-                <TreeDeciduous size={21} />
-              </span>
-              <span className="font-heading text-xl font-bold tracking-tight">
-                PEATGUARD
-              </span>
-            </a>
-            {ownerStatus === "authenticated" && sessionUser ? (
-              <div className="flex items-center gap-2">
-                <GlobalSearch />
-                <UserAccountMenu
-                  email={sessionUser.email}
-                  image={sessionUser.image ?? null}
-                  name={sessionUser.name}
-                  role="RELAWAN"
-                />
-              </div>
-            ) : (
-              <span className="rounded-full border border-border bg-white px-3 py-1 text-[11px] font-semibold text-muted-foreground">
-                {ownerStatus === "signed-out"
-                  ? "Belum masuk"
-                  : ownerStatus === "loading"
-                    ? "Memeriksa sesi"
+                <span className="truncate">
+                  {ownerStatus === "authenticated"
+                    ? isConnected
+                      ? "Sesi relawan aktif"
+                      : "Antrean tersimpan"
                     : ownerStatus === "offline-known"
-                      ? "Relawan offline"
-                      : ownerStatus === "unavailable"
-                        ? "Akun belum dikenal"
-                        : "Akun relawan"}
+                      ? "Draf terkait akun terakhir"
+                      : "Akun belum diverifikasi"}
+                </span>
               </span>
-            )}
-          </div>
-        </header>
-
-        {notice ? (
-          <div
-            className="fixed top-[108px] left-1/2 z-50 w-[min(calc(100%-2rem),28rem)] -translate-x-1/2"
-            role="status"
-            aria-live="polite"
-          >
-            <div className="flex items-start justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3 text-sm shadow-lg">
-              <p>{notice}</p>
-              <button
-                type="button"
-                className="min-h-11 shrink-0 rounded-lg px-2 text-peat-green"
-                aria-label="Tutup pemberitahuan"
-                onClick={() => setNotice("")}
-              >
-                Tutup
-              </button>
+              <span className="flex items-center gap-2">
+                <span>Simulasi</span>
+                <button
+                  type="button"
+                  aria-label="Simulasikan mode offline"
+                  aria-pressed={simulatedOffline}
+                  onClick={toggleSimulatedOffline}
+                  className={`relative h-7 w-12 cursor-pointer rounded-full transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-white ${simulatedOffline ? "bg-offline" : "bg-white/35"}`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`absolute top-1 size-5 rounded-full bg-white shadow transition-transform ${simulatedOffline ? "translate-x-6" : "translate-x-1"}`}
+                  />
+                </button>
+                {queueCount > 0 ? (
+                  <span className="rounded-full bg-white px-2 py-0.5 font-semibold text-peat-forest">
+                    Antrean {queueCount}
+                  </span>
+                ) : null}
+              </span>
             </div>
-          </div>
-        ) : null}
+            <div className="flex h-[58px] items-center justify-between border-b border-border bg-background px-5">
+              <FieldBrand compact />
+              {ownerStatus === "authenticated" && sessionUser ? (
+                <div className="flex items-center gap-2">
+                  <GlobalSearch />
+                  <UserAccountMenu
+                    email={sessionUser.email}
+                    image={sessionUser.image ?? null}
+                    name={sessionUser.name}
+                    role="RELAWAN"
+                  />
+                </div>
+              ) : (
+                <span className="rounded-full border border-border bg-white px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+                  {ownerStatus === "signed-out"
+                    ? "Belum masuk"
+                    : ownerStatus === "loading"
+                      ? "Memeriksa sesi"
+                      : ownerStatus === "offline-known"
+                        ? "Relawan offline"
+                        : ownerStatus === "unavailable"
+                          ? "Akun belum dikenal"
+                          : "Akun relawan"}
+                </span>
+              )}
+            </div>
+          </header>
 
-        <main className="flex-1 pb-24">{children}</main>
+          {/* Notice banner */}
+          {notice ? (
+            <div
+              className="fixed top-20 left-1/2 z-50 w-[min(calc(100%-2rem),28rem)] -translate-x-1/2 lg:top-24"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="flex items-start justify-between gap-3 rounded-2xl border border-border bg-white p-4 text-sm shadow-xl">
+                <p className="font-medium text-peat-forest">{notice}</p>
+                <button
+                  type="button"
+                  className="min-h-9 shrink-0 cursor-pointer rounded-lg px-2 text-sm font-semibold text-peat-green hover:bg-peat-green/10"
+                  aria-label="Tutup pemberitahuan"
+                  onClick={() => setNotice("")}
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          ) : null}
 
-        <nav
-          aria-label="Navigasi relawan"
-          className="fixed inset-x-0 bottom-0 z-40 mx-auto grid h-[74px] w-full max-w-lg grid-cols-3 items-center border-t border-border bg-white/95 px-3 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(31,77,61,0.08)] backdrop-blur"
-        >
-          <a
-            href={APP_ROUTES.field.home}
-            aria-current={activeRoute === "home" ? "page" : undefined}
-            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-peat-green ${activeRoute === "home" ? "font-semibold text-peat-green" : "text-muted-foreground"}`}
-          >
-            <Home aria-hidden="true" size={20} />
-            Beranda
-          </a>
-          <a
-            href={APP_ROUTES.field.createReport}
-            aria-current={activeRoute === "create" ? "page" : undefined}
-            className="mx-auto flex min-h-11 w-[134px] items-center justify-center rounded-xl bg-peat-green px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-peat-forest focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-forest"
-          >
-            + Lapor temuan
-          </a>
-          <a
-            href={APP_ROUTES.field.queue}
-            aria-current={activeRoute === "queue" ? "page" : undefined}
-            className={`relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-peat-green ${activeRoute === "queue" ? "font-semibold text-peat-green" : "text-muted-foreground"}`}
-          >
-            <ListChecks aria-hidden="true" size={20} />
-            Antrean
-            {queueCount ? (
-              <span className="absolute top-1 right-4 grid min-h-5 min-w-5 place-items-center rounded-full bg-offline px-1 text-[10px] font-bold text-white">
-                {queueCount}
-              </span>
-            ) : null}
-          </a>
-        </nav>
+          {/* Main content */}
+          <main className="mx-auto w-full max-w-[1600px] flex-1 pb-24 lg:p-7 lg:pb-12 xl:p-9">
+            {children}
+          </main>
+
+          {/* Mobile bottom nav (hidden on desktop) */}
+          <FieldBottomNav activeRoute={activeRoute} queueCount={queueCount} />
+        </div>
       </div>
     </FieldShellContext.Provider>
   );

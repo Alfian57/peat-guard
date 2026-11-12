@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Filter, X } from "lucide-react";
 
@@ -23,8 +24,6 @@ type LedgerFilterFormProps = {
 
 const fieldClassName =
   "h-11 w-full rounded-xl border border-input bg-white px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
-const buttonClassName =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold text-peat-green hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 const aiStateLabels: Record<NonNullable<LedgerFilters["aiState"]>, string> = {
   COMPLETED: "Selesai",
   FAILED: "Gagal",
@@ -59,19 +58,77 @@ export function LedgerFilterForm({
       ? `Zona ${selectedZone.slice(0, 8)}… (tidak tersedia)`
       : "Semua zona");
 
+  const activeFiltersCount =
+    (selectedZone ? 1 : 0) +
+    (selectedEvidence && selectedEvidence !== "all" ? 1 : 0) +
+    (selectedAiState ? 1 : 0) +
+    (selectedFrom ? 1 : 0) +
+    (selectedTo ? 1 : 0) +
+    (reportId ? 1 : 0);
+  const hasActiveFilter = activeFiltersCount > 0;
+
   return (
-    <div className="audit-hide-on-print">
+    <div className="audit-hide-on-print flex flex-wrap items-center justify-between gap-3 pt-1">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
+        {hasActiveFilter ? (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {selectedZoneName ? (
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
+                Zona: {selectedZoneName}
+              </span>
+            ) : null}
+            {selectedEvidence && selectedEvidence !== "all" ? (
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
+                Bukti lengkap
+              </span>
+            ) : null}
+            {selectedAiState ? (
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
+                Triase: {aiStateLabels[selectedAiState]}
+              </span>
+            ) : null}
+            {selectedFrom || selectedTo ? (
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
+                {selectedFrom ? `Dari ${selectedFrom}` : "Awal"} –{" "}
+                {selectedTo ? `Sampai ${selectedTo}` : "Sekarang"}
+              </span>
+            ) : null}
+            {reportId ? (
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
+                Laporan: {reportId.slice(0, 8)}…
+              </span>
+            ) : null}
+            <Link
+              className="inline-flex min-h-7 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted-foreground transition hover:text-red-700"
+              href={APP_ROUTES.audit.ledger}
+            >
+              <X aria-hidden="true" size={13} />
+              Hapus filter
+            </Link>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Menampilkan seluruh catatan audit tanpa filter khusus.
+          </p>
+        )}
+      </div>
+
       <button
         aria-controls={open ? "ledger-filter-dialog" : undefined}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className={buttonClassName}
+        className="inline-flex h-8 min-h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-border bg-white px-3 text-xs font-semibold text-peat-forest shadow-xs transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
         onClick={openDialog}
         ref={triggerRef}
         type="button"
       >
-        <Filter aria-hidden="true" size={17} />
-        Filter buku besar
+        <Filter aria-hidden="true" size={14} />
+        <span>Filter</span>
+        {activeFiltersCount > 0 ? (
+          <span className="grid size-4.5 min-w-4.5 place-items-center rounded-full bg-peat-green text-[10px] font-bold text-white">
+            {activeFiltersCount}
+          </span>
+        ) : null}
       </button>
 
       <LedgerDialog
@@ -296,19 +353,21 @@ export function LedgerFilterForm({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-3">
             <button
-              className="min-h-11 rounded-xl bg-peat-forest px-4 text-sm font-semibold text-white transition hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex h-9 min-h-9 items-center justify-center rounded-xl border border-border px-4 text-xs font-semibold text-peat-forest transition hover:bg-peat-paper"
+              onClick={closeDialog}
+              type="button"
+            >
+              Batal
+            </button>
+            <button
+              className="inline-flex h-9 min-h-9 items-center justify-center gap-1.5 rounded-xl bg-peat-forest px-4 text-xs font-semibold text-white transition hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               type="submit"
             >
+              <Filter aria-hidden="true" size={14} />
               Terapkan filter
             </button>
-            <a
-              className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-peat-green underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              href={APP_ROUTES.audit.ledger}
-            >
-              Atur ulang
-            </a>
           </div>
         </form>
       </LedgerDialog>

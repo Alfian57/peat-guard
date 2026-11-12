@@ -5,6 +5,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
+import { X } from "lucide-react";
 
 import {
   REPORT_STATUSES,
@@ -74,13 +75,13 @@ export function ReportStatusDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-peat-forest/65 p-3 sm:p-6"
+      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/50 p-3 sm:p-6"
       role="presentation"
     >
       <form
         aria-labelledby="report-status-heading"
         aria-modal="true"
-        className="my-auto w-full max-w-2xl space-y-5 rounded-2xl border-[10px] border-peat-forest bg-peat-paper p-5 shadow-2xl sm:p-7"
+        className="my-auto w-full max-w-2xl space-y-5 rounded-2xl border border-peat-forest/15 bg-white p-5 shadow-2xl sm:p-7"
         onKeyDown={handleDialogKeyDown}
         onSubmit={submit}
         ref={dialogRef}
@@ -100,16 +101,16 @@ export function ReportStatusDialog({
           </div>
           <button
             aria-label="Tutup dialog status"
-            className="grid min-h-11 min-w-11 place-items-center rounded-lg text-2xl text-peat-forest hover:bg-white disabled:opacity-50"
+            className="grid size-9 place-items-center rounded-xl text-peat-forest/60 transition hover:bg-peat-paper hover:text-peat-forest disabled:opacity-50"
             disabled={isSaving}
             onClick={onCancel}
             type="button"
           >
-            ×
+            <X aria-hidden="true" size={20} />
           </button>
         </div>
 
-        <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-peat-forest/10 bg-[#f6f7ef] px-4 py-3">
           <p className="text-sm font-medium text-peat-forest">
             Status saat ini: {statusLabel(report.handlingStatus)}
           </p>
@@ -179,9 +180,9 @@ export function ReportStatusDialog({
           </p>
         ) : null}
 
-        <div className="flex flex-col-reverse gap-2 border-t border-peat-forest/10 pt-4 sm:flex-row sm:justify-end">
+        <div className="flex items-center justify-end gap-2 border-t border-peat-forest/10 pt-3">
           <button
-            className="min-h-11 rounded-xl border border-peat-forest/20 bg-white px-5 text-sm font-semibold text-peat-forest"
+            className="inline-flex h-9 min-h-9 items-center justify-center rounded-xl border border-border px-4 text-xs font-semibold text-peat-forest transition hover:bg-peat-paper"
             disabled={isSaving}
             onClick={onCancel}
             type="button"
@@ -189,7 +190,7 @@ export function ReportStatusDialog({
             Batal
           </button>
           <button
-            className="min-h-11 rounded-xl bg-peat-green px-5 text-sm font-semibold text-white hover:bg-peat-forest disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-9 min-h-9 items-center justify-center rounded-xl bg-peat-forest px-4 text-xs font-semibold text-white transition hover:bg-peat-green disabled:cursor-not-allowed disabled:opacity-50"
             disabled={isSaving || nextStatus === report.handlingStatus}
             type="submit"
           >

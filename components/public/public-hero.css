@@ -1,0 +1,198 @@
+.public-hero {
+  --public-header-height: 72px;
+}
+
+/* Both stages stay pinned while Motion raises and expands the panel. */
+.public-hero__stage {
+  height: 100dvh;
+}
+
+.public-hero__video-window {
+  height: 175dvh;
+}
+
+.public-hero__intro-track {
+  margin-top: -100dvh;
+  pointer-events: none;
+  position: relative;
+  z-index: 10;
+}
+
+/* Reserve the scroll distance without moving the panel's viewport. Includes hold/pin buffer. */
+.public-hero__intro-track::after {
+  content: "";
+  display: block;
+  height: 175dvh;
+}
+
+.public-hero__intro-stage {
+  min-height: 100dvh;
+  overflow: clip;
+  position: sticky;
+  top: 0;
+}
+
+.public-hero__panel {
+  align-items: center;
+  background: var(--peat-paper);
+  display: flex;
+  min-height: 100dvh;
+  overflow: clip;
+  padding-block: calc(var(--public-header-height) + 2rem) 5rem;
+  pointer-events: auto;
+}
+
+.public-hero__art {
+  object-fit: cover;
+  object-position: center bottom;
+}
+
+.public-hero__intro-backdrop {
+  background:
+    linear-gradient(
+      90deg,
+      var(--peat-paper) 0%,
+      rgb(246 247 239 / 95%) 26%,
+      rgb(246 247 239 / 78%) 43%,
+      rgb(246 247 239 / 25%) 63%,
+      rgb(246 247 239 / 0%) 85%
+    ),
+    linear-gradient(180deg, rgb(246 247 239 / 40%), transparent 45%);
+}
+
+.public-hero__copy {
+  max-width: min(42rem, 54%);
+}
+
+.public-hero__title {
+  font-size: clamp(3rem, min(7.8vw, 10.5dvh), 6.5rem);
+  line-height: 0.96;
+}
+
+.public-hero__description {
+  font-size: clamp(0.875rem, 1.15vw, 1.0625rem);
+  line-height: 1.8;
+  margin-top: clamp(1rem, 3dvh, 1.75rem);
+  max-width: 34rem;
+}
+
+.public-hero__actions {
+  margin-top: clamp(1.25rem, 3.5dvh, 2rem);
+}
+
+.public-hero__intro-footer {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 1023px) {
+  .public-hero {
+    --public-header-height: 112px;
+  }
+
+  .public-hero__copy {
+    max-width: 60%;
+  }
+}
+
+@media (max-width: 767px) {
+  .public-hero__panel {
+    padding-top: calc(var(--public-header-height) + 1.5rem);
+  }
+
+  .public-hero__art {
+    object-position: 68% bottom;
+  }
+
+  .public-hero__intro-backdrop {
+    background: linear-gradient(
+      180deg,
+      var(--peat-paper) 0%,
+      rgb(246 247 239 / 96%) 40%,
+      rgb(246 247 239 / 88%) 62%,
+      rgb(246 247 239 / 45%) 82%,
+      rgb(246 247 239 / 8%) 100%
+    );
+  }
+
+  .public-hero__copy {
+    max-width: 38rem;
+  }
+
+  .public-hero__title {
+    font-size: clamp(2.5rem, min(12vw, 8dvh), 3.5rem);
+  }
+
+  .public-hero__description {
+    line-height: 1.65;
+  }
+}
+
+@media (min-width: 768px) and (max-height: 700px) {
+  .public-hero__panel {
+    padding-block: calc(var(--public-header-height) + 1rem) 4.25rem;
+  }
+
+  .public-hero__copy {
+    max-width: min(42rem, 68%);
+  }
+
+  .public-hero__title {
+    font-size: clamp(2.25rem, 8dvh, 3.5rem);
+  }
+
+  .public-hero__description {
+    font-size: 0.875rem;
+    line-height: 1.65;
+    margin-top: 1rem;
+  }
+
+  .public-hero__actions {
+    margin-top: 1.25rem;
+  }
+}
+
+@media (max-width: 767px) and (max-height: 620px) {
+  .public-hero__panel {
+    padding-block: calc(var(--public-header-height) + 1rem) 4.5rem;
+  }
+
+  .public-hero__title {
+    font-size: clamp(2rem, min(10vw, 7.2dvh), 2.75rem);
+  }
+
+  .public-hero__description {
+    line-height: 1.6;
+    margin-top: 0.875rem;
+  }
+
+  .public-hero__actions {
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-hero__intro-track {
+    margin-top: 0;
+  }
+
+  .public-hero__intro-track::after {
+    display: none;
+  }
+
+  .public-hero__intro-stage {
+    overflow: visible;
+    position: relative;
+  }
+
+  .public-hero__panel {
+    border-radius: 0 !important;
+    transform: none !important;
+    will-change: auto !important;
+  }
+
+  .public-hero__stage,
+  .public-hero__video-window {
+    display: none;
+  }
+}

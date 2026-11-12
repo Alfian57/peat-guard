@@ -1,46 +1,33 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Droplets, Plus } from "lucide-react";
 
-import {
-  CommandError,
-  CommandLoading,
-} from "@/components/command/command-feedback";
+import { CommandError } from "@/components/command/command-feedback";
+import { WaterPointGridSkeleton } from "@/components/command/water-points/water-point-grid-skeleton";
 import { CommandPageHeading } from "@/components/command/command-page-heading";
 import {
-  isWaterPointResponse,
   isWaterPointsResponse,
-  isZonesResponse,
   requestCommandJson,
 } from "@/components/command/command-api";
 import {
   COMMAND_API_ROUTES,
+  COMMAND_ROUTES,
   waterPointApiRoute,
 } from "@/components/command/routes";
-import {
-  WaterPointForm,
-  type WaterPointInput,
-} from "@/components/command/water-points/water-point-form";
-import { WaterPointCard } from "@/components/command/water-points/water-point-card";
+import { WaterPointTableRow } from "@/components/command/water-points/water-point-table-row";
 import { WaterPointDeleteDialog } from "@/components/command/water-points/water-point-delete-dialog";
+import { toast } from "@/components/ui/toast";
 import type { CommandWaterPoint } from "@/lib/server/water/data";
-import type { CommandZone } from "@/lib/server/zones/data";
 
 type LoadState = "loading" | "ready" | "error";
 
 export function WaterPointManagerScreen() {
   const [state, setState] = useState<LoadState>("loading");
   const [points, setPoints] = useState<CommandWaterPoint[]>([]);
-  const [zones, setZones] = useState<CommandZone[]>([]);
   const [retryKey, setRetryKey] = useState(0);
   const [error, setError] = useState("");
-  const [formError, setFormError] = useState("");
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingPoint, setEditingPoint] = useState<CommandWaterPoint | null>(
-    null,
-  );
-  const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CommandWaterPoint | null>(
     null,
   );
@@ -55,27 +42,15 @@ export function WaterPointManagerScreen() {
 
   useEffect(() => {
     const controller = new AbortController();
-    Promise.all([
-      requestCommandJson(COMMAND_API_ROUTES.waterPoints, {
-        cache: "no-store",
-        signal: controller.signal,
-      }),
-      requestCommandJson(COMMAND_API_ROUTES.zones, {
-        cache: "no-store",
-        signal: controller.signal,
-      }),
-    ])
-      .then(([pointPayload, zonePayload]) => {
-        if (
-          !isWaterPointsResponse(pointPayload) ||
-          !isZonesResponse(zonePayload)
-        ) {
-          throw new Error(
-            "Data titik air atau zona dari server tidak sesuai format.",
-          );
+    requestCommandJson(COMMAND_API_ROUTES.waterPoints, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((pointPayload) => {
+        if (!isWaterPointsResponse(pointPayload)) {
+          throw new Error("Data titik air dari server tidak sesuai format.");
         }
         setPoints(pointPayload.waterPoints);
-        setZones(zonePayload.zones);
         setState("ready");
       })
       .catch((cause: unknown) => {
@@ -90,45 +65,6 @@ export function WaterPointManagerScreen() {
     return () => controller.abort();
   }, [retryKey]);
 
-  async function savePoint(input: WaterPointInput) {
-    setSaving(true);
-    setFormError("");
-    try {
-      const result = await requestCommandJson(
-        editingPoint
-          ? waterPointApiRoute(editingPoint.id)
-          : COMMAND_API_ROUTES.waterPoints,
-        {
-          method: editingPoint ? "PATCH" : "POST",
-          body: JSON.stringify(input),
-        },
-      );
-      if (!isWaterPointResponse(result)) {
-        throw new Error("Respons titik air dari server tidak sesuai format.");
-      }
-
-      const savedPoint = result.waterPoint;
-      setPoints((current) =>
-        editingPoint
-          ? current.map((point) =>
-              point.id === savedPoint.id ? savedPoint : point,
-            )
-          : [...current, savedPoint].sort((left, right) =>
-              left.name.localeCompare(right.name, "id"),
-            ),
-      );
-      closeForm();
-    } catch (cause) {
-      setFormError(
-        cause instanceof Error
-          ? cause.message
-          : "Titik air belum dapat disimpan.",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
   async function deletePoint() {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -139,6 +75,10 @@ export function WaterPointManagerScreen() {
       });
       setPoints((current) =>
         current.filter((point) => point.id !== deleteTarget.id),
+      );
+      toast.success(
+        "Titik air dihapus",
+        `Titik air ${deleteTarget.name} berhasil dihapus.`,
       );
       setDeleteTarget(null);
     } catch (cause) {
@@ -152,58 +92,24 @@ export function WaterPointManagerScreen() {
     }
   }
 
-  function openCreateForm() {
-    setEditingPoint(null);
-    setFormError("");
-    setFormOpen(true);
-  }
-
-  function openEditForm(point: CommandWaterPoint) {
-    setEditingPoint(point);
-    setFormError("");
-    setFormOpen(true);
-  }
-
-  function closeForm() {
-    setFormOpen(false);
-    setEditingPoint(null);
-    setFormError("");
-  }
-
   return (
     <div>
       <CommandPageHeading
         action={
-          <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-peat-forest px-4 text-sm font-semibold text-white hover:bg-peat-green"
-            onClick={openCreateForm}
-            type="button"
+          <Link
+            className="inline-flex h-8 min-h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-peat-forest px-3 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-peat-green"
+            href={COMMAND_ROUTES.createWaterPoint}
           >
-            <Plus aria-hidden="true" size={17} />
+            <Plus aria-hidden="true" size={14} />
             Tambah titik air
-          </button>
+          </Link>
         }
         description="Catat lokasi sekat kanal, embung, dan sumber air. Titik yang sudah dipakai laporan tidak dapat dihapus."
-        eyebrow="POSKO · SARANA PEMADAMAN"
         title="Titik sumber air"
       />
 
-      {formOpen ? (
-        <div className="mb-5">
-          <WaterPointForm
-            key={editingPoint?.id ?? "new"}
-            error={formError}
-            initialPoint={editingPoint}
-            isSaving={saving}
-            onCancel={closeForm}
-            onSave={(input) => void savePoint(input)}
-            zones={zones}
-          />
-        </div>
-      ) : null}
-
       {state === "loading" ? (
-        <CommandLoading label="Memuat titik sumber air…" />
+        <WaterPointGridSkeleton />
       ) : state === "error" ? (
         <CommandError message={error} onRetry={refreshData} />
       ) : points.length === 0 ? (
@@ -220,32 +126,53 @@ export function WaterPointManagerScreen() {
             Tambahkan lokasi sumber air, embung, atau sekat kanal untuk membantu
             koordinasi regu.
           </p>
-          <button
-            className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-peat-forest px-4 text-sm font-semibold text-white hover:bg-peat-green"
-            onClick={openCreateForm}
-            type="button"
+          <Link
+            className="mt-5 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-peat-forest px-4 text-sm font-semibold text-white transition-colors hover:bg-peat-green"
+            href={COMMAND_ROUTES.createWaterPoint}
           >
             <Plus aria-hidden="true" size={16} />
             Tambah titik pertama
-          </button>
+          </Link>
         </div>
       ) : (
-        <ul
-          aria-label="Daftar titik sumber air"
-          className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3"
-        >
-          {points.map((point) => (
-            <WaterPointCard
-              key={point.id}
-              onDelete={(target) => {
-                setDeleteError("");
-                setDeleteTarget(target);
-              }}
-              onEdit={openEditForm}
-              point={point}
-            />
-          ))}
-        </ul>
+        <div className="overflow-hidden rounded-2xl border border-peat-forest/10 bg-white shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px] border-collapse text-left">
+              <caption className="sr-only">Daftar titik sumber air</caption>
+              <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-peat-forest/70">
+                <tr>
+                  <th className="px-4 py-3.5" scope="col">
+                    Nama Titik Air
+                  </th>
+                  <th className="px-4 py-3.5" scope="col">
+                    Tipe
+                  </th>
+                  <th className="px-4 py-3.5" scope="col">
+                    Zona Terkait
+                  </th>
+                  <th className="px-4 py-3.5" scope="col">
+                    Koordinat GPS
+                  </th>
+                  <th className="px-4 py-3.5 text-right" scope="col">
+                    Aksi
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-peat-forest/10 text-sm">
+                {points.map((point) => (
+                  <WaterPointTableRow
+                    key={point.id}
+                    onDelete={(target) => {
+                      setDeleteError("");
+                      setDeleteTarget(target);
+                    }}
+                    point={point}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {deleteTarget ? (
