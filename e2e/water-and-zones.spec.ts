@@ -12,7 +12,7 @@ test.describe("Water Points & Conservation Zones Governance", () => {
     const pageHeading = page.locator("h1");
     await expect(pageHeading).toContainText(/Titik sumber air/i);
 
-    const addBtn = page.getByRole("button", { name: /Tambah titik air/i });
+    const addBtn = page.getByRole("link", { name: /Tambah titik air/i });
     await expect(addBtn).toBeVisible();
 
     // 2. Posko visits conservation zones list page

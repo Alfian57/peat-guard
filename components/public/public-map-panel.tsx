@@ -23,69 +23,58 @@ export function PublicMapPanel({
     mapData.hotspots.length === 0;
 
   return (
-    <div>
-      <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <h3 className="font-heading text-3xl font-bold text-peat-forest sm:text-4xl lg:text-5xl">
-            Peta pantauan publik
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-peat-forest/70 sm:text-base">
-            Zona disetujui dan indikasi hotspot satelit.
-          </p>
-        </div>
-        <p className="text-xs font-medium text-peat-forest/65 sm:text-sm">
-          Hotspot bukan konfirmasi kejadian kebakaran.
-        </p>
+    <div className="public-map__panel">
+      <div className="public-map__toolbar">
+        <h3>Peta pantauan publik</h3>
+        <span>Zona & hotspot satelit</span>
+      </div>
+      <div className="public-map__viewport">
+        {state === "loading" ? (
+          <div className="public-map__canvas">
+            <MapLoadingState />
+          </div>
+        ) : state === "error" ? (
+          <div className="public-map__canvas grid place-items-center bg-red-50 p-6 text-center">
+            <div>
+              <p className="font-heading text-2xl font-bold text-red-950">
+                Peta belum dapat dimuat
+              </p>
+              <p className="mt-2 text-sm leading-6 text-red-950/80">
+                Periksa koneksi lalu coba muat data publik kembali.
+              </p>
+              <button
+                className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-peat-forest px-5 text-sm font-semibold text-white hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-peat-green"
+                onClick={onRetry}
+                type="button"
+              >
+                <RefreshCw aria-hidden="true" size={16} />
+                Coba lagi
+              </button>
+            </div>
+          </div>
+        ) : (
+          <MapCanvasLoader
+            autoFit
+            className="public-map__canvas w-full overflow-hidden"
+            clusterPoints={false}
+            initialCenter={[113.9, -2.01]}
+            initialZoom={6.5}
+            maxAutoFitZoom={6.5}
+            points={mapData?.hotspots ?? []}
+            zones={mapData?.zones ?? []}
+          />
+        )}
       </div>
 
-      {state === "loading" ? (
-        <div className="h-[480px] sm:h-[580px] lg:h-[640px]">
-          <MapLoadingState />
-        </div>
-      ) : state === "error" ? (
-        <div className="grid min-h-[480px] place-items-center rounded-2xl border border-red-900/15 bg-red-50 p-6 text-center sm:min-h-[580px] lg:min-h-[640px]">
-          <div>
-            <p className="font-heading text-2xl font-bold text-red-950">
-              Peta belum dapat dimuat
-            </p>
-            <p className="mt-2 text-sm leading-6 text-red-950/80">
-              Periksa koneksi lalu coba muat data publik kembali.
-            </p>
-            <button
-              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-peat-forest px-5 text-sm font-semibold text-white hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-peat-green"
-              onClick={onRetry}
-              type="button"
-            >
-              <RefreshCw aria-hidden="true" size={16} />
-              Coba lagi
-            </button>
-          </div>
-        </div>
-      ) : (
-        <MapCanvasLoader
-          autoFit
-          className="h-[480px] w-full overflow-hidden rounded-2xl border border-peat-forest/10 shadow-sm sm:h-[580px] lg:h-[640px]"
-          clusterPoints={false}
-          initialCenter={[113.9, -2.01]}
-          initialZoom={6.5}
-          maxAutoFitZoom={6.5}
-          points={mapData?.hotspots ?? []}
-          zones={mapData?.zones ?? []}
-        />
-      )}
-
       {isEmpty ? (
-        <p className="mt-3 rounded-xl bg-white px-4 py-3 text-sm leading-6 text-peat-forest/75">
+        <p className="public-map__empty">
           Belum ada zona yang disetujui atau hotspot satelit untuk ditampilkan.
           Peta akan terisi saat data publik tersedia.
         </p>
       ) : null}
 
       {state === "ready" && mapData && !isEmpty ? (
-        <ul
-          aria-label="Legenda peta"
-          className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-peat-forest/80"
-        >
+        <ul aria-label="Legenda peta" className="public-map__legend">
           <li className="inline-flex items-center gap-2">
             <span
               aria-hidden="true"

@@ -20,11 +20,11 @@ export function FieldStatusWidget({
   ownerStatus: FieldOwnerStatus;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 text-white">
+    <div className="rounded-xl border border-sidebar-border bg-white/70 p-4 text-peat-forest">
       <div className="flex items-center justify-between text-xs">
         <span className="flex items-center gap-2 font-medium">
           {isConnected ? (
-            <Wifi aria-hidden="true" className="text-peat-leaf" size={15} />
+            <Wifi aria-hidden="true" className="text-peat-forest" size={15} />
           ) : (
             <WifiOff aria-hidden="true" className="text-offline" size={15} />
           )}
@@ -36,13 +36,13 @@ export function FieldStatusWidget({
         />
       </div>
 
-      <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-xs text-white/80">
+      <div className="mt-3 flex items-center justify-between border-t border-sidebar-border pt-3 text-xs text-peat-forest">
         <span>Simulasi offline</span>
         <button
           aria-label="Simulasikan mode offline"
           aria-pressed={simulatedOffline}
-          className={`relative h-6 w-11 cursor-pointer rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-sun ${
-            simulatedOffline ? "bg-offline" : "bg-white/30"
+          className={`relative h-6 w-11 cursor-pointer rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring ${
+            simulatedOffline ? "bg-offline" : "bg-sidebar-primary/20"
           }`}
           onClick={toggleSimulatedOffline}
           type="button"
@@ -57,15 +57,15 @@ export function FieldStatusWidget({
       </div>
 
       {queueCount > 0 ? (
-        <div className="mt-3 border-t border-white/10 pt-3">
+        <div className="mt-3 border-t border-sidebar-border pt-3">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-white/75">Antrean lokal</span>
+            <span>Antrean lokal</span>
             <span className="rounded-full bg-offline px-2 py-0.5 font-bold text-white">
               {queueCount}
             </span>
           </div>
           <button
-            className="mt-2.5 flex min-h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-peat-leaf px-3 text-xs font-semibold text-peat-forest transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
+            className="mt-2.5 flex min-h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-sidebar-primary px-3 text-xs font-semibold text-sidebar-primary-foreground transition-colors hover:bg-sidebar-primary/90 disabled:cursor-wait disabled:opacity-60"
             disabled={
               isSyncing || !isConnected || ownerStatus !== "authenticated"
             }

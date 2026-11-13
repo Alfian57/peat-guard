@@ -8,6 +8,8 @@ import { APP_ROUTES } from "@/lib/routes";
 
 import "./audit.css";
 
+export const instant = false;
+
 export default async function AuditLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { PublicMapPage } from "@/components/public/public-map-page";
 
 export const metadata: Metadata = {
-  title: "Peta pantauan publik | PEATGUARD",
+  title: "Peta pantauan publik",
   description:
     "Jelajahi zona gambut yang disetujui dan indikasi hotspot NASA FIRMS dengan filter waktu, sumber, keyakinan, dan area peta.",
 };

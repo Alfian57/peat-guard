@@ -61,6 +61,7 @@ export function DashboardDateFilter({
       </div>
 
       <button
+        aria-label="Filter periode tanggal"
         aria-controls="dashboard-date-filter-dialog"
         aria-expanded={isOpen}
         aria-haspopup="dialog"

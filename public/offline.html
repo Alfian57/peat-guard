@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#1f4d3d" />
+    <link rel="icon" href="/brand/app-icon-192.png" type="image/png" />
     <title>Offline · PEATGUARD</title>
     <style>
       :root {
@@ -55,19 +56,23 @@
         outline: 3px solid #1f4d3d;
         outline-offset: 3px;
       }
-      .leaf {
-        display: inline-grid;
-        width: 56px;
-        height: 56px;
-        place-items: center;
-        border-radius: 50%;
-        background: #e9efdc;
+      .brand-logo {
+        display: inline-block;
+        width: 52px;
+        height: 52px;
+        object-fit: contain;
       }
     </style>
   </head>
   <body>
     <main>
-      <span class="leaf" aria-hidden="true">🌿</span>
+      <img
+        class="brand-logo"
+        src="/brand/logo-circle.png"
+        alt="PEATGUARD"
+        width="52"
+        height="52"
+      />
       <h1>Anda sedang offline</h1>
       <p>
         Halaman ini belum tersedia tanpa koneksi. Laporan yang sudah disimpan

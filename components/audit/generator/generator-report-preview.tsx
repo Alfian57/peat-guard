@@ -1,4 +1,5 @@
 import type { MrvGeneratedReport } from "@/lib/server/mrv/contracts";
+import { BrandLogo } from "@/components/brand/brand-logo";
 
 import {
   formatCarbon,
@@ -23,9 +24,7 @@ export function GeneratorReportPreview({
       <header className="border-b border-border pb-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="font-heading text-lg font-bold tracking-wide text-peat-green">
-              PEATGUARD
-            </p>
+            <BrandLogo height={36} />
             <p className="mt-5 text-xs font-semibold tracking-wide text-peat-green uppercase">
               {isCarbonAudit
                 ? "Audit karbon bulanan"

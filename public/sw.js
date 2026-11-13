@@ -1,7 +1,12 @@
-const CACHE_NAME = "peatguard-field-v2";
+const CACHE_NAME = "peatguard-field-v4";
 const STATIC_ASSETS = [
   "/offline.html",
-  "/manifest-icon.svg",
+  "/brand/logo-horizontal.png",
+  "/brand/logo-symbol.png",
+  "/brand/logo-circle.png",
+  "/brand/app-icon-192.png",
+  "/brand/app-icon-512.png",
+  "/brand/app-icon-maskable-512.png",
   "/samples/asap-gambut.webp",
   "/samples/kanal-kering.webp",
   "/samples/hutan-aman.webp",
@@ -34,6 +39,8 @@ self.addEventListener("install", (event) => {
             new Request(new URL(path, self.location.origin), {
               headers: { Accept: "text/html" },
               cache: "no-store",
+              // A slow shell must not block activation of the cached brand assets.
+              signal: AbortSignal.timeout(10_000),
             }),
           );
           if (isCacheableShell(response)) {
@@ -109,7 +116,7 @@ self.addEventListener("fetch", (event) => {
   const isStaticAsset =
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/samples/") ||
-    url.pathname === "/manifest-icon.svg";
+    STATIC_ASSETS.includes(url.pathname);
   if (!isStaticAsset) return;
 
   event.respondWith(

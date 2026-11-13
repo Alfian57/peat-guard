@@ -40,15 +40,15 @@ test.describe("Field Volunteer Patrol & Incident Reporting Journey", () => {
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
 
-    // 7. Verify navigation away from form after successful save
+    // 7. A successful save opens the saved report before returning to the queue.
     await page.waitForURL(
-      (url) => url.pathname.startsWith(APP_ROUTES.field.root),
-      {
-        timeout: 15_000,
-      },
+      (url) =>
+        url.pathname === APP_ROUTES.field.report &&
+        url.searchParams.has("reportId"),
+      { timeout: 15_000 },
     );
 
-    // 8. Visit queue page and verify the report appears
+    // 8. Visit the queue after the report detail navigation finishes.
     await page.goto(APP_ROUTES.field.queue);
     await expect(page.locator("h1")).toContainText(/Antrean laporan/i);
 

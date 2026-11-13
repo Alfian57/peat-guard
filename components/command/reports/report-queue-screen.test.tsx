@@ -1,15 +1,38 @@
 import { afterEach, expect, mock, test } from "bun:test";
+import { useMemo, useSyncExternalStore } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+let searchParamsValue = "";
+const searchParamsListeners = new Set<() => void>();
+const searchParamsSnapshot = () => searchParamsValue;
+const subscribeToSearchParams = (listener: () => void) => {
+  searchParamsListeners.add(listener);
+  return () => searchParamsListeners.delete(listener);
+};
+
+function useMockSearchParams() {
+  const value = useSyncExternalStore(
+    subscribeToSearchParams,
+    searchParamsSnapshot,
+    searchParamsSnapshot,
+  );
+  return useMemo(() => new URLSearchParams(value), [value]);
+}
+
+function updateSearchParams(href: string) {
+  searchParamsValue = href.split("?")[1] ?? "";
+  searchParamsListeners.forEach((listener) => listener());
+}
+
 const router = {
-  push: mock(() => undefined),
-  replace: mock(() => undefined),
+  push: mock((href: string) => updateSearchParams(href)),
+  replace: mock((href: string) => updateSearchParams(href)),
 };
 
 mock.module("next/navigation", () => ({
   useRouter: () => router,
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: useMockSearchParams,
   usePathname: () => "/command/reports",
 }));
 
@@ -99,7 +122,7 @@ test("applies status and zone filters and shows the requested page", async () =>
     true,
   );
 
-  await user.click(screen.getByRole("button", { name: "Berikutnya" }));
+  await user.click(screen.getByRole("button", { name: "Halaman berikutnya" }));
   await screen.findByText("2 / 2");
   expect(await screen.findByText("PG-BBBBBBBB")).toBeTruthy();
   expect(

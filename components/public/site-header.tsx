@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Leaf } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { APP_ROUTES } from "@/lib/routes";
+import { BrandLogo } from "@/components/brand/brand-logo";
 import { handleSectionScroll } from "@/components/public/smooth-scroll";
 
 const NAV_ITEMS = [
@@ -120,7 +121,7 @@ export function SiteHeader() {
       <div className="mx-auto flex min-h-[72px] max-w-[1440px] items-center justify-between gap-5 px-5 sm:px-8 lg:px-14">
         <Link
           aria-label="PEATGUARD beranda"
-          className={`flex shrink-0 items-center gap-2.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 ${isHeroSurface ? "focus-visible:outline-white" : "focus-visible:outline-peat-green"}`}
+          className={`flex min-h-11 w-24 shrink-0 items-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 sm:w-auto ${isHeroSurface ? "focus-visible:outline-white" : "focus-visible:outline-peat-green"}`}
           href={APP_ROUTES.home}
           onClick={(e) => {
             if (
@@ -135,14 +136,7 @@ export function SiteHeader() {
             }
           }}
         >
-          <span className="grid size-10 place-items-center rounded-full bg-peat-forest text-peat-sun">
-            <Leaf aria-hidden="true" size={21} strokeWidth={2.2} />
-          </span>
-          <span
-            className={`font-heading text-2xl leading-none font-bold tracking-wide ${isHeroSurface ? "text-white" : "text-peat-forest"}`}
-          >
-            PEATGUARD
-          </span>
+          <BrandLogo decorative tone={isHeroSurface ? "dark" : "light"} />
         </Link>
 
         <nav

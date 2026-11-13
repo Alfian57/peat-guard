@@ -93,14 +93,14 @@
   --chart-4: #f6b84a;
   --chart-5: #d97706;
   --radius: 0.75rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #1e2c24;
-  --sidebar-primary: #1f4d3d;
+  --sidebar: #f1f2e9;
+  --sidebar-foreground: var(--peat-forest);
+  --sidebar-primary: var(--peat-forest);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e9efdf;
-  --sidebar-accent-foreground: #294a36;
-  --sidebar-border: #d8dfd2;
-  --sidebar-ring: #1f4d3d;
+  --sidebar-accent: #e1e7df;
+  --sidebar-accent-foreground: var(--peat-forest);
+  --sidebar-border: #d9e0d4;
+  --sidebar-ring: var(--peat-green);
 }
 
 @layer base {
@@ -207,173 +207,10 @@
   }
 }
 
-.peatland-story {
-  min-height: 100dvh;
-}
-
-.peatland-story__stage {
-  min-height: 100dvh;
-}
-
-@supports (animation-timeline: view()) {
-  .peatland-story__image-layer {
-    animation: peatland-image-drift 1s linear both;
-    animation-timeline: view(block);
-    animation-range: entry 0% exit 100%;
-  }
-
-  .public-scroll-reveal {
-    animation: public-scroll-reveal 1s linear both;
-    animation-timeline: view(block);
-    animation-range: entry 10% entry 78%;
-  }
-
-  .public-metric-card {
-    animation: public-scroll-reveal 1s linear both;
-    animation-timeline: view(block);
-    animation-range: entry 6% entry 75%;
-  }
-
-  .public-metric-card:nth-child(2) {
-    animation-delay: 0.1s;
-  }
-
-  .public-metric-card:nth-child(3) {
-    animation-delay: 0.2s;
-  }
-
-  .public-metric-card:nth-child(4) {
-    animation-delay: 0.3s;
-  }
-
-  .public-metric-card:nth-child(5) {
-    animation-delay: 0.4s;
-  }
-
-  .public-map__frame {
-    animation: public-map-frame-reveal 1s linear both;
-    animation-timeline: view(block);
-    animation-range: entry 8% entry 62%;
-  }
-
-  .public-how-it-works {
-    view-timeline-name: --public-how-it-works;
-    view-timeline-axis: block;
-  }
-
-  .public-workflow__rail-fill {
-    animation: public-workflow-progress 1s linear both;
-    animation-timeline: --public-how-it-works;
-    animation-range: entry 5% entry 76%;
-  }
-
-  .public-workflow__step {
-    animation: public-scroll-reveal 1s linear both;
-    animation-timeline: view(block);
-    animation-range: entry 8% entry 72%;
-  }
-
-  .public-workflow__step:nth-child(2) {
-    animation-delay: 0.12s;
-  }
-
-  .public-workflow__step:nth-child(3) {
-    animation-delay: 0.24s;
-  }
-
-  .public-workflow__cta {
-    animation: public-scroll-reveal 1s linear both;
-    animation-timeline: view(block);
-    animation-range: entry 10% entry 72%;
-  }
-}
-
-@keyframes peatland-image-drift {
-  from {
-    transform: translate3d(0, 3%, 0);
-  }
-
-  to {
-    transform: translate3d(0, -3%, 0);
-  }
-}
-
-@keyframes public-scroll-reveal {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 1.75rem, 0);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes public-map-frame-reveal {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes public-workflow-progress {
-  from {
-    transform: scaleX(0);
-  }
-
-  to {
-    transform: scaleX(1);
-  }
-}
-
-@supports not (animation-timeline: view()) {
-  .peatland-story {
-    min-height: auto;
-  }
-
-  .peatland-story__stage {
-    position: relative;
-    height: auto;
-    min-height: 100dvh;
-  }
-}
-
-@media (max-width: 767px) {
-  .peatland-story {
-    min-height: auto;
-  }
-
-  .peatland-story__stage {
-    position: relative;
-    height: auto;
-    min-height: 100dvh;
-  }
-
-  .peatland-story__image-layer {
-    inset: 0;
-    animation: none !important;
-    opacity: 1;
-    transform: none;
-  }
-
-  .peatland-story__copy,
-  .peatland-story__workflow,
-  .peatland-story__title {
-    animation: none !important;
-    opacity: 1;
-    transform: none;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
-
   *,
   *::before,
   *::after {
@@ -381,96 +218,12 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-
-  .peatland-story__image-layer {
-    animation: none !important;
-    transform: none !important;
-  }
-
-  .peatland-story__image-layer,
-  .peatland-story__title,
-  .peatland-story__copy,
-  .peatland-story__workflow,
-  .public-scroll-reveal,
-  .public-metric-card,
-  .public-map__frame,
-  .public-workflow__step,
-  .public-workflow__cta,
-  .public-workflow__rail-fill {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-    will-change: auto;
-  }
-
-  .peatland-story {
-    min-height: auto;
-  }
-
-  .peatland-story__stage {
-    position: relative;
-    height: auto;
-    min-height: 100dvh;
-  }
 }
 
-.peatland-story__copy:focus-within,
-.peatland-story__workflow:focus-within,
-.public-scroll-reveal:focus-within,
-.public-map__frame:focus-within,
-.public-workflow__cta:focus-within {
-  opacity: 1 !important;
-  transform: none !important;
-}
-
-.public-workflow__rail {
-  align-items: center;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  height: 12px;
-  position: relative;
-}
-
-.public-workflow__rail-dot {
-  background: var(--peat-sun);
-  border: 2px solid var(--peat-paper);
-  border-radius: 9999px;
-  box-shadow: 0 0 0 1px rgb(31 77 61 / 14%);
-  height: 12px;
-  place-self: center;
-  position: relative;
-  width: 12px;
-  z-index: 1;
-}
-
-.public-workflow__rail-track {
-  background: rgb(31 77 61 / 16%);
-  height: 2px;
-  left: 16.667%;
-  overflow: hidden;
-  position: absolute;
-  right: 16.667%;
-  top: 5px;
-}
-
-.public-workflow__rail-fill {
-  background: var(--peat-green);
-  display: block;
-  height: 100%;
-  transform: scaleX(1);
-  transform-origin: left center;
-  width: 100%;
-}
-
-@supports (animation-timeline: view()) {
-  .public-workflow__rail-fill {
-    transform: scaleX(0);
-  }
-}
-
-/* Custom scrollbar for dark sidebars */
+/* Subtle forest scrollbar for ivory sidebars. */
 .sidebar-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scrollbar-color: rgba(31, 77, 61, 0.2) transparent;
 }
 
 .sidebar-scroll::-webkit-scrollbar {
@@ -482,20 +235,10 @@
 }
 
 .sidebar-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(31, 77, 61, 0.2);
   border-radius: 9999px;
 }
 
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.35);
-}
-
-@media (max-width: 767px) {
-  .public-workflow__rail {
-    display: none;
-  }
-
-  .public-workflow__steps {
-    margin-top: 2.5rem;
-  }
+  background: rgba(31, 77, 61, 0.32);
 }

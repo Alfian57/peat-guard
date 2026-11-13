@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft, Leaf, RefreshCw } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
+import { BrandLogo } from "@/components/brand/brand-logo";
 
 import { MapCanvasLoader } from "@/components/maps/map-canvas-loader";
 import {
@@ -49,15 +50,13 @@ export function PublicMapScreen({
           >
             <ArrowLeft aria-hidden="true" size={20} />
           </Link>
-          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-peat-forest text-peat-sun">
-            <Leaf aria-hidden="true" size={19} />
-          </span>
+          <BrandLogo height={32} variant="circle" />
           <div className="min-w-0">
             <p className="font-heading text-lg leading-none font-bold tracking-wide">
-              PEATGUARD
+              Pantauan publik
             </p>
             <p className="mt-1 truncate text-xs text-peat-forest/65">
-              Peta pantauan publik
+              Peta bentang gambut
             </p>
           </div>
         </div>
@@ -85,6 +84,9 @@ export function PublicMapScreen({
             filters={filters}
             hasUnappliedViewport={hasUnappliedViewport}
             isLoading={loadState === "loading"}
+            loadingLabel={
+              data ? "Memperbarui…" : "Memuat data untuk filter terpilih…"
+            }
             onChange={onFilterChange}
             onSearchViewport={onSearchViewport}
           />

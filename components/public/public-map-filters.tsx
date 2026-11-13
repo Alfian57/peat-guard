@@ -24,12 +24,14 @@ export function PublicMapFiltersPanel({
   hasUnappliedViewport,
   onSearchViewport,
   isLoading,
+  loadingLabel,
 }: {
   filters: PublicMapFilters;
   onChange: (filters: Partial<PublicMapFilters>) => void;
   hasUnappliedViewport: boolean;
   onSearchViewport: () => void;
   isLoading: boolean;
+  loadingLabel: string;
 }) {
   return (
     <section aria-labelledby="map-filter-title">
@@ -45,7 +47,7 @@ export function PublicMapFiltersPanel({
             className="text-xs font-medium text-peat-forest/65"
             role="status"
           >
-            Memperbarui…
+            {loadingLabel}
           </span>
         ) : null}
       </div>

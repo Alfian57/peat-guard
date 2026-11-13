@@ -18,18 +18,16 @@ test.describe("Role-Based Access Control (RBAC) & Route Security Guard", () => {
     await expect(page).toHaveURL(new RegExp(APP_ROUTES.login));
   });
 
-  test("relawan is blocked from command center and audit ledger", async ({
+  test("relawan is redirected away from command center and audit ledger", async ({
     relawanPage: page,
   }) => {
     // 1. Relawan attempts to access command center layout -> redirected to home
     await page.goto(APP_ROUTES.command.map);
     await expect(page).toHaveURL(new RegExp(APP_ROUTES.home));
 
-    // 2. Relawan attempts to access audit ledger -> access denied warning
+    // 2. Relawan is redirected away from audit routes by the audit layout.
     await page.goto(APP_ROUTES.audit.ledger);
-    await expect(
-      page.getByText(/Halaman ini memerlukan akses Verifikator karbon/i),
-    ).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(APP_ROUTES.home));
   });
 
   test("posko is blocked from audit ledger", async ({ poskoPage: page }) => {

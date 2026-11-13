@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Leaf } from "lucide-react";
+import { BrandLogo } from "@/components/brand/brand-logo";
 
 import { UserAccountMenu } from "@/components/auth/user-account-menu";
 import { GlobalSearch } from "@/components/search/global-search";
@@ -20,15 +20,10 @@ export async function AuditHeader() {
       <div className="mx-auto flex min-h-[4.5rem] max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-8">
         <Link
           aria-label="PEATGUARD beranda"
-          className="flex shrink-0 items-center gap-2.5 rounded-md text-peat-forest focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-peat-green"
+          className="flex min-h-11 shrink-0 items-center gap-2.5 rounded-md text-peat-forest focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-peat-green"
           href={APP_ROUTES.home}
         >
-          <span className="grid size-10 place-items-center rounded-xl bg-peat-forest text-peat-paper">
-            <Leaf aria-hidden="true" size={22} strokeWidth={2.2} />
-          </span>
-          <span className="font-heading text-2xl leading-none font-bold tracking-wide">
-            PEATGUARD
-          </span>
+          <BrandLogo decorative height={40} />
         </Link>
 
         <AuditNav role={role} />

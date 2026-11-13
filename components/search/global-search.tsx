@@ -164,18 +164,18 @@ export function GlobalSearch({
         aria-keyshortcuts="Control+K Meta+K"
         className={
           variant === "bar"
-            ? "flex min-h-10 min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#e2e5dc] bg-white px-3 text-left text-sm text-peat-forest/55 shadow-sm transition hover:border-peat-green/35 hover:bg-[#fff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green sm:max-w-[28rem]"
+            ? "flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#e2e5dc] bg-white text-left text-sm text-peat-forest/55 shadow-sm transition hover:border-peat-green/35 hover:bg-[#fff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green lg:w-auto lg:max-w-[28rem] lg:min-w-0 lg:flex-1 lg:justify-start lg:gap-3 lg:px-3"
             : "inline-grid size-10 shrink-0 place-items-center rounded-xl border border-peat-forest/10 bg-white text-peat-forest transition hover:bg-peat-forest/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
         }
         type="button"
       >
-        <Search aria-hidden="true" size={18} />
+        <Search aria-hidden="true" className="shrink-0" size={18} />
         {variant === "bar" ? (
           <>
-            <span className="flex-1">
+            <span className="hidden flex-1 lg:block">
               Cari fitur, menu, laporan, atau data…
             </span>
-            <span className="hidden items-center rounded-md border border-peat-forest/10 px-1.5 py-0.5 text-[10px] font-semibold text-peat-forest/45 md:flex">
+            <span className="hidden items-center rounded-md border border-peat-forest/10 px-1.5 py-0.5 text-[10px] font-semibold text-peat-forest/45 lg:flex">
               ⌘ / Ctrl K
             </span>
           </>

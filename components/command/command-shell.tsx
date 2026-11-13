@@ -21,26 +21,20 @@ export function CommandShell({
 
   return (
     <div className="min-h-dvh bg-[#fbfaf6] lg:flex">
-      <aside className="sidebar-scroll sticky top-0 z-30 hidden h-dvh w-72 shrink-0 flex-col overflow-x-hidden overflow-y-auto overscroll-contain border-r border-[#49483f] bg-gradient-to-b from-[#292b29] via-[#32312d] to-[#3c3930] px-6 py-7 shadow-[8px_0_28px_rgba(0,0,0,0.12)] lg:flex">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-24 -left-24 size-64 rounded-full bg-peat-sun/15 blur-3xl"
-        />
-        <div className="relative flex min-h-full flex-col">
-          <CommandBrand tone="dark" />
-          <CommandNavigation
-            dark
-            pathname={pathname}
-            onNavigate={() => undefined}
-          />
+      <aside className="sidebar-scroll sticky top-0 z-30 hidden h-dvh w-72 shrink-0 flex-col overflow-x-hidden overflow-y-auto overscroll-contain border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
+        <div className="flex h-18 shrink-0 items-center border-b border-sidebar-border px-6">
+          <CommandBrand />
+        </div>
+        <div className="px-6 pt-6 pb-7">
+          <CommandNavigation pathname={pathname} onNavigate={() => undefined} />
         </div>
       </aside>
 
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-20 border-b border-[#e7e6dd] bg-[#fbfaf6]/90 backdrop-blur-xl">
-          <div className="mx-auto flex min-h-[4.5rem] max-w-[1600px] items-center justify-between gap-3 px-4 sm:px-7 xl:px-9">
+        <header className="sticky top-0 z-20 h-18 border-b border-[#e7e6dd] bg-[#fbfaf6]/90 backdrop-blur-xl">
+          <div className="mx-auto flex h-full max-w-[1600px] items-center justify-between gap-3 px-4 sm:px-7 xl:px-9">
             <div className="flex min-w-0 flex-1 items-center gap-3">
-              <div className="lg:hidden">
+              <div className="shrink-0 lg:hidden">
                 <CommandBrand compact />
               </div>
               <GlobalSearch variant="bar" />
@@ -48,6 +42,7 @@ export function CommandShell({
 
             <div className="flex shrink-0 items-center gap-2 sm:gap-3">
               <UserAccountMenu
+                compactOnMobile
                 email={user.email}
                 image={user.image}
                 name={user.name}
@@ -73,9 +68,8 @@ export function CommandShell({
         </header>
 
         {mobileNavigationOpen ? (
-          <div className="border-b border-[#49483f] bg-gradient-to-b from-[#292b29] to-[#3c3930] px-4 py-4 lg:hidden">
+          <div className="border-b border-sidebar-border bg-sidebar px-4 py-4 lg:hidden">
             <CommandNavigation
-              dark
               pathname={pathname}
               onNavigate={() => setMobileNavigationOpen(false)}
             />

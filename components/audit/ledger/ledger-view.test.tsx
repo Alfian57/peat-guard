@@ -119,7 +119,9 @@ test("ledger shows factual GPS evidence, private photo viewer, filters, and pagi
     />,
   );
 
-  expect(screen.getByRole("button", { name: /^Filter$/i })).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Filter buku besar" }),
+  ).toBeTruthy();
   expect(
     screen.getByText("Koordinat tercatat · belum diverifikasi"),
   ).toBeTruthy();
@@ -258,7 +260,7 @@ test("filter dialog applies supported filters and restores focus on Escape", asy
     />,
   );
 
-  const trigger = screen.getByRole("button", { name: /^Filter$/i });
+  const trigger = screen.getByRole("button", { name: "Filter buku besar" });
   await user.click(trigger);
 
   const dialog = screen.getByRole("dialog", { name: "Filter buku besar MRV" });
@@ -297,7 +299,7 @@ test("filter form submits parsable defaults, evidence-only, and AI-only filters"
     />,
   );
 
-  await user.click(screen.getByRole("button", { name: /^Filter$/i }));
+  await user.click(screen.getByRole("button", { name: "Filter buku besar" }));
   const form = screen
     .getByRole("button", { name: "Terapkan filter" })
     .closest("form");
@@ -366,7 +368,7 @@ test("report-specific ledger search survives applying other filters", async () =
     />,
   );
 
-  await user.click(screen.getByRole("button", { name: /^Filter$/i }));
+  await user.click(screen.getByRole("button", { name: "Filter buku besar" }));
   const form = screen
     .getByRole("button", { name: "Terapkan filter" })
     .closest("form");

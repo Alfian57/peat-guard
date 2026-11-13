@@ -11,7 +11,7 @@ test.describe("MRV Verifier & Carbon Audit Journey", () => {
 
     // 2. Verify filter and export controls exist
     await expect(
-      page.getByRole("button", { name: /Filter buku besar/i }),
+      page.getByRole("button", { name: "Filter buku besar" }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: /Ekspor data/i }),
@@ -32,7 +32,9 @@ test.describe("MRV Verifier & Carbon Audit Journey", () => {
     await expect(page.getByText(/Pratinjau dokumen/i)).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByText(/Ringkasan metrik/i)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Ringkasan metrik" }),
+    ).toBeVisible();
     await expect(page.getByText(/Titik panas satelit/i)).toBeVisible();
   });
 });

@@ -1,4 +1,7 @@
+"use client";
+
 import { Flame, Leaf, MapPinned, Sprout } from "lucide-react";
+import { motion } from "motion/react";
 
 import { MetricCard } from "@/components/public/metric-card";
 import type { PublicLoadState } from "@/components/public/public-types";
@@ -10,25 +13,37 @@ const KALIMANTAN_METRICS = [
     detail: "Bentang hidrologis gambut Kalimantan (BRGM & KLHK)",
     icon: <MapPinned aria-hidden="true" size={20} />,
     label: "Kesatuan Hidrologis",
-    value: "190 KHG",
+    value: 190,
+    unit: "KHG",
+    decimals: 0,
+    suffix: "",
   },
   {
     detail: "Fungsi lindung ekosistem gambut prioritas Kalimantan",
     icon: <Sprout aria-hidden="true" size={20} />,
     label: "Kawasan lindung gambut",
-    value: "4,09 Juta ha",
+    value: 4.09,
+    unit: "Juta ha",
+    decimals: 2,
+    suffix: "",
   },
   {
     detail: "Luas karhutla terpantau di lahan gambut & mineral (SiPongi)",
     icon: <Flame aria-hidden="true" size={20} />,
     label: "Areal rawan karhutla",
-    value: "38.310 ha",
+    value: 38310,
+    unit: "ha",
+    decimals: 0,
+    suffix: "",
   },
   {
     detail: "Simpanan karbon per hektare gambut tropis terlindungi",
     icon: <Leaf aria-hidden="true" size={20} />,
     label: "Cadangan karbon",
-    value: "3.000+ t/ha",
+    value: 3000,
+    unit: "t/ha",
+    decimals: 0,
+    suffix: "+",
   },
 ];
 
@@ -40,15 +55,19 @@ export function MetricsGrid({
   onRetry?: () => void;
 }) {
   return (
-    <div
+    <motion.div
       aria-busy={state === "loading"}
-      className="public-metrics__grid mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+      className="public-metrics__grid"
+      variants={{
+        rest: {},
+        visible: { transition: { staggerChildren: 0.12 } },
+      }}
     >
       {state === "loading"
         ? Array.from({ length: 4 }, (_, index) => (
             <div
               aria-hidden="true"
-              className="min-h-36 rounded-2xl border border-peat-forest/10 bg-white p-5 shadow-xs"
+              className="public-metric-card public-metric-card--loading"
               key={index}
             >
               <div className="flex items-center justify-between gap-3">
@@ -66,8 +85,11 @@ export function MetricsGrid({
               key={metric.label}
               label={metric.label}
               value={metric.value}
+              unit={metric.unit}
+              decimals={metric.decimals}
+              suffix={metric.suffix}
             />
           ))}
-    </div>
+    </motion.div>
   );
 }

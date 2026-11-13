@@ -1,0 +1,170 @@
+.offline-phone {
+  width: min(100%, clamp(248px, 32dvh, 304px));
+  justify-self: center;
+  perspective: 1200px;
+}
+
+.offline-phone__device {
+  --phone-radius: 38px;
+  position: relative;
+  padding: 2px;
+  border-radius: var(--phone-radius);
+  background: linear-gradient(
+    125deg,
+    #a2aca5 0%,
+    #38473e 18%,
+    #7d8d81 48%,
+    #23362b 75%,
+    #a2aca5 100%
+  );
+  box-shadow:
+    0 30px 65px rgb(0 0 0 / 34%),
+    10px 7px 20px rgb(0 0 0 / 16%),
+    inset 0 0 0 1px rgb(255 255 255 / 28%);
+  transform: rotateY(-5deg);
+}
+.offline-phone__device::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 52px;
+  bottom: 52px;
+  left: 1px;
+  width: 1px;
+  background: linear-gradient(transparent, rgb(255 255 255 / 55%), transparent);
+  pointer-events: none;
+}
+.offline-phone__frame {
+  position: relative;
+  padding: 17px 6px 10px;
+  border: 1px solid #142219;
+  border-radius: calc(var(--phone-radius) - 2px);
+  background: #101c16;
+}
+.offline-phone__screen {
+  position: relative;
+  aspect-ratio: 390 / 844;
+  overflow: hidden;
+  border-radius: 26px;
+  background: var(--peat-paper);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 65%);
+}
+.offline-phone__state {
+  position: absolute;
+  inset: 0;
+}
+.offline-phone__state > img {
+  object-fit: contain;
+}
+.offline-phone__speaker {
+  position: absolute;
+  top: 7px;
+  left: calc(50% - 24px);
+  width: 40px;
+  height: 3px;
+  border-radius: 10px;
+  background: #030906;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 9%);
+}
+.offline-phone__lens {
+  position: absolute;
+  top: 6px;
+  left: calc(50% + 22px);
+  width: 5px;
+  height: 5px;
+  border: 1px solid #293b32;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, #40675f, #020a06 65%);
+}
+.offline-phone__home-indicator {
+  position: absolute;
+  bottom: 4px;
+  left: 39%;
+  width: 22%;
+  height: 2px;
+  border-radius: 10px;
+  background: #78857c;
+}
+.offline-phone__key {
+  position: absolute;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #a0aca3, #263a2d);
+}
+.offline-phone__key--mute {
+  top: 70px;
+  left: -2px;
+  height: 22px;
+}
+.offline-phone__key--volume {
+  top: 112px;
+  left: -2px;
+  height: 50px;
+}
+.offline-phone__key--power {
+  top: 122px;
+  right: -2px;
+  height: 58px;
+}
+
+@media (max-width: 767px) {
+  .offline-phone {
+    width: min(34vw, 15dvh, 148px);
+  }
+  .offline-phone__device {
+    --phone-radius: 22px;
+    padding: 1px;
+  }
+  .offline-phone__frame {
+    padding: 10px 3px 6px;
+  }
+  .offline-phone__screen {
+    border-radius: 16px;
+  }
+  .offline-phone__speaker {
+    top: 4px;
+    left: calc(50% - 14px);
+    width: 24px;
+    height: 2px;
+  }
+  .offline-phone__lens {
+    top: 3px;
+    left: calc(50% + 14px);
+    width: 4px;
+    height: 4px;
+  }
+  .offline-phone__home-indicator {
+    bottom: 2px;
+    height: 1px;
+  }
+  .offline-phone__key--mute {
+    top: 36px;
+    height: 14px;
+  }
+  .offline-phone__key--volume {
+    top: 60px;
+    height: 26px;
+  }
+  .offline-phone__key--power {
+    top: 64px;
+    height: 30px;
+  }
+}
+
+@media (max-height: 700px),
+  (max-width: 767px) and (max-height: 780px),
+  (prefers-reduced-motion: reduce),
+  (scripting: none) {
+  .offline-phone {
+    width: min(100%, 280px);
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .offline-phone__state--capture,
+  .offline-phone__state--saved {
+    visibility: hidden;
+  }
+  .offline-phone__state--sent {
+    opacity: 1 !important;
+  }
+}

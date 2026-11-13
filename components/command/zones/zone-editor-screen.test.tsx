@@ -3,7 +3,11 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const router = { replace: mock(() => undefined) };
-mock.module("next/navigation", () => ({ useRouter: () => router }));
+mock.module("next/navigation", () => ({
+  useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/command/zones",
+}));
 
 const originalFetch = globalThis.fetch;
 const zoneId = "6a57d28f-d424-4e4c-90c4-66208b10b755";

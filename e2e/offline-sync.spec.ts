@@ -11,7 +11,9 @@ test.describe("Offline-First & Field Queue Synchronization", () => {
     await expect(page).toHaveURL(new RegExp(APP_ROUTES.field.createReport));
 
     // 2. Toggle simulated offline mode
-    const offlineToggle = page.getByLabel("Simulasikan mode offline");
+    const offlineToggle = page.locator(
+      'button[aria-label="Simulasikan mode offline"]:visible',
+    );
     await expect(offlineToggle).toBeVisible();
     await offlineToggle.click();
     await expect(offlineToggle).toHaveAttribute("aria-pressed", "true");
@@ -56,7 +58,9 @@ test.describe("Offline-First & Field Queue Synchronization", () => {
     await expect(page.getByText(/Menunggu sinkronisasi/i)).toBeVisible();
 
     // 6. Restore connectivity by toggling simulated offline off
-    const restoreToggle = page.getByLabel("Simulasikan mode offline");
+    const restoreToggle = page.locator(
+      'button[aria-label="Simulasikan mode offline"]:visible',
+    );
     await restoreToggle.click();
     await expect(restoreToggle).toHaveAttribute("aria-pressed", "false");
     await expect(page.getByText(/Koneksi tersedia/i)).toBeVisible();

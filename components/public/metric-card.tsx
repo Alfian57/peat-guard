@@ -1,28 +1,43 @@
+"use client";
+
+import { motion } from "motion/react";
 import type { ReactNode } from "react";
+
+import { sectionReveal } from "@/components/public/public-section-motion";
+import {
+  MetricCount,
+  type MetricCountProps,
+} from "@/components/public/metric-count";
 
 export function MetricCard({
   icon,
   label,
   value,
+  unit,
+  decimals,
+  suffix,
   detail,
-}: {
+}: MetricCountProps & {
   icon: ReactNode;
   label: string;
-  value: string;
   detail: string;
 }) {
   return (
-    <article className="public-metric-card rounded-2xl border border-peat-forest/10 bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex items-center justify-between gap-4">
-        <p className="text-sm font-medium text-peat-forest/75">{label}</p>
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-peat-forest/8 text-peat-green">
-          {icon}
-        </span>
+    <motion.article
+      className="public-section__reveal public-metric-card"
+      variants={sectionReveal}
+    >
+      <div className="public-metric-card__heading">
+        <p>{label}</p>
+        <span className="text-peat-green">{icon}</span>
       </div>
-      <p className="mt-4 font-heading text-xl leading-none font-bold text-peat-forest sm:text-[2.75rem] xl:text-3xl">
-        {value}
-      </p>
-      <p className="mt-2 text-xs leading-5 text-peat-forest/65">{detail}</p>
-    </article>
+      <MetricCount
+        value={value}
+        unit={unit}
+        decimals={decimals}
+        suffix={suffix}
+      />
+      <p className="public-metric-card__detail">{detail}</p>
+    </motion.article>
   );
 }

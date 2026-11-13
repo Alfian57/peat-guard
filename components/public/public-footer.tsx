@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Leaf } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import { BrandLogo } from "@/components/brand/brand-logo";
 
 import { handleSectionScroll } from "@/components/public/smooth-scroll";
 import { APP_ROUTES } from "@/lib/routes";
@@ -30,12 +31,7 @@ export function PublicFooter() {
               }
             }}
           >
-            <span className="grid size-11 place-items-center rounded-full bg-white/10 text-peat-sun">
-              <Leaf aria-hidden="true" size={21} />
-            </span>
-            <span className="font-heading text-2xl leading-none font-bold tracking-wide">
-              PEATGUARD
-            </span>
+            <BrandLogo decorative height={48} tone="dark" />
           </Link>
           <p className="mt-4 max-w-lg text-sm leading-6 text-white/70">
             WebGIS untuk pemantauan dan perlindungan gambut, dengan informasi

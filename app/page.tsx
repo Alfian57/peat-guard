@@ -1,4 +1,5 @@
 import { HowItWorks } from "@/components/public/how-it-works";
+import { OfflineStory } from "@/components/public/offline-story";
 import { PeatlandStory } from "@/components/public/peatland-story";
 import { PublicFooter } from "@/components/public/public-footer";
 import { PublicHero } from "@/components/public/public-hero";
@@ -19,6 +20,7 @@ export default function Home() {
       <main id="main-content">
         <PublicHero />
         <PeatlandStory />
+        <OfflineStory />
         <PublicMonitor />
         <HowItWorks />
       </main>

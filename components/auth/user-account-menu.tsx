@@ -14,11 +14,13 @@ export function UserAccountMenu({
   email,
   role,
   image,
+  compactOnMobile = false,
 }: {
   name: string;
   email: string;
   role: AppRole;
   image: string | null;
+  compactOnMobile?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
@@ -67,7 +69,9 @@ export function UserAccountMenu({
         type="button"
       >
         <UserAvatar className="size-9 shrink-0" image={image} name={name} />
-        <div className="min-w-0 text-left">
+        <div
+          className={`min-w-0 text-left ${compactOnMobile ? "hidden sm:block" : ""}`}
+        >
           <p
             className="max-w-[130px] truncate text-xs leading-tight font-bold text-peat-forest"
             title={email}
@@ -80,7 +84,7 @@ export function UserAccountMenu({
         </div>
         <ChevronDown
           aria-hidden="true"
-          className="shrink-0 text-peat-forest/60"
+          className={`shrink-0 text-peat-forest/60 ${compactOnMobile ? "hidden sm:block" : ""}`}
           size={14}
         />
       </button>

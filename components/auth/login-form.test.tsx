@@ -9,6 +9,8 @@ const router = {
 
 mock.module("next/navigation", () => ({
   useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/",
 }));
 
 mock.module("next/image", () => ({

@@ -9,7 +9,8 @@ import type { RefObject } from "react";
 import { useHeroPanelReveal } from "@/components/public/use-hero-panel-reveal";
 import { handleSectionScroll } from "@/components/public/smooth-scroll";
 import { APP_ROUTES } from "@/lib/routes";
-import peatlandIntro from "@/public/images/peatland-arsip-bumi.webp";
+
+const peatlandIntro = "/images/peatland-arsip-bumi.webp";
 
 interface PublicHeroIntroProps {
   revealMarkerRef: RefObject<HTMLDivElement | null>;
@@ -44,7 +45,6 @@ export function PublicHeroIntro({
           alt=""
           className="public-hero__art"
           fill
-          placeholder="blur"
           sizes="100vw"
           src={peatlandIntro}
         />

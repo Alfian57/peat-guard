@@ -114,6 +114,7 @@ export function LedgerFilterForm({
       </div>
 
       <button
+        aria-label="Filter buku besar"
         aria-controls={open ? "ledger-filter-dialog" : undefined}
         aria-expanded={open}
         aria-haspopup="dialog"
@@ -125,7 +126,10 @@ export function LedgerFilterForm({
         <Filter aria-hidden="true" size={14} />
         <span>Filter</span>
         {activeFiltersCount > 0 ? (
-          <span className="grid size-4.5 min-w-4.5 place-items-center rounded-full bg-peat-green text-[10px] font-bold text-white">
+          <span
+            aria-hidden="true"
+            className="grid size-4.5 min-w-4.5 place-items-center rounded-full bg-peat-green text-[10px] font-bold text-white"
+          >
             {activeFiltersCount}
           </span>
         ) : null}
