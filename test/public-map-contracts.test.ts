@@ -47,6 +47,8 @@ const validMapResponse = {
     configured: false,
     checkedAt: "2026-11-15T05:00:00.000Z",
     lastSuccessfulAt: null,
+    lastDataSyncAt: null,
+    failedSources: [],
     expectedIntervalMinutes: 30,
   },
 };
@@ -59,6 +61,33 @@ describe("public map runtime contracts", () => {
     expect(data.hotspots[0]?.id).toBe("public-hotspot-0");
     expect(data.hotspots[0]?.label).toBe("Titik panas contoh");
     expect(data.hotspots[0]?.description).toContain("Ilustrasi sintetis");
+  });
+
+  test("accepts partial freshness and an invalid sync schedule without losing map data", () => {
+    const partial = parsePublicMapData({
+      ...validMapResponse,
+      freshness: {
+        ...validMapResponse.freshness,
+        status: "partial",
+        configured: true,
+        lastDataSyncAt: "2026-11-15T04:30:00.000Z",
+        failedSources: ["VIIRS_NOAA20_NRT"],
+      },
+    });
+    expect(partial.freshness.status).toBe("partial");
+    expect(partial.freshness.failedSources).toEqual(["VIIRS_NOAA20_NRT"]);
+
+    const invalidSchedule = parsePublicMapData({
+      ...validMapResponse,
+      freshness: {
+        ...validMapResponse.freshness,
+        status: "configuration_error",
+        configured: true,
+        expectedIntervalMinutes: null,
+      },
+    });
+    expect(invalidSchedule.freshness.status).toBe("configuration_error");
+    expect(invalidSchedule.freshness.expectedIntervalMinutes).toBeNull();
   });
 
   test("rejects report identity fields and non-allowlisted sources", () => {

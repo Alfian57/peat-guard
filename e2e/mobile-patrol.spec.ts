@@ -19,9 +19,9 @@ test.describe("Mobile Viewport & Touch Interaction", () => {
     const bottomNav = page.locator('nav[aria-label="Navigasi relawan"]');
     await expect(bottomNav).toBeVisible();
 
-    // 3. Tap "+ Lapor temuan" button in bottom nav
+    // 3. Tap the Lapor tab in bottom navigation
     const createNavBtn = bottomNav.getByRole("link", {
-      name: "+ Lapor temuan",
+      name: "Lapor",
     });
     await createNavBtn.click();
     await expect(page).toHaveURL(new RegExp(APP_ROUTES.field.createReport));

@@ -1,173 +1,136 @@
-import { authClient } from "@/lib/auth-client";
+import { API_ROUTES } from "@/lib/routes";
 import {
   buildReportFormData,
   getSyncFailureMessage,
   readServerReportId,
 } from "./report-contract";
+import { isSessionAuthDenied } from "./owner-store";
 import {
-  isActiveVolunteerOwnerMatch,
-  isSessionAuthDenied,
-} from "./owner-store";
-import { listQueuedReports, saveQueuedReport } from "./report-store";
+  claimQueuedReport,
+  finishQueuedReport,
+  listQueuedReports,
+} from "./report-store";
 import type { QueuedFieldReport, SyncSummary } from "./types";
-import { API_ROUTES } from "@/lib/routes";
 
-let activeSync: { ownerId: string; promise: Promise<SyncSummary> } | null =
-  null;
+type SyncOptions = {
+  onReportUpdated?: (report: QueuedFieldReport) => void;
+  signal?: AbortSignal;
+};
 
-function isAuthenticationFailure(status: number): boolean {
-  return isSessionAuthDenied(status);
+let activeSync: {
+  ownerId: string;
+  signal?: AbortSignal;
+  promise: Promise<SyncSummary>;
+} | null = null;
+
+function reportErrorCode(payload: unknown): unknown {
+  return typeof payload === "object" && payload !== null && "code" in payload
+    ? payload.code
+    : undefined;
 }
 
 async function syncReports(
   ownerId: string,
-  onReportUpdated?: (report: QueuedFieldReport) => void,
-  includeAuthenticationFailures = false,
+  { onReportUpdated, signal }: SyncOptions,
 ): Promise<SyncSummary> {
   const summary: SyncSummary = { synced: 0, failed: 0, requiresAuth: 0 };
   const reports = await listQueuedReports(ownerId);
-  const candidates = reports.filter(
-    (report) =>
-      report.syncState !== "synced" &&
-      (includeAuthenticationFailures || report.syncState !== "requires-auth"),
-  );
 
-  for (const report of candidates) {
-    let activeSessionOwnerId: string | null = null;
-    let activeSessionRole: unknown = null;
-    try {
-      const sessionResponse = await authClient.getSession();
-      if (!sessionResponse.error) {
-        const activeUser = sessionResponse.data?.user;
-        activeSessionOwnerId = activeUser?.id ?? null;
-        activeSessionRole = activeUser ? Reflect.get(activeUser, "role") : null;
-      }
-    } catch {
-      activeSessionOwnerId = null;
+  for (const report of reports) {
+    if (signal?.aborted) break;
+    if (report.syncState === "synced") continue;
+
+    const claim = await claimQueuedReport(report.clientReportId, ownerId);
+    if (!claim) {
+      summary.retryable = true;
+      continue;
     }
-
-    if (
-      !isActiveVolunteerOwnerMatch(
-        ownerId,
-        activeSessionOwnerId,
-        activeSessionRole,
-      )
-    ) {
-      const blockedReport: QueuedFieldReport = {
-        ...report,
-        syncState: "requires-auth",
-        syncError:
-          "Sesi aktif bukan akun RELAWAN pemilik laporan. Masuk kembali ke akun relawan pemilik untuk mengirim.",
-      };
-      await saveQueuedReport(blockedReport, ownerId);
-      onReportUpdated?.(blockedReport);
-      summary.requiresAuth += 1;
-      break;
-    }
-
-    const syncingReport: QueuedFieldReport = {
-      ...report,
-      syncState: "syncing",
-      syncError: null,
-    };
-    await saveQueuedReport(syncingReport, ownerId);
-    onReportUpdated?.(syncingReport);
-
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 45000);
+    onReportUpdated?.(claim);
+    const timeout = AbortSignal.timeout(45_000);
+    const uploadSignal = signal ? AbortSignal.any([timeout, signal]) : timeout;
+    let serverFailure: { status: number; code: unknown } | undefined;
+    let serverReportId: string | null = null;
 
     try {
       const response = await fetch(API_ROUTES.reports.root, {
         method: "POST",
-        body: buildReportFormData(syncingReport),
-        signal: controller.signal,
+        body: buildReportFormData(claim),
+        signal: uploadSignal,
         cache: "no-store",
       });
-
-      if (!response.ok) {
-        const demoSampleIsForbidden =
-          response.status === 403 && syncingReport.isDemoSample;
-        const nextState =
-          isAuthenticationFailure(response.status) && !demoSampleIsForbidden
-            ? "requires-auth"
-            : "failed";
-        const failedReport: QueuedFieldReport = {
-          ...syncingReport,
-          syncState: nextState,
-          syncError: getSyncFailureMessage(
-            response.status,
-            syncingReport.isDemoSample,
-          ),
-        };
-        await saveQueuedReport(failedReport, ownerId);
-        onReportUpdated?.(failedReport);
-        if (nextState === "requires-auth") {
-          summary.requiresAuth += 1;
-        } else {
-          summary.failed += 1;
-        }
-        continue;
-      }
-
       const payload: unknown = await response.json().catch(() => null);
-      const syncedReport: QueuedFieldReport = {
-        ...syncingReport,
-        syncState: "synced",
-        syncError: null,
-        serverReportId: readServerReportId(payload),
-        aiState: syncingReport.aiConsent ? "pending" : "skipped",
-      };
-      await saveQueuedReport(syncedReport, ownerId);
-      onReportUpdated?.(syncedReport);
-      summary.synced += 1;
+      if (response.ok) serverReportId = readServerReportId(payload);
+      else
+        serverFailure = {
+          status: response.status,
+          code: reportErrorCode(payload),
+        };
     } catch {
-      const failedReport: QueuedFieldReport = {
-        ...syncingReport,
-        syncState: "failed",
-        syncError: controller.signal.aborted
-          ? "Koneksi terlalu lama. Laporan tetap tersimpan; coba sinkronkan lagi."
-          : "Koneksi terputus. Laporan tetap tersimpan; coba sinkronkan lagi.",
-      };
-      await saveQueuedReport(failedReport, ownerId);
-      onReportUpdated?.(failedReport);
+      // A lost response may follow a successful commit. Retry the same draft.
+    }
+
+    const demoSampleDenied = serverFailure?.code === "demo_sample_forbidden";
+    const requiresAuth =
+      serverFailure !== undefined &&
+      isSessionAuthDenied(serverFailure.status) &&
+      !demoSampleDenied;
+    const retryable =
+      !serverFailure ||
+      serverFailure.status >= 500 ||
+      serverFailure.status === 429;
+    const updated = await finishQueuedReport(
+      claim,
+      serverReportId
+        ? {
+            syncState: "synced",
+            syncError: null,
+            uploadUncertain: false,
+            serverReportId,
+            aiState: claim.aiConsent ? "pending" : "skipped",
+          }
+        : {
+            syncState: requiresAuth ? "requires-auth" : "failed",
+            syncError: serverFailure
+              ? getSyncFailureMessage(serverFailure.status, demoSampleDenied)
+              : "Pengiriman belum terkonfirmasi. Laporan tetap tersimpan dan dapat disinkronkan kembali.",
+            uploadUncertain: Boolean(
+              claim.uploadUncertain ||
+              !serverFailure ||
+              serverFailure.status >= 500,
+            ),
+          },
+    );
+    if (!updated) continue;
+    onReportUpdated?.(updated);
+    if (serverReportId) summary.synced += 1;
+    else if (requiresAuth) {
+      summary.requiresAuth += 1;
+      break;
+    } else {
       summary.failed += 1;
-    } finally {
-      window.clearTimeout(timeoutId);
+      if (retryable) summary.retryable = true;
     }
   }
-
   return summary;
 }
 
 export function syncQueuedReports(
   ownerId: string,
-  onReportUpdated?: (report: QueuedFieldReport) => void,
-  includeAuthenticationFailures = false,
+  options: SyncOptions = {},
 ): Promise<SyncSummary> {
   if (!ownerId.trim()) {
     return Promise.reject(new Error("Pemilik laporan belum diverifikasi."));
   }
-
   if (activeSync) {
-    if (activeSync.ownerId === ownerId) return activeSync.promise;
+    if (activeSync.ownerId === ownerId && activeSync.signal === options.signal)
+      return activeSync.promise;
     return activeSync.promise
-      .catch(() => ({ synced: 0, failed: 0, requiresAuth: 0 }))
-      .then(() =>
-        syncQueuedReports(
-          ownerId,
-          onReportUpdated,
-          includeAuthenticationFailures,
-        ),
-      );
+      .catch(() => undefined)
+      .then(() => syncQueuedReports(ownerId, options));
   }
-
-  const promise = syncReports(
-    ownerId,
-    onReportUpdated,
-    includeAuthenticationFailures,
-  ).finally(() => {
+  const promise = syncReports(ownerId, options).finally(() => {
     if (activeSync?.promise === promise) activeSync = null;
   });
-  activeSync = { ownerId, promise };
+  activeSync = { ownerId, signal: options.signal, promise };
   return promise;
 }

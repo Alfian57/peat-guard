@@ -1,12 +1,10 @@
 import type { MrvLedgerAuditEntry } from "@/lib/server/mrv/contracts";
+import {
+  aiAnalysisStateLabel,
+  reportCategoryLabel,
+  reportUrgencyLabel,
+} from "@/lib/report-labels";
 import { formatDateTime, formatDecimal } from "../audit-formatters";
-
-const aiStateLabels: Record<string, string> = {
-  COMPLETED: "Selesai",
-  FAILED: "Gagal",
-  PENDING: "Menunggu",
-  SKIPPED: "Tidak dianalisis",
-};
 
 export function EvidenceSnapshotDetails({
   event,
@@ -40,11 +38,11 @@ export function EvidenceSnapshotDetails({
       </dd>
       <dt className="text-muted-foreground">Triase saat dicatat</dt>
       <dd className="text-peat-forest">
-        {aiStateLabels[snapshot.aiState ?? ""] ?? "Belum tersedia"}
-        {snapshot.aiCategory ? ` · ${snapshot.aiCategory}` : ""}
-        {snapshot.aiUrgency ? ` · ${snapshot.aiUrgency}` : ""}
+        {aiAnalysisStateLabel(snapshot.aiState)}
+        {` · ${reportCategoryLabel(snapshot.aiCategory)}`}
+        {` · ${reportUrgencyLabel(snapshot.aiUrgency)}`}
       </dd>
-      <dt className="text-muted-foreground">Waktu lapangan / sinkronisasi</dt>
+      <dt className="text-muted-foreground">Waktu kejadian / sinkronisasi</dt>
       <dd className="text-peat-forest">
         {formatDateTime(snapshot.capturedAt)} /{" "}
         {formatDateTime(snapshot.syncedAt)}

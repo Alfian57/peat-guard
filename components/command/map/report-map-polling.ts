@@ -1,4 +1,5 @@
 export const REPORT_MAP_REFRESH_INTERVAL_MS = 30_000;
+export const COMMAND_MAP_DATA_REFRESH_INTERVAL_MS = 5 * 60_000;
 
 export type VisibilitySource = {
   visibilityState: DocumentVisibilityState;
@@ -15,6 +16,33 @@ export function startVisibleReportMapPolling(
   visibilitySource: VisibilitySource,
   refresh: () => void,
   scheduler: ReportMapPollingScheduler,
+): () => void {
+  return startVisiblePolling(
+    visibilitySource,
+    refresh,
+    scheduler,
+    REPORT_MAP_REFRESH_INTERVAL_MS,
+  );
+}
+
+export function startVisibleCommandMapPolling(
+  visibilitySource: VisibilitySource,
+  refresh: () => void,
+  scheduler: ReportMapPollingScheduler,
+): () => void {
+  return startVisiblePolling(
+    visibilitySource,
+    refresh,
+    scheduler,
+    COMMAND_MAP_DATA_REFRESH_INTERVAL_MS,
+  );
+}
+
+function startVisiblePolling(
+  visibilitySource: VisibilitySource,
+  refresh: () => void,
+  scheduler: ReportMapPollingScheduler,
+  refreshIntervalMs: number,
 ): () => void {
   let intervalId: number | null = null;
 
@@ -33,7 +61,7 @@ export function startVisibleReportMapPolling(
       ) {
         refresh();
       }
-    }, REPORT_MAP_REFRESH_INTERVAL_MS);
+    }, refreshIntervalMs);
     intervalId = nextIntervalId;
   };
 

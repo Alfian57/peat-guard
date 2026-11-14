@@ -4,6 +4,7 @@ import {
 } from "@/lib/generated/prisma/enums";
 
 import { urgencyLabel } from "./report-status-badge";
+import { reportUrgencyLabel } from "@/lib/report-labels";
 
 export function ReportUrgencyBadge({
   urgency,
@@ -11,7 +12,11 @@ export function ReportUrgencyBadge({
   urgency: ReportUrgencyValue | null;
 }) {
   if (!urgency) {
-    return <span className="text-xs text-peat-forest/60">Belum dinilai</span>;
+    return (
+      <span className="text-xs text-peat-forest/60">
+        {reportUrgencyLabel(null)}
+      </span>
+    );
   }
   const label = urgencyLabel(urgency);
   const appearance =

@@ -23,12 +23,12 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:fresh": "bun run scripts/db-migrate-fresh.ts",
-    "db:seed": "bun run prisma/seed.ts",
+    "db:seed": "bun --conditions=react-server run prisma/seed.ts",
     "docker:db": "docker compose -f docker/compose.dev.yaml -p peatguard-main up -d postgres",
     "docker:up": "docker compose -f docker/compose.dev.yaml -p peatguard-main up --build",
     "docker:down": "docker compose -f docker/compose.dev.yaml -p peatguard-main down",
     "docker:logs": "docker compose -f docker/compose.dev.yaml -p peatguard-main logs -f",
-    "worker": "bun run scripts/worker.ts",
+    "worker": "bun --conditions=react-server scripts/worker.ts",
     "prepare": "husky"
   },
   "dependencies": {

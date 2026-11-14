@@ -5,6 +5,7 @@ import type { CommandWaterPoint } from "@/lib/server/water/data";
 import type { CommandZone } from "@/lib/server/zones/data";
 import { MapCoordinatePicker } from "@/components/maps/map-coordinate-picker";
 import { WaterPointFormField } from "@/components/command/water-points/water-point-form-field";
+import { WATER_POINT_TYPE_OPTIONS } from "@/lib/water-point-labels";
 
 export type WaterPointInput = {
   name: string;
@@ -107,9 +108,11 @@ export function WaterPointForm({
             }
             value={type}
           >
-            <option value="SUMBER_AIR">Sumber air</option>
-            <option value="EMBUNG">Embung</option>
-            <option value="SEKAT_KANAL">Sekat kanal</option>
+            {WATER_POINT_TYPE_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </WaterPointFormField>
         <div className="sm:col-span-2">

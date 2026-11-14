@@ -29,6 +29,39 @@ export class ReportInputError extends Error {
   }
 }
 
+export class ReportDemoSampleError extends Error {
+  constructor() {
+    super("Sampel laporan hanya dapat dikirim oleh akun relawan demo lokal.");
+    this.name = "ReportDemoSampleError";
+  }
+}
+
+export class ReportOwnerMismatchError extends Error {
+  constructor() {
+    super("Sesi aktif tidak cocok dengan pemilik draf.");
+    this.name = "ReportOwnerMismatchError";
+  }
+}
+
+export function assertExpectedReportOwner(
+  formData: FormData,
+  sessionOwnerId: string,
+): void {
+  const [value, duplicate] = formData.getAll("expectedOwnerId");
+  if (
+    duplicate !== undefined ||
+    typeof value !== "string" ||
+    !UUID_PATTERN.test(value)
+  ) {
+    throw new ReportInputError(
+      400,
+      "Perbarui aplikasi sebelum menyinkronkan laporan.",
+    );
+  }
+  if (value.toLowerCase() !== sessionOwnerId.toLowerCase())
+    throw new ReportOwnerMismatchError();
+}
+
 export type NewReportInput = {
   clientReportId: string;
   capturedAt: Date;

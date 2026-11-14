@@ -25,6 +25,7 @@ type ZoneRow = {
   isApproved: boolean;
   isDemoData: boolean;
   geometryJson: string;
+  reviewRevision: number;
 };
 
 export type CommandZone = {
@@ -43,32 +44,24 @@ export type CommandZone = {
 };
 
 export async function listCommandZones(): Promise<CommandZone[]> {
-  const rows = await prisma.$queryRaw<ZoneRow[]>`
-    SELECT
-      zone.id::text AS id,
-      zone.slug,
-      zone.zone_name AS "zoneName",
-      zone.village_name AS "villageName",
-      zone.peat_depth_meters::double precision AS "peatDepthMeters",
-      zone.area_hectares::double precision AS "areaHectares",
-      parameters.biomass_factor::double precision AS "carbonFactor",
-      parameters.emission_factor::double precision AS "emissionFactor",
-      parameters.incentive_per_ton_idr::double precision AS "incentivePerTonIdr",
-      zone.is_approved AS "isApproved",
-      zone.is_demo_data AS "isDemoData",
-      ST_AsGeoJSON(zone.boundary) AS "geometryJson"
-    FROM forest_zones AS zone
-    INNER JOIN carbon_parameter_sets AS parameters
-      ON parameters.id = zone.carbon_parameter_set_id
-    ORDER BY zone.zone_name ASC
-    LIMIT 500
-  `;
-
+  const rows = await queryZones(Prisma.sql`WHERE zone.archived_at IS NULL`);
   return rows.map(toCommandZone);
 }
 
+export async function listPendingZoneReviews() {
+  const rows = await queryZones(
+    Prisma.sql`WHERE zone.archived_at IS NULL AND NOT zone.is_approved`,
+  );
+  return rows.map((row) => ({
+    zone: toCommandZone(row),
+    revision: row.reviewRevision,
+  }));
+}
+
 export async function getCommandZone(zoneId: string): Promise<CommandZone> {
-  const rows = await queryZones(Prisma.sql`WHERE zone.id = ${zoneId}::uuid`);
+  const rows = await queryZones(
+    Prisma.sql`WHERE zone.id = ${zoneId}::uuid AND zone.archived_at IS NULL`,
+  );
   const row = rows[0];
 
   if (!row) {
@@ -181,7 +174,9 @@ export async function updateCommandZone(
   const approvalSensitiveChange =
     input.geometry !== undefined || input.peatDepthMeters !== undefined;
 
-  assignments.push(Prisma.sql`updated_at = CURRENT_TIMESTAMP`);
+  assignments.push(
+    Prisma.sql`updated_at = CURRENT_TIMESTAMP, review_revision = review_revision + 1`,
+  );
 
   try {
     const changedFields = Object.keys(input);
@@ -191,7 +186,7 @@ export async function updateCommandZone(
       >(Prisma.sql`
         SELECT id::text AS id, is_approved AS "isApproved"
         FROM forest_zones
-        WHERE id = ${zoneId}::uuid
+        WHERE id = ${zoneId}::uuid AND archived_at IS NULL
         FOR UPDATE
       `);
       const current = currentRows[0];
@@ -229,6 +224,7 @@ export async function updateCommandZone(
           parameters.incentive_per_ton_idr::double precision AS "incentivePerTonIdr",
           zone.is_approved AS "isApproved",
           zone.is_demo_data AS "isDemoData",
+          zone.review_revision AS "reviewRevision",
           ST_AsGeoJSON(zone.boundary) AS "geometryJson"
         FROM updated AS zone
         INNER JOIN carbon_parameter_sets AS parameters
@@ -278,94 +274,114 @@ export async function updateCommandZone(
 export async function approveCommandZone(
   zoneId: string,
   actorId: string,
+  expectedRevision: number,
 ): Promise<{ zone: CommandZone; alreadyApproved: boolean }> {
-  const updated = await prisma.$transaction(async (transaction) => {
-    const rows = await transaction.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-      UPDATE forest_zones
-      SET is_approved = TRUE, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${zoneId}::uuid AND is_approved = FALSE
-      RETURNING id::text AS id
-    `);
+  return prisma.$transaction((transaction) =>
+    approveZoneReview(transaction, zoneId, actorId, expectedRevision),
+  );
+}
 
-    if (rows.length > 0) {
-      await transaction.auditEvent.create({
-        data: {
-          actorId,
-          aggregateType: "ForestZone",
-          aggregateId: zoneId,
-          eventType: "ZONE_APPROVED",
-          payload: { previousApproval: false, nextApproval: true },
-        },
-      });
+export async function approveZoneReview(
+  transaction: Prisma.TransactionClient,
+  zoneId: string,
+  actorId: string,
+  expectedRevision: number,
+): Promise<{ zone: CommandZone; alreadyApproved: boolean }> {
+  await transaction.$queryRaw`SELECT id FROM forest_zones WHERE id = ${zoneId}::uuid FOR UPDATE`;
+  const [current] = await queryZones(
+    Prisma.sql`WHERE zone.id = ${zoneId}::uuid AND zone.archived_at IS NULL`,
+    transaction,
+  );
+  if (!current)
+    throw new CommandApiError(404, "zone_not_found", "Zona tidak ditemukan.");
+  if (current.reviewRevision !== expectedRevision) {
+    throw new CommandApiError(
+      409,
+      "zone_revision_conflict",
+      "Data zona berubah. Muat ulang dan tinjau kembali sebelum menyetujui.",
+    );
+  }
+  if (current.isApproved)
+    return { zone: toCommandZone(current), alreadyApproved: true };
 
-      return { changed: true };
-    }
-
-    const existing = await transaction.forestZone.findUnique({
-      where: { id: zoneId },
-      select: { isApproved: true },
-    });
-
-    if (!existing) {
-      throw new CommandApiError(404, "zone_not_found", "Zona tidak ditemukan.");
-    }
-
-    return { changed: false };
+  await transaction.$executeRaw`
+      UPDATE forest_zones SET is_approved = TRUE, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${zoneId}::uuid
+    `;
+  await transaction.auditEvent.create({
+    data: {
+      actorId,
+      aggregateType: "ForestZone",
+      aggregateId: zoneId,
+      eventType: "ZONE_APPROVED",
+      payload: {
+        previousApproval: false,
+        nextApproval: true,
+        revision: expectedRevision,
+      },
+    },
   });
-
   return {
-    zone: await getCommandZone(zoneId),
-    alreadyApproved: !updated.changed,
+    zone: toCommandZone({ ...current, isApproved: true }),
+    alreadyApproved: false,
   };
 }
 
-export async function deleteCommandZone(
+export async function archiveCommandZone(
   zoneId: string,
   actorId: string,
 ): Promise<void> {
-  try {
-    await prisma.$transaction(async (transaction) => {
-      const existing = await transaction.forestZone.findUnique({
-        where: { id: zoneId },
-        select: { id: true },
-      });
-
-      if (!existing) {
-        throw new CommandApiError(
-          404,
-          "zone_not_found",
-          "Zona tidak ditemukan.",
-        );
-      }
-
-      await transaction.forestZone.delete({ where: { id: zoneId } });
-      await transaction.auditEvent.create({
-        data: {
-          actorId,
-          aggregateType: "ForestZone",
-          aggregateId: zoneId,
-          eventType: "ZONE_DELETED",
-        },
-      });
-    });
-  } catch (error) {
-    if (
-      databaseErrorCode(error) === "23503" ||
-      databaseErrorCode(error) === "P2003"
-    ) {
-      throw new CommandApiError(
-        409,
-        "zone_in_use",
-        "Zona masih digunakan oleh laporan atau titik sumber air.",
-      );
-    }
-
-    throw error;
-  }
+  await prisma.$transaction((transaction) =>
+    archiveZone(transaction, zoneId, actorId),
+  );
 }
 
-async function queryZones(where: Prisma.Sql): Promise<ZoneRow[]> {
-  return prisma.$queryRaw<ZoneRow[]>(Prisma.sql`
+export async function archiveZone(
+  transaction: Prisma.TransactionClient,
+  zoneId: string,
+  actorId: string,
+): Promise<void> {
+  const [zone] = await transaction.$queryRaw<
+    Array<{ archivedAt: Date | null }>
+  >`
+      SELECT archived_at AS "archivedAt" FROM forest_zones WHERE id = ${zoneId}::uuid FOR UPDATE
+    `;
+  if (!zone)
+    throw new CommandApiError(404, "zone_not_found", "Zona tidak ditemukan.");
+  if (zone.archivedAt) return;
+
+  const [references] = await transaction.$queryRaw<Array<{ inUse: boolean }>>`
+      SELECT EXISTS (SELECT 1 FROM field_reports WHERE zone_id = ${zoneId}::uuid)
+        OR EXISTS (SELECT 1 FROM water_points WHERE zone_id = ${zoneId}::uuid) AS "inUse"
+    `;
+  if (references?.inUse) {
+    throw new CommandApiError(
+      409,
+      "zone_in_use",
+      "Zona masih digunakan oleh laporan atau titik sumber air.",
+    );
+  }
+
+  await transaction.$executeRaw`
+      UPDATE forest_zones SET archived_at = clock_timestamp(), is_approved = FALSE,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${zoneId}::uuid
+    `;
+  await transaction.auditEvent.create({
+    data: {
+      actorId,
+      aggregateType: "ForestZone",
+      aggregateId: zoneId,
+      eventType: "ZONE_ARCHIVED",
+    },
+  });
+}
+
+async function queryZones(
+  where: Prisma.Sql,
+  database: Prisma.TransactionClient = prisma,
+): Promise<ZoneRow[]> {
+  return database.$queryRaw<ZoneRow[]>(Prisma.sql`
     SELECT
       zone.id::text AS id,
       zone.slug,
@@ -378,6 +394,7 @@ async function queryZones(where: Prisma.Sql): Promise<ZoneRow[]> {
       parameters.incentive_per_ton_idr::double precision AS "incentivePerTonIdr",
       zone.is_approved AS "isApproved",
       zone.is_demo_data AS "isDemoData",
+          zone.review_revision AS "reviewRevision",
       ST_AsGeoJSON(zone.boundary) AS "geometryJson"
     FROM forest_zones AS zone
     INNER JOIN carbon_parameter_sets AS parameters

@@ -28,7 +28,7 @@ export function ZoneEditorFormField({
       </span>
       {children}
       {hint ? (
-        <span className="mt-1 block text-xs font-normal text-peat-forest/60">
+        <span className="mt-1 block text-xs font-normal text-muted-foreground">
           {hint}
         </span>
       ) : null}

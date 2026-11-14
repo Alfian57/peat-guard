@@ -50,18 +50,23 @@ test("dashboard labels the estimate and unavailable history without a readiness 
     />,
   );
 
-  expect(screen.getByRole("heading", { name: /Jejak patroli/ })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Dasbor dampak" })).toBeTruthy();
   fireEvent.click(
-    screen.getByRole("button", { name: /Filter periode tanggal/ }),
+    screen.getByRole("button", { name: /Filter periode aktivitas/ }),
   );
-  expect(screen.getByLabelText(/Dari tanggal/)).toBeTruthy();
-  expect(screen.getByLabelText(/Sampai tanggal/)).toBeTruthy();
+  expect(screen.getByLabelText(/Tanggal mulai periode/)).toBeTruthy();
+  expect(screen.getByLabelText(/Tanggal akhir periode/)).toBeTruthy();
   expect(
-    screen.getByRole("heading", { name: "Tren estimasi karbon" }),
+    screen.getByRole("heading", { name: "Tren estimasi emisi dicegah" }),
   ).toBeTruthy();
   expect(
     screen.getByText("Perubahan bulanan belum dapat dihitung."),
   ).toBeTruthy();
+  const calculation = screen.getByRole("heading", {
+    name: "Cara menghitung estimasi emisi dicegah",
+  });
+  expect(calculation.closest("details")).toBeNull();
+  expect(screen.getByText("E_saved = A × B × EF × conversion")).toBeTruthy();
   expect(screen.queryByText("Skor kesiapsiagaan")).toBeNull();
   expect(screen.getByText(/bukan kredit tersertifikasi/)).toBeTruthy();
 });

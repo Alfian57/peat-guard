@@ -1,10 +1,18 @@
-import { ReportDetailScreen } from "@/components/command/reports/report-detail-screen";
+import { Suspense } from "react";
 
-export default async function CommandReportDetailPage({
+import { ReportDetailScreen } from "@/components/command/reports/report-detail-screen";
+import { ReportDetailSkeleton } from "@/components/command/reports/report-detail-skeleton";
+
+export default function CommandReportDetailPage({
   params,
 }: {
   params: Promise<{ reportId: string }>;
 }) {
-  const { reportId } = await params;
-  return <ReportDetailScreen key={reportId} reportId={reportId} />;
+  return (
+    <Suspense fallback={<ReportDetailSkeleton />}>
+      {params.then(({ reportId }) => (
+        <ReportDetailScreen key={reportId} reportId={reportId} />
+      ))}
+    </Suspense>
+  );
 }

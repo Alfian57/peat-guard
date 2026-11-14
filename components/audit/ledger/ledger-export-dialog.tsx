@@ -3,19 +3,13 @@
 import { Download, FileJson, FileSpreadsheet, X } from "lucide-react";
 
 import type { LedgerFilters } from "@/lib/server/mrv/contracts";
+import { aiAnalysisStateLabel } from "@/lib/report-labels";
 
 import { formatCount } from "../audit-formatters";
 import { getLedgerExportHref } from "./ledger-format";
 import { LedgerDialog, useLedgerDialog } from "./ledger-dialog";
 
 const MAX_EXPORT_ROWS = 5000;
-
-const aiStateLabels: Record<NonNullable<LedgerFilters["aiState"]>, string> = {
-  COMPLETED: "Triase AI selesai",
-  FAILED: "Triase AI gagal",
-  PENDING: "Triase AI menunggu",
-  SKIPPED: "AI tidak menganalisis",
-};
 
 type LedgerExportDialogProps = {
   filters: LedgerFilters;
@@ -24,7 +18,7 @@ type LedgerExportDialogProps = {
 };
 
 const exportLinkClassName =
-  "inline-flex h-8 min-h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-peat-forest px-3 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring";
+  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-peat-forest px-3 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring";
 
 export function LedgerExportDialog({
   filters,
@@ -38,7 +32,7 @@ export function LedgerExportDialog({
     zoneName ??
     (filters.zoneId
       ? `Zona ${filters.zoneId.slice(0, 8)}… (tidak tersedia)`
-      : "Semua zona");
+      : "Semua zona gambut");
   const from = filters.range?.fromDate ?? "";
   const to = filters.range?.toDate ?? "";
   const dateScope =
@@ -117,7 +111,7 @@ export function LedgerExportDialog({
             </div>
             <div>
               <dt className="text-xs font-semibold text-muted-foreground">
-                Wilayah
+                Zona gambut
               </dt>
               <dd className="mt-1 font-semibold text-peat-forest">
                 {displayZoneName}
@@ -125,21 +119,23 @@ export function LedgerExportDialog({
             </div>
             <div>
               <dt className="text-xs font-semibold text-muted-foreground">
-                Periode WIB
+                Waktu rekam (WIB)
               </dt>
               <dd className="mt-1 font-semibold text-peat-forest">
-                {dateScope ?? "Semua tanggal"}
+                {dateScope ?? "Semua waktu rekam"}
               </dd>
             </div>
             <div className="sm:col-span-2">
               <dt className="text-xs font-semibold text-muted-foreground">
-                Status bukti dan AI
+                Kelengkapan bukti dan triase AI
               </dt>
               <dd className="mt-1 font-semibold text-peat-forest">
                 {filters.evidence === "complete"
-                  ? "Koordinat, foto, dan triase AI selesai tersedia"
+                  ? "Koordinat dan foto tersedia"
                   : "Semua tingkat kelengkapan bukti"}
-                {filters.aiState ? ` · ${aiStateLabels[filters.aiState]}` : ""}
+                {filters.aiState
+                  ? ` · Triase AI: ${aiAnalysisStateLabel(filters.aiState)}`
+                  : " · Semua status triase AI"}
               </dd>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 Kelengkapan bukti bukan verifikasi independen lokasi GPS.
@@ -157,16 +153,16 @@ export function LedgerExportDialog({
             dialog ini dan persempit filter sebelum mengekspor.
           </p>
         ) : (
-          <div className="mt-5 flex items-center justify-end gap-2 border-t border-border pt-3">
+          <div className="mt-5 flex items-center justify-end gap-2 border-t border-peat-forest/10 pt-3">
             <a
-              className="inline-flex h-9 min-h-9 items-center justify-center gap-1.5 rounded-xl border border-border bg-white px-4 text-xs font-semibold text-peat-forest transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-peat-forest/10 bg-white px-4 text-xs font-semibold text-peat-forest transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               href={getLedgerExportHref(filters, "json")}
             >
               <FileJson aria-hidden="true" size={14} />
               Unduh JSON
             </a>
             <a
-              className="inline-flex h-9 min-h-9 items-center justify-center gap-1.5 rounded-xl bg-peat-forest px-4 text-xs font-semibold text-white transition hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-peat-forest px-4 text-xs font-semibold text-white transition hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               href={getLedgerExportHref(filters, "csv")}
             >
               <FileSpreadsheet aria-hidden="true" size={14} />

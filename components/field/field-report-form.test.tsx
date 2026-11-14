@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { NewFieldReport } from "@/lib/client/offline/types";
 
 const NativeDate = globalThis.Date;
+const originalFetch = globalThis.fetch;
 const originalGeolocation = Object.getOwnPropertyDescriptor(
   navigator,
   "geolocation",
@@ -14,17 +15,21 @@ mock.module("next/image", () => ({
   default: ({ alt }: { alt: string }) => <span role="img" aria-label={alt} />,
 }));
 
+const compressFile = async (file: File) => ({
+  blob: new Blob(["normalized photo"], { type: "image/webp" }),
+  fileName: `${file.name}.webp`,
+});
+let compressPhoto = compressFile;
 mock.module("@/lib/client/offline/compress-photo", () => ({
-  compressPhoto: async (file: File) => ({
-    blob: new Blob(["normalized photo"], { type: "image/webp" }),
-    fileName: `${file.name}.webp`,
-  }),
+  compressPhoto: (file: File) => compressPhoto(file),
 }));
 
 const { FieldReportForm } =
   await import("@/components/field/field-report-form");
 
 afterEach(() => {
+  globalThis.fetch = originalFetch;
+  compressPhoto = compressFile;
   Object.defineProperty(globalThis, "Date", {
     value: NativeDate,
     configurable: true,
@@ -101,6 +106,8 @@ test("requests GPS on a new form and saves the photo selection time", async () =
   expect(screen.getByLabelText(/Bujur/)).toHaveProperty("value", "113.910200");
 
   const photoSelectedAt = new NativeDate(currentTime).toISOString();
+  await user.clear(screen.getByLabelText(/Lintang/));
+  await user.type(screen.getByLabelText(/Lintang/), "-2.3194");
   await user.upload(
     screen.getByLabelText("Ambil foto"),
     new File(["camera photo"], "patrol.jpg", { type: "image/jpeg" }),
@@ -110,6 +117,7 @@ test("requests GPS on a new form and saves the photo selection time", async () =
 
   await waitFor(() => expect(savedReports).toHaveLength(1));
   expect(savedReports[0]?.capturedAt).toBe(photoSelectedAt);
+  expect(savedReports[0]?.accuracyMeters).toBe(null);
 });
 
 test("keeps manual coordinates available when automatic GPS permission is denied", async () => {
@@ -188,4 +196,180 @@ test("preserves manual coordinates if automatic GPS resolves after the volunteer
   expect(screen.getByLabelText(/Lintang/)).toHaveProperty("value", "-2.500000");
   expect(screen.getByLabelText(/Bujur/)).toHaveProperty("value", "113.750000");
   expect(screen.getByText("Koordinat manual dipertahankan.")).toBeTruthy();
+});
+
+test("offline form uses camera or gallery without demo samples or online map chunks and preserves AI consent", async () => {
+  const user = userEvent.setup();
+  const saved: NewFieldReport[] = [];
+  render(
+    <FieldReportForm
+      isConnected={false}
+      canUseDemoSamples
+      onSave={async (report) => {
+        saved.push(report);
+      }}
+      submitLabel="Simpan laporan"
+    />,
+  );
+  expect(screen.queryByText("Coba dengan sampel demo") === null).toBe(true);
+  expect(screen.getByText("Peta tersedia saat terhubung")).toBeTruthy();
+  expect(screen.queryByText("Tentukan titik laporan di peta") === null).toBe(
+    true,
+  );
+  expect(screen.queryByRole("button", { name: /Sampel demo/ }) === null).toBe(
+    true,
+  );
+  await user.upload(
+    screen.getByLabelText("Galeri"),
+    new File(["camera photo"], "patrol.jpg", { type: "image/jpeg" }),
+  );
+  await user.type(screen.getByLabelText(/Lintang/), "-2.3194");
+  await user.type(screen.getByLabelText(/Bujur/), "113.9102");
+  await user.click(
+    screen.getByRole("checkbox", { name: /Izinkan analisis foto/ }),
+  );
+  await user.click(screen.getByRole("button", { name: "Simpan laporan" }));
+  await waitFor(() => expect(saved).toHaveLength(1));
+  expect(saved[0]?.isDemoSample).toBe(false);
+  expect(saved[0]?.aiConsent).toBe(true);
+  expect(saved[0]?.latitude).toBe(-2.3194);
+  expect(saved[0]?.accuracyMeters).toBe(null);
+});
+
+test("preserves the photo and entered values when saving fails, then permits retry", async () => {
+  const user = userEvent.setup();
+  let attempts = 0;
+  const saved: NewFieldReport[] = [];
+  render(
+    <FieldReportForm
+      onSave={async (report) => {
+        attempts += 1;
+        if (attempts === 1) throw new Error("Penyimpanan belum tersedia.");
+        saved.push(report);
+      }}
+      submitLabel="Simpan laporan"
+    />,
+  );
+  await user.upload(
+    screen.getByLabelText("Galeri"),
+    new File(["photo"], "canal.jpg", { type: "image/jpeg" }),
+  );
+  await user.type(screen.getByLabelText(/Lintang/), "-2.3194");
+  await user.type(screen.getByLabelText(/Bujur/), "113.9102");
+  await user.type(
+    screen.getByLabelText(/Keterangan tambahan/),
+    "Kanal perlu diperiksa.",
+  );
+  await user.click(screen.getByRole("button", { name: "Kanal", exact: true }));
+  await user.click(screen.getByRole("button", { name: "Simpan laporan" }));
+  expect((await screen.findByRole("alert")).textContent).toBe(
+    "Penyimpanan belum tersedia.",
+  );
+  expect(screen.getByLabelText(/Keterangan tambahan/)).toHaveProperty(
+    "value",
+    "Kanal perlu diperiksa.",
+  );
+  expect(screen.getByLabelText(/Lintang/)).toHaveProperty("value", "-2.3194");
+  await user.click(screen.getByRole("button", { name: "Simpan laporan" }));
+  await waitFor(() => expect(saved).toHaveLength(1));
+  expect(saved[0]?.tags).toEqual(["Kanal"]);
+  expect(saved[0]?.photo.size).toBeGreaterThan(0);
+});
+
+test("keeps coordinates typed after a manual GPS request starts", async () => {
+  const callbacks: PositionCallback[] = [];
+  Object.defineProperty(navigator, "geolocation", {
+    configurable: true,
+    value: {
+      getCurrentPosition: (callback: PositionCallback) =>
+        callbacks.push(callback),
+    },
+  });
+  const user = userEvent.setup();
+  render(
+    <FieldReportForm
+      onSave={async () => undefined}
+      submitLabel="Simpan laporan"
+    />,
+  );
+  await user.click(screen.getByRole("button", { name: "Ambil GPS" }));
+  await user.type(screen.getByLabelText(/Lintang/), "-2.5");
+  await user.type(screen.getByLabelText(/Bujur/), "113.9");
+  expect(callbacks).toHaveLength(2);
+
+  await act(async () => {
+    const position = {
+      coords: {
+        latitude: -6.2,
+        longitude: 106.8,
+        accuracy: 10,
+        altitude: null,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: null,
+      },
+      timestamp: 1,
+    } as GeolocationPosition;
+    callbacks[1](position);
+    callbacks[0](position);
+  });
+  expect(screen.getByLabelText(/Lintang/)).toHaveProperty("value", "-2.5");
+  expect(screen.getByLabelText(/Bujur/)).toHaveProperty("value", "113.9");
+});
+
+test("submits the latest selected photo even if earlier compression finishes last", async () => {
+  const first =
+    Promise.withResolvers<Awaited<ReturnType<typeof compressFile>>>();
+  compressPhoto = (file) =>
+    file.name === "old.jpg" ? first.promise : compressFile(file);
+  const user = userEvent.setup();
+  const save = mock(async () => undefined);
+  render(
+    <FieldReportForm
+      isConnected={false}
+      onSave={save}
+      submitLabel="Simpan laporan"
+    />,
+  );
+  await user.type(screen.getByLabelText(/Lintang/), "-2.5");
+  await user.type(screen.getByLabelText(/Bujur/), "113.9");
+  const gallery = screen.getByLabelText("Galeri");
+  await user.upload(
+    gallery,
+    new File(["old"], "old.jpg", { type: "image/jpeg" }),
+  );
+  expect(screen.getByRole("button", { name: "Simpan laporan" })).toHaveProperty(
+    "disabled",
+    true,
+  );
+  await user.upload(
+    gallery,
+    new File(["new"], "new.jpg", { type: "image/jpeg" }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Simpan laporan" }),
+    ).toHaveProperty("disabled", false),
+  );
+  await act(async () =>
+    first.resolve(await compressFile(new File(["old"], "old.jpg"))),
+  );
+  await user.click(screen.getByRole("button", { name: "Simpan laporan" }));
+  expect(save.mock.calls[0]?.[0].photoName).toBe("new.jpg.webp");
+});
+
+test("offers only the formats supported by the offline photo form", () => {
+  render(
+    <FieldReportForm
+      isConnected={false}
+      onSave={async () => undefined}
+      submitLabel="Simpan laporan"
+    />,
+  );
+  for (const label of ["Ambil foto", "Galeri"]) {
+    expect(screen.getByLabelText(label)).toHaveProperty(
+      "accept",
+      "image/jpeg,image/png,image/webp",
+    );
+  }
 });

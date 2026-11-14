@@ -14,12 +14,14 @@ export type ReportMapLoadState = "idle" | "loading" | "ready" | "error";
 
 export type ReportMapControlsProps = {
   draftFilters: ReportMapFilters;
+  appliedFilters: ReportMapFilters;
   error: string;
   filtersError: string;
   isVisible: boolean;
   limit: number | null;
   loadState: ReportMapLoadState;
-  onApply: (event: FormEvent<HTMLFormElement>) => void;
+  onApply: (event: FormEvent<HTMLFormElement>) => boolean;
+  onDiscardDraft: () => void;
   onDraftChange: (filters: ReportMapFilters) => void;
   onReset: () => void;
   onRetry: () => void;
@@ -30,12 +32,14 @@ export type ReportMapControlsProps = {
 
 export function ReportMapControls({
   draftFilters,
+  appliedFilters,
   error,
   filtersError,
   isVisible,
   limit,
   loadState,
   onApply,
+  onDiscardDraft,
   onDraftChange,
   onReset,
   onRetry,
@@ -47,23 +51,23 @@ export function ReportMapControls({
   const isLoading = loadState === "loading";
 
   const activeFiltersCount =
-    (draftFilters.from ? 1 : 0) +
-    (draftFilters.to ? 1 : 0) +
-    (draftFilters.status && draftFilters.status !== "all" ? 1 : 0) +
-    (draftFilters.urgency && draftFilters.urgency !== "all" ? 1 : 0);
+    (appliedFilters.from ? 1 : 0) +
+    (appliedFilters.to ? 1 : 0) +
+    (appliedFilters.status !== "all" ? 1 : 0) +
+    (appliedFilters.urgency !== "all" ? 1 : 0);
 
   return (
     <section
       aria-labelledby="map-reports-heading"
-      className="rounded-2xl border border-peat-forest/10 bg-white p-4"
+      className="border-t border-peat-forest/10 pt-5"
     >
       <h2
-        className="font-heading text-2xl font-bold text-peat-forest"
+        className="text-sm font-semibold text-peat-forest"
         id="map-reports-heading"
       >
         Laporan lapangan
       </h2>
-      <div className="mt-3">
+      <div className="mt-1">
         <LayerCheckbox
           checked={isVisible}
           label="Tampilkan pin laporan"
@@ -72,11 +76,11 @@ export function ReportMapControls({
         />
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {activeFiltersCount > 0 ? (
             <ReportMapActiveFilterTags
-              filters={draftFilters}
+              filters={appliedFilters}
               onReset={onReset}
             />
           ) : (
@@ -90,7 +94,7 @@ export function ReportMapControls({
           aria-controls="report-map-filter-dialog"
           aria-expanded={isDialogOpen}
           aria-haspopup="dialog"
-          className="inline-flex h-8 min-h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-peat-forest/15 bg-white px-3 text-xs font-semibold text-peat-forest shadow-xs transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-peat-green"
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full border border-peat-forest/15 bg-white px-3 text-xs font-semibold text-peat-forest transition-colors hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
           onClick={() => setIsDialogOpen(true)}
           type="button"
         >
@@ -106,40 +110,46 @@ export function ReportMapControls({
 
       <div
         aria-label="Keterangan warna status pin laporan"
-        className="mt-3.5 rounded-xl bg-peat-paper p-3"
+        className="mt-4"
         role="group"
       >
         <h3 className="text-xs font-semibold text-peat-forest">
-          Warna pin laporan
+          Warna pin menurut triase dan status
         </h3>
         <ul className="mt-2 grid grid-cols-2 gap-2 text-xs text-peat-forest/75">
-          <ReportMapLegendItem color="bg-red-600" label="Kritis" />
-          <ReportMapLegendItem color="bg-amber-600" label="Waspada" />
-          <ReportMapLegendItem color="bg-emerald-700" label="Aman / selesai" />
+          <ReportMapLegendItem color="bg-red-600" label="Urgensi AI kritis" />
+          <ReportMapLegendItem
+            color="bg-amber-600"
+            label="Urgensi AI waspada"
+          />
+          <ReportMapLegendItem
+            color="bg-emerald-700"
+            label="Aman / terkendali atau selesai"
+          />
           <ReportMapLegendItem
             color="bg-slate-500"
-            label="Rendah / belum dinilai"
+            label="Urgensi AI rendah / belum dinilai"
           />
         </ul>
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">
+          Kategori aman atau status selesai memakai pin hijau meskipun urgensi
+          AI tinggi.
+        </p>
       </div>
 
-      <div
-        aria-live="polite"
-        className="mt-4 border-t border-peat-forest/10 pt-3"
-      >
+      <div aria-live="polite" className="mt-3">
         {loadState === "idle" ? (
-          <p className="text-sm leading-5 text-peat-forest/65">
+          <p className="text-xs leading-5 text-muted-foreground">
             Laporan akan dimuat untuk area yang terlihat pada peta.
           </p>
         ) : loadState === "loading" ? (
           <div
             aria-busy="true"
             aria-label="Memuat laporan pada area peta"
-            className="space-y-2 py-1"
+            className="flex h-5 items-center"
             role="status"
           >
-            <Skeleton className="h-4 w-44 rounded-md bg-peat-forest/10" />
-            <Skeleton className="h-3 w-32 rounded-md bg-peat-forest/10" />
+            <Skeleton className="h-3 w-44 rounded-md bg-peat-forest/10" />
           </div>
         ) : loadState === "error" ? (
           <div className="space-y-2">
@@ -147,7 +157,7 @@ export function ReportMapControls({
               {error}
             </p>
             <button
-              className="min-h-10 rounded-lg border border-peat-forest/15 px-3 text-sm font-semibold text-peat-forest hover:bg-peat-paper"
+              className="min-h-11 rounded-lg border border-peat-forest/15 px-3 text-xs font-semibold text-peat-forest hover:bg-peat-paper"
               onClick={onRetry}
               type="button"
             >
@@ -156,7 +166,7 @@ export function ReportMapControls({
           </div>
         ) : (
           <>
-            <p className="text-sm leading-5 text-peat-forest/70">
+            <p className="text-xs leading-5 text-muted-foreground">
               {truncated
                 ? `Menampilkan ${limit ?? pointCount}+ laporan terbaru di area peta.`
                 : `${pointCount ?? 0} laporan pada area peta.`}
@@ -179,8 +189,13 @@ export function ReportMapControls({
         filtersError={filtersError}
         isLoading={isLoading}
         isOpen={isDialogOpen}
-        onApply={onApply}
-        onClose={() => setIsDialogOpen(false)}
+        onApply={(event) => {
+          if (onApply(event)) setIsDialogOpen(false);
+        }}
+        onClose={() => {
+          onDiscardDraft();
+          setIsDialogOpen(false);
+        }}
         onDraftChange={onDraftChange}
       />
     </section>

@@ -3,14 +3,17 @@
 import { useSyncExternalStore } from "react";
 import { EditReport } from "./edit-report";
 import { ReportDetail } from "./report-detail";
+import { FieldReportDetailSkeleton } from "./field-report-detail-skeleton";
 import { APP_ROUTES } from "@/lib/routes";
 
 export function ReportWorkspace() {
-  const search = useSyncExternalStore(
+  const search = useSyncExternalStore<string | null>(
     subscribeToLocation,
     getLocationSearch,
     getServerLocationSearch,
   );
+  if (search === null) return <FieldReportDetailSkeleton />;
+
   const params = new URLSearchParams(search);
   const reportId = params.get("reportId");
   const serverReportId = params.get("serverReportId");
@@ -21,8 +24,8 @@ export function ReportWorkspace() {
 
   if (!reportId && !serverReportId) {
     return (
-      <div className="mx-auto max-w-xl px-4 pt-8">
-        <p className="rounded-xl border border-border bg-white p-4 text-sm">
+      <div className="w-full min-w-0">
+        <p className="rounded-xl border border-peat-forest/10 bg-white p-4 text-sm">
           Tautan laporan tidak memuat ID laporan.
         </p>
         <a
@@ -51,5 +54,5 @@ function getLocationSearch() {
 }
 
 function getServerLocationSearch() {
-  return "";
+  return null;
 }

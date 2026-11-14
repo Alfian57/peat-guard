@@ -13,7 +13,11 @@ function createDependencies(
   overrides: Partial<FirmsSyncDependencies> = {},
 ): FirmsSyncDependencies {
   return {
-    fetchHotspots: mock(async () => []),
+    fetchHotspots: mock(async () => ({
+      hotspots: [],
+      successfulSources: ["VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT"],
+      failedSources: [],
+    })),
     reserveSyncSlot: mock(async () => ({ allowed: true as const })),
     persistSuccess: mock(async () => {}),
     persistFailure: mock(async () => {}),
@@ -60,22 +64,27 @@ describe("performFirmsSync", () => {
     expect(dependencies.persistFailure).toHaveBeenCalledWith({
       actorId: "actor-1",
       errorCode: "provider_http_error",
+      failedSources: [],
     });
   });
 
   test("persists all parsed data before reporting a successful sync", async () => {
     const dependencies = createDependencies({
-      fetchHotspots: mock(async () => [
-        {
-          source: "VIIRS_SNPP_NRT",
-          externalId: "stable-hash",
-          latitude: -2.001,
-          longitude: 113.904,
-          brightnessKelvin: 315.4,
-          confidence: "nominal",
-          acquiredAt: new Date("2026-11-15T09:24:00.000Z"),
-        },
-      ]),
+      fetchHotspots: mock(async () => ({
+        hotspots: [
+          {
+            source: "VIIRS_NOAA20_NRT",
+            externalId: "stable-hash",
+            latitude: -2.001,
+            longitude: 113.904,
+            brightnessKelvin: 315.4,
+            confidence: "nominal",
+            acquiredAt: new Date("2026-11-15T09:24:00.000Z"),
+          },
+        ],
+        successfulSources: ["VIIRS_NOAA20_NRT"],
+        failedSources: [],
+      })),
     });
 
     await expect(
@@ -92,8 +101,76 @@ describe("performFirmsSync", () => {
       status: "success",
       processedCount: 1,
       completedAt: "2026-11-15T10:00:00.000Z",
+      successfulSources: ["VIIRS_NOAA20_NRT"],
     });
     expect(dependencies.persistSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  test("keeps a healthy source batch when another source is unavailable", async () => {
+    const dependencies = createDependencies({
+      fetchHotspots: mock(async () => ({
+        hotspots: [],
+        successfulSources: ["VIIRS_NOAA21_NRT"],
+        failedSources: [
+          { source: "VIIRS_NOAA20_NRT", errorCode: "provider_http_error" },
+        ],
+      })),
+    });
+
+    await expect(
+      performFirmsSync(
+        { apiKey: "test-key", area, actorId: null, intervalMinutes: 30 },
+        dependencies,
+      ),
+    ).resolves.toEqual({
+      status: "partial",
+      processedCount: 0,
+      completedAt: "2026-11-15T10:00:00.000Z",
+      successfulSources: ["VIIRS_NOAA21_NRT"],
+      failedSources: [
+        { source: "VIIRS_NOAA20_NRT", errorCode: "provider_http_error" },
+      ],
+    });
+    expect(dependencies.persistSuccess).toHaveBeenCalledWith({
+      hotspots: [],
+      successfulSources: ["VIIRS_NOAA21_NRT"],
+      failedSources: [
+        { source: "VIIRS_NOAA20_NRT", errorCode: "provider_http_error" },
+      ],
+      actorId: null,
+      area,
+    });
+    expect(dependencies.persistFailure).not.toHaveBeenCalled();
+  });
+
+  test("preserves existing records when every active source fails", async () => {
+    const failedSources = [
+      { source: "VIIRS_NOAA20_NRT" as const, errorCode: "provider_http_error" },
+      {
+        source: "VIIRS_NOAA21_NRT" as const,
+        errorCode: "provider_request_failed",
+      },
+    ];
+    const dependencies = createDependencies({
+      fetchHotspots: mock(async () => ({
+        hotspots: [],
+        successfulSources: [],
+        failedSources,
+      })),
+    });
+
+    await expect(
+      performFirmsSync(
+        { apiKey: "test-key", area, actorId: null, intervalMinutes: 30 },
+        dependencies,
+      ),
+    ).rejects.toMatchObject({ status: 502, code: "provider_unavailable" });
+    expect(dependencies.persistFailure).toHaveBeenCalledWith({
+      actorId: null,
+      errorCode: "all_sources_failed",
+      failedSources,
+    });
+    expect(dependencies.persistSuccess).not.toHaveBeenCalled();
   });
 
   test("does not call NASA again before a shared sync slot is available", async () => {

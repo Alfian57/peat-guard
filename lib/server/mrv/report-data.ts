@@ -178,16 +178,16 @@ async function getReportAggregate(
       (AVG(GREATEST(
         EXTRACT(EPOCH FROM (response.first_response_at - report.created_at)) / 60,
         0
-      )))::double precision AS "responseMinutes",
+      )) FILTER (WHERE response.report_id IS NOT NULL))::double precision AS "responseMinutes",
       (AVG(GREATEST(
         EXTRACT(EPOCH FROM (response.first_response_at - report.created_at)) / 60,
         0
-      )) FILTER (WHERE report.is_demo_sample = TRUE))::double precision
+      )) FILTER (WHERE response.report_id IS NOT NULL AND report.is_demo_sample = TRUE))::double precision
         AS "demoResponseMinutes",
       (AVG(GREATEST(
         EXTRACT(EPOCH FROM (response.first_response_at - report.created_at)) / 60,
         0
-      )) FILTER (WHERE report.is_demo_sample = FALSE))::double precision
+      )) FILTER (WHERE response.report_id IS NOT NULL AND report.is_demo_sample = FALSE))::double precision
         AS "nonDemoResponseMinutes"
     FROM filtered_reports AS report
     LEFT JOIN first_responses AS response ON response.report_id = report.id

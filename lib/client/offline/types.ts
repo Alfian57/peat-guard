@@ -21,6 +21,9 @@ export type QueuedFieldReport = {
   photoType: string;
   syncState: ReportSyncState;
   syncError: string | null;
+  revision?: number;
+  syncLease?: { token: string; expiresAt: number } | null;
+  uploadUncertain?: boolean;
   serverReportId: string | null;
   aiState: ReportAiState;
 };
@@ -32,6 +35,9 @@ export type NewFieldReport = Omit<
   | "createdAt"
   | "syncState"
   | "syncError"
+  | "revision"
+  | "syncLease"
+  | "uploadUncertain"
   | "serverReportId"
   | "aiState"
 >;
@@ -40,6 +46,7 @@ export type SyncSummary = {
   synced: number;
   failed: number;
   requiresAuth: number;
+  retryable?: boolean;
 };
 
 export const MAX_PHOTO_DIMENSION = 1280;

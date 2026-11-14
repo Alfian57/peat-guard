@@ -142,16 +142,16 @@ export function WaterPointManagerScreen() {
               <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-peat-forest/70">
                 <tr>
                   <th className="px-4 py-3.5" scope="col">
-                    Nama Titik Air
+                    Nama titik air
                   </th>
                   <th className="px-4 py-3.5" scope="col">
-                    Tipe
+                    Jenis titik
                   </th>
                   <th className="px-4 py-3.5" scope="col">
-                    Zona Terkait
+                    Zona terkait
                   </th>
                   <th className="px-4 py-3.5" scope="col">
-                    Koordinat GPS
+                    Koordinat
                   </th>
                   <th className="px-4 py-3.5 text-right" scope="col">
                     Aksi

@@ -20,7 +20,7 @@ export function ZoneSummaryGrid({
       />
       <ZoneSummaryCard
         icon={<MapPinned aria-hidden="true" size={18} />}
-        label="Luas terdaftar"
+        label="Total luas zona"
         value={formatNumber(areaHectares, 1) + " ha"}
       />
       <ZoneSummaryCard

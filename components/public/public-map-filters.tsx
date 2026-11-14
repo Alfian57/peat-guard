@@ -2,20 +2,16 @@ import type {
   PublicMapConfidenceFilter,
   PublicMapSourceFilter,
 } from "@/lib/public/contracts";
+import {
+  PUBLIC_MAP_CONFIDENCE_LABELS,
+  PUBLIC_MAP_SOURCE_LABELS,
+} from "@/lib/public/map-labels";
 import type { PublicMapPeriod } from "@/lib/public/query";
 
 export type PublicMapFilters = {
   period: PublicMapPeriod;
   source: PublicMapSourceFilter;
   confidence: PublicMapConfidenceFilter;
-};
-
-const SOURCE_LABELS: Record<PublicMapSourceFilter, string> = {
-  all: "Semua sumber yang diizinkan",
-  demo: "Data ilustrasi sintetis",
-  VIIRS_SNPP_NRT: "NASA VIIRS SNPP",
-  VIIRS_NOAA20_NRT: "NASA VIIRS NOAA-20",
-  VIIRS_NOAA21_NRT: "NASA VIIRS NOAA-21",
 };
 
 export function PublicMapFiltersPanel({
@@ -90,7 +86,7 @@ export function PublicMapFiltersPanel({
             }
             value={filters.source}
           >
-            {Object.entries(SOURCE_LABELS).map(([source, label]) => (
+            {Object.entries(PUBLIC_MAP_SOURCE_LABELS).map(([source, label]) => (
               <option key={source} value={source}>
                 {label}
               </option>
@@ -100,7 +96,7 @@ export function PublicMapFiltersPanel({
 
         <label className="grid gap-1.5 text-sm font-semibold text-peat-forest">
           <span>
-            Keyakinan satelit{" "}
+            Keyakinan deteksi{" "}
             <span className="text-xs font-normal text-muted-foreground">
               (opsional)
             </span>
@@ -115,12 +111,13 @@ export function PublicMapFiltersPanel({
             }
             value={filters.confidence}
           >
-            <option value="all">Semua tingkat</option>
-            <option value="high">Tinggi</option>
-            <option value="nominal">Menengah</option>
-            <option value="low">Rendah</option>
-            <option value="numeric">Nilai numerik (asli)</option>
-            <option value="unknown">Tidak tersedia</option>
+            {Object.entries(PUBLIC_MAP_CONFIDENCE_LABELS).map(
+              ([confidence, label]) => (
+                <option key={confidence} value={confidence}>
+                  {label}
+                </option>
+              ),
+            )}
           </select>
         </label>
       </div>

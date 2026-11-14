@@ -125,7 +125,7 @@ test("generator reports server errors and keeps the selected date after failure"
   globalThis.fetch = fetchMock as unknown as typeof fetch;
 
   render(<GeneratorForm zones={[]} />);
-  fireEvent.change(screen.getByLabelText("Dari tanggal"), {
+  fireEvent.change(screen.getByLabelText("Tanggal mulai periode (WIB)"), {
     target: { value: "2026-11-01" },
   });
   await user.click(screen.getByRole("button", { name: "Susun laporan" }));
@@ -135,7 +135,7 @@ test("generator reports server errors and keeps the selected date after failure"
   );
   expect(fetchMock).not.toHaveBeenCalled();
 
-  fireEvent.change(screen.getByLabelText("Sampai tanggal"), {
+  fireEvent.change(screen.getByLabelText("Tanggal akhir periode (WIB)"), {
     target: { value: "2026-11-15" },
   });
   await user.click(screen.getByRole("button", { name: "Susun laporan" }));
@@ -144,6 +144,7 @@ test("generator reports server errors and keeps the selected date after failure"
     "Zona tidak ditemukan atau belum disetujui.",
   );
   expect(
-    (screen.getByLabelText("Dari tanggal") as HTMLInputElement).value,
+    (screen.getByLabelText("Tanggal mulai periode (WIB)") as HTMLInputElement)
+      .value,
   ).toBe("2026-11-01");
 });

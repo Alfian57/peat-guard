@@ -5,9 +5,16 @@ import { PublicFooter } from "@/components/public/public-footer";
 import { PublicHero } from "@/components/public/public-hero";
 import { PublicMonitor } from "@/components/public/public-monitor";
 import { SiteHeader } from "@/components/public/site-header";
+import { getServerSession } from "@/lib/authz";
+import { getRoleHomeRoute } from "@/lib/roles";
 import { APP_ROUTES } from "@/lib/routes";
 
-export default function Home() {
+export const instant = false;
+
+export default async function Home() {
+  const session = await getServerSession();
+  const workspaceHref = session ? getRoleHomeRoute(session.user.role) : null;
+
   return (
     <>
       <a
@@ -16,7 +23,7 @@ export default function Home() {
       >
         Lewati ke konten utama
       </a>
-      <SiteHeader />
+      <SiteHeader workspaceHref={workspaceHref} />
       <main id="main-content">
         <PublicHero />
         <PeatlandStory />

@@ -1,6 +1,5 @@
 "use client";
 
-import { Wifi, WifiOff } from "lucide-react";
 import { usePathname } from "next/navigation";
 import {
   createContext,
@@ -21,12 +20,14 @@ import { FieldBrand } from "@/components/field/field-brand";
 import { FieldNavigation } from "@/components/field/field-navigation";
 import { FieldStatusWidget } from "@/components/field/field-status-widget";
 import { FieldBottomNav } from "@/components/field/field-bottom-nav";
+import { FieldMobileHeader } from "./field-mobile-header";
+import { fieldNavigationRoute } from "./field-navigation-state";
 import { canUseDemoSamples as canUseLocalDemoSamples } from "@/lib/client/offline/demo-samples";
 import {
   clearLastKnownOwner,
+  getFieldAuthEvent,
   getLastKnownOwnerSnapshot,
   getServerOwnerSnapshot,
-  isActiveVolunteerOwnerMatch,
   isFieldRoleDenied,
   isFieldVolunteerRole,
   isSessionAuthDenied,
@@ -35,13 +36,15 @@ import {
 } from "@/lib/client/offline/owner-store";
 import { listQueuedReports } from "@/lib/client/offline/report-store";
 import { syncQueuedReports } from "@/lib/client/offline/sync-manager";
+import { useFieldPwa, type FieldPwaState } from "./use-field-pwa";
+import { Skeleton } from "@/components/ui/skeleton";
 import type {
   QueuedFieldReport,
   SyncSummary,
 } from "@/lib/client/offline/types";
-import { APP_ROUTES } from "@/lib/routes";
 
 type FieldShellContextValue = {
+  pwa: FieldPwaState;
   online: boolean;
   simulatedOffline: boolean;
   isConnected: boolean;
@@ -49,6 +52,7 @@ type FieldShellContextValue = {
   ownerStatus: FieldOwnerStatus;
   canUseDemoSamples: boolean;
   queueCount: number;
+  syncRevision: number;
   isSyncing: boolean;
   lastSyncSummary: SyncSummary | null;
   notice: string;
@@ -93,9 +97,6 @@ export function ownerStatusMessage(status: FieldOwnerStatus): string {
 
 const SIMULATED_OFFLINE_KEY = "peatguard:field:simulated-offline";
 const offlineListeners = new Set<() => void>();
-const clockListeners = new Set<() => void>();
-let clockSnapshot = "--:--";
-let clockInterval: number | null = null;
 
 function subscribeOnline(listener: () => void) {
   window.addEventListener("online", listener);
@@ -135,41 +136,6 @@ function subscribeSimulatedOffline(listener: () => void) {
   };
 }
 
-function formatDeviceTime() {
-  return new Intl.DateTimeFormat("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date());
-}
-
-function notifyClockListeners() {
-  clockSnapshot = formatDeviceTime();
-  clockListeners.forEach((listener) => listener());
-}
-
-function subscribeClock(listener: () => void) {
-  clockListeners.add(listener);
-  if (clockInterval === null) {
-    clockSnapshot = formatDeviceTime();
-    clockInterval = window.setInterval(notifyClockListeners, 60_000);
-  }
-  return () => {
-    clockListeners.delete(listener);
-    if (clockListeners.size === 0 && clockInterval !== null) {
-      window.clearInterval(clockInterval);
-      clockInterval = null;
-    }
-  };
-}
-
-function getClockSnapshot() {
-  return clockSnapshot;
-}
-
-function getServerClockSnapshot() {
-  return "--:--";
-}
-
 export function FieldAppShell({
   children,
   demoSamplesEnabled,
@@ -178,11 +144,13 @@ export function FieldAppShell({
   demoSamplesEnabled: boolean;
 }) {
   const pathname = usePathname();
+  const pwa = useFieldPwa();
   const {
     data: session,
     isPending: isSessionPending,
     isRefetching: isSessionRefetching,
     error: sessionError,
+    refetch: refetchSession,
   } = authClient.useSession();
   const sessionUser = session?.user ?? null;
   const sessionRole = sessionUser ? Reflect.get(sessionUser, "role") : null;
@@ -205,7 +173,67 @@ export function FieldAppShell({
     getLastKnownOwnerSnapshot,
     getServerOwnerSnapshot,
   );
+  const authEvent = useSyncExternalStore(
+    subscribeLastKnownOwner,
+    getFieldAuthEvent,
+    () => "",
+  );
+  const loggedOut = authEvent.startsWith("logout:");
+  const [verifiedLogin, setVerifiedLogin] = useState<{
+    event: string;
+    ownerId: string;
+  } | null>(null);
+
+  const verifiedOwnerId =
+    verifiedLogin?.event === authEvent ? verifiedLogin.ownerId : null;
+  const sessionUserId = sessionUser?.id;
+  const verifyLogin =
+    online &&
+    authEvent.startsWith("login:") &&
+    !isSessionPending &&
+    !isSessionRefetching &&
+    isFieldVolunteerRole(sessionRole) &&
+    Boolean(sessionUserId) &&
+    verifiedOwnerId !== sessionUserId;
+
+  useEffect(() => {
+    if (!verifyLogin) return;
+    let active = true;
+    let timer: number | undefined;
+    let delay = 1_000;
+    async function verify() {
+      try {
+        const result = await authClient.getSession();
+        if (!active || getFieldAuthEvent() !== authEvent) return;
+        if (!result.error) {
+          const user = result.data?.user;
+          if (user && isFieldVolunteerRole(Reflect.get(user, "role"))) {
+            setVerifiedLogin({ event: authEvent, ownerId: user.id });
+          }
+          if (user?.id !== sessionUserId) void refetchSession();
+          return;
+        }
+        if (isSessionAuthDenied(result.error.status)) {
+          void refetchSession();
+          return;
+        }
+      } catch {
+        // The auth request can fail while the browser still reports online.
+      }
+      if (!active || getFieldAuthEvent() !== authEvent) return;
+      timer = window.setTimeout(verify, delay);
+      delay = Math.min(delay * 2, 30_000);
+    }
+    void verify();
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [authEvent, refetchSession, sessionUserId, verifyLogin]);
+
   const activeSessionOwnerId =
+    !loggedOut &&
+    (!authEvent || verifiedOwnerId === sessionUserId) &&
     !isSessionPending &&
     !isSessionRefetching &&
     !sessionError &&
@@ -216,6 +244,7 @@ export function FieldAppShell({
   const sessionIsForbidden = sessionError?.status === 403;
   const sessionIsAuthDenied = isSessionAuthDenied(sessionError?.status);
   const canUseOfflineOwner =
+    !loggedOut &&
     (!online || simulatedOffline) &&
     !sessionRoleIsDenied &&
     !sessionIsAuthDenied;
@@ -227,19 +256,15 @@ export function FieldAppShell({
       (sessionError && !sessionIsAuthDenied))
       ? lastKnownOwnerId
       : null);
-  const ownerStatus: FieldOwnerStatus =
-    sessionRoleIsDenied || sessionIsForbidden
+  const ownerStatus: FieldOwnerStatus = loggedOut
+    ? "signed-out"
+    : sessionRoleIsDenied || sessionIsForbidden
       ? "role-denied"
       : activeSessionOwnerId
         ? "authenticated"
-        : canUseOfflineOwner &&
-            (isSessionPending ||
-              isSessionRefetching ||
-              (sessionError && !sessionIsAuthDenied))
-          ? lastKnownOwnerId
-            ? "offline-known"
-            : "unavailable"
-          : isSessionPending || isSessionRefetching
+        : ownerId
+          ? "offline-known"
+          : verifyLogin || isSessionPending || isSessionRefetching
             ? "loading"
             : sessionIsUnauthorized
               ? "signed-out"
@@ -262,15 +287,13 @@ export function FieldAppShell({
     count: number;
   }>({ ownerId: null, count: 0 });
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncRevision, setSyncRevision] = useState(0);
+  const syncControllerRef = useRef<AbortController | null>(null);
   const [lastSyncSummary, setLastSyncSummary] = useState<SyncSummary | null>(
     null,
   );
   const [notice, setNotice] = useState("");
-  const deviceTime = useSyncExternalStore(
-    subscribeClock,
-    getClockSnapshot,
-    getServerClockSnapshot,
-  );
+
   const isConnected = online && !simulatedOffline;
   const queueCount =
     queueSnapshot.ownerId === ownerId ? queueSnapshot.count : 0;
@@ -292,7 +315,7 @@ export function FieldAppShell({
     }
 
     if (activeSessionOwnerId) {
-      persistLastKnownOwner(activeSessionOwnerId, sessionRole);
+      persistLastKnownOwner(activeSessionOwnerId, sessionRole, authEvent);
       return;
     }
 
@@ -306,6 +329,7 @@ export function FieldAppShell({
     }
   }, [
     activeSessionOwnerId,
+    authEvent,
     isSessionPending,
     isSessionRefetching,
     session,
@@ -347,149 +371,119 @@ export function FieldAppShell({
     }
   }, [ownerId, setNotice, setQueueSnapshot]);
 
+  const canSync =
+    isConnected &&
+    ownerStatus === "authenticated" &&
+    ownerId === activeSessionOwnerId;
+  const hasQueuedReports = queueCount > 0;
+
+  useEffect(() => {
+    if (!canSync || !ownerId) return;
+    const controller = new AbortController();
+    syncControllerRef.current = controller;
+    return () => {
+      controller.abort();
+      if (syncControllerRef.current === controller)
+        syncControllerRef.current = null;
+    };
+  }, [authEvent, canSync, ownerId]);
+
+  const performSync = useCallback(async () => {
+    const controller = syncControllerRef.current;
+    if (
+      !controller ||
+      controller.signal.aborted ||
+      !ownerId ||
+      getFieldAuthEvent() !== authEvent
+    )
+      return null;
+    setIsSyncing(true);
+    try {
+      const summary = await syncQueuedReports(ownerId, {
+        signal: controller.signal,
+        onReportUpdated: (report) => {
+          if (controller.signal.aborted || getFieldAuthEvent() !== authEvent)
+            return;
+          if (report.syncState === "synced")
+            setSyncRevision((current) => current + 1);
+        },
+      });
+      if (controller.signal.aborted) return null;
+      setLastSyncSummary(summary);
+      await refreshQueue();
+      return summary;
+    } catch {
+      if (!controller.signal.aborted) {
+        setNotice(
+          "Sinkronisasi belum berhasil. Laporan tetap aman di perangkat.",
+        );
+      }
+      return null;
+    } finally {
+      if (
+        isMountedRef.current &&
+        (!syncControllerRef.current || syncControllerRef.current === controller)
+      ) {
+        setIsSyncing(false);
+      }
+    }
+  }, [
+    authEvent,
+    ownerId,
+    refreshQueue,
+    setIsSyncing,
+    setLastSyncSummary,
+    setNotice,
+    setSyncRevision,
+  ]);
+
   const syncNow = useCallback(async () => {
-    if (!online || simulatedOffline) {
+    if (!isConnected) {
       setNotice(
         "Laporan aman tersimpan di perangkat. Hubungkan kembali untuk sinkronisasi.",
       );
       return null;
     }
-
-    if (
-      !ownerId ||
-      ownerStatus !== "authenticated" ||
-      !isActiveVolunteerOwnerMatch(ownerId, activeSessionOwnerId, sessionRole)
-    ) {
-      setNotice(
-        ownerId
-          ? "Sesi aktif belum cocok dengan pemilik antrean. Masuk kembali ke akun pemilik sebelum mengirim."
-          : "Masuk online sekali agar laporan tersimpan dengan akun pemilik yang benar.",
-      );
+    if (!canSync) {
+      setNotice("Masuk dengan akun relawan pemilik antrean sebelum mengirim.");
       return null;
     }
-
-    setIsSyncing(true);
     setNotice("Menyinkronkan laporan ke posko…");
-    try {
-      const summary = await syncQueuedReports(
-        ownerId,
-        () => void refreshQueue(),
-        true,
-      );
-      setLastSyncSummary(summary);
-      const message =
-        summary.failed || summary.requiresAuth
-          ? `${summary.synced} terkirim, ${summary.failed + summary.requiresAuth} masih perlu perhatian.`
+    const summary = await performSync();
+    if (summary) {
+      const attention = summary.failed + summary.requiresAuth;
+      setNotice(
+        attention
+          ? `${summary.synced} terkirim, ${attention} masih perlu perhatian.`
           : summary.synced
             ? `${summary.synced} laporan berhasil dikirim ke posko.`
-            : "Tidak ada laporan yang menunggu sinkronisasi.";
-      setNotice(message);
-      await refreshQueue();
-      return summary;
-    } catch {
-      setNotice(
-        "Sinkronisasi belum berhasil. Laporan tetap aman di perangkat.",
+            : "Tidak ada laporan yang menunggu sinkronisasi.",
       );
-      return null;
-    } finally {
-      setIsSyncing(false);
     }
-  }, [
-    activeSessionOwnerId,
-    online,
-    ownerId,
-    ownerStatus,
-    refreshQueue,
-    setIsSyncing,
-    setLastSyncSummary,
-    setNotice,
-    sessionRole,
-    simulatedOffline,
-  ]);
+    return summary;
+  }, [canSync, isConnected, performSync, setNotice]);
 
   useEffect(() => {
-    const queueTimer = window.setTimeout(() => void refreshQueue(), 0);
-    if ("serviceWorker" in navigator && window.isSecureContext) {
-      void navigator.serviceWorker
-        .register("/sw.js", { scope: "/" })
-        .catch(() => {
-          setNotice(
-            "Mode offline belum aktif. Pastikan aplikasi dibuka melalui HTTPS atau localhost.",
-          );
-        });
-    }
-    return () => window.clearTimeout(queueTimer);
+    const timer = window.setTimeout(() => void refreshQueue(), 0);
+    return () => window.clearTimeout(timer);
   }, [refreshQueue]);
 
-  const syncAutomatically = useCallback(async () => {
-    if (
-      !isConnected ||
-      !ownerId ||
-      ownerStatus !== "authenticated" ||
-      !isActiveVolunteerOwnerMatch(ownerId, activeSessionOwnerId, sessionRole)
-    ) {
-      return;
-    }
-
-    setIsSyncing(true);
-    try {
-      const summary = await syncQueuedReports(
-        ownerId,
-        () => void refreshQueue(),
-      );
-      if (
-        summary.synced > 0 ||
-        summary.failed > 0 ||
-        summary.requiresAuth > 0
-      ) {
-        setLastSyncSummary(summary);
-        void refreshQueue();
-      }
-    } catch {
-      setNotice(
-        "Sinkronisasi otomatis gagal. Laporan tetap tersimpan di perangkat.",
-      );
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [
-    activeSessionOwnerId,
-    isConnected,
-    ownerId,
-    ownerStatus,
-    refreshQueue,
-    setIsSyncing,
-    setLastSyncSummary,
-    setNotice,
-    sessionRole,
-  ]);
-
   useEffect(() => {
-    if (
-      !isConnected ||
-      queueCount === 0 ||
-      ownerStatus !== "authenticated" ||
-      !isActiveVolunteerOwnerMatch(
-        ownerId ?? "",
-        activeSessionOwnerId,
-        sessionRole,
-      )
-    )
-      return;
-
-    const timerId = window.setTimeout(() => {
-      void syncAutomatically();
-    }, 0);
-    return () => window.clearTimeout(timerId);
-  }, [
-    activeSessionOwnerId,
-    isConnected,
-    ownerId,
-    ownerStatus,
-    queueCount,
-    sessionRole,
-    syncAutomatically,
-  ]);
+    if (!canSync || !hasQueuedReports) return;
+    let active = true;
+    let delay = 2_000;
+    let timer = window.setTimeout(attempt, 0);
+    async function attempt() {
+      const summary = await performSync();
+      if (!active || !summary?.retryable || summary.requiresAuth) return;
+      timer = window.setTimeout(attempt, delay);
+      delay = Math.min(delay * 2, 60_000);
+    }
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [canSync, hasQueuedReports, performSync]);
 
   const toggleSimulatedOffline = useCallback(() => {
     const nextValue = !getSimulatedOfflineSnapshot();
@@ -505,6 +499,7 @@ export function FieldAppShell({
 
   const contextValue = useMemo(
     () => ({
+      pwa,
       online,
       simulatedOffline,
       isConnected,
@@ -512,6 +507,7 @@ export function FieldAppShell({
       ownerStatus,
       canUseDemoSamples,
       queueCount,
+      syncRevision,
       isSyncing,
       lastSyncSummary,
       notice,
@@ -521,6 +517,7 @@ export function FieldAppShell({
       syncNow,
     }),
     [
+      pwa,
       isConnected,
       isSyncing,
       lastSyncSummary,
@@ -530,6 +527,7 @@ export function FieldAppShell({
       ownerStatus,
       canUseDemoSamples,
       queueCount,
+      syncRevision,
       refreshQueue,
       simulatedOffline,
       setNotice,
@@ -538,11 +536,7 @@ export function FieldAppShell({
     ],
   );
 
-  const activeRoute = pathname.startsWith(APP_ROUTES.field.queue)
-    ? "queue"
-    : pathname.startsWith(APP_ROUTES.field.createReport)
-      ? "create"
-      : "home";
+  const activeRoute = fieldNavigationRoute(pathname);
 
   if (ownerStatus === "role-denied") {
     return (
@@ -601,23 +595,45 @@ export function FieldAppShell({
               </div>
 
               <div className="flex shrink-0 items-center gap-3">
-                <div className="flex items-center gap-2 rounded-full border border-peat-forest/15 bg-white px-3 py-1.5 text-xs font-semibold text-peat-forest">
-                  <span
+                {ownerStatus === "loading" ? (
+                  <Skeleton
                     aria-hidden="true"
-                    className={`size-2 shrink-0 rounded-full ${isConnected ? "bg-peat-leaf" : "bg-offline"}`}
+                    className="h-8 w-36 rounded-full bg-peat-forest/10 motion-reduce:animate-none"
                   />
-                  <span>
-                    {ownerStatus === "authenticated"
-                      ? isConnected
-                        ? "Online · Terhubung"
-                        : "Offline · Tersimpan"
-                      : ownerStatus === "offline-known"
-                        ? "Offline · Draf lokal"
-                        : "Belum diverifikasi"}
-                  </span>
-                </div>
+                ) : (
+                  <div className="flex items-center gap-2 rounded-full border border-peat-forest/15 bg-white px-3 py-1.5 text-xs font-semibold text-peat-forest">
+                    <span
+                      aria-hidden="true"
+                      className={`size-2 shrink-0 rounded-full ${isConnected ? "bg-peat-leaf" : "bg-offline"}`}
+                    />
+                    <span>
+                      {ownerStatus === "authenticated"
+                        ? isConnected
+                          ? "Online · Terhubung"
+                          : "Offline · Tersimpan"
+                        : ownerStatus === "offline-known"
+                          ? "Offline · Draf lokal"
+                          : "Belum diverifikasi"}
+                    </span>
+                  </div>
+                )}
 
-                {sessionUser ? (
+                {ownerStatus === "loading" ? (
+                  <div
+                    className="flex h-10 items-center gap-2"
+                    role="status"
+                    aria-label="Memeriksa sesi relawan"
+                  >
+                    <Skeleton
+                      aria-hidden="true"
+                      className="size-9 rounded-full bg-peat-forest/10 motion-reduce:animate-none"
+                    />
+                    <div className="space-y-1" aria-hidden="true">
+                      <Skeleton className="h-3 w-24 bg-peat-forest/10 motion-reduce:animate-none" />
+                      <Skeleton className="h-2.5 w-28 bg-peat-forest/10 motion-reduce:animate-none" />
+                    </div>
+                  </div>
+                ) : sessionUser ? (
                   <UserAccountMenu
                     email={sessionUser.email}
                     image={sessionUser.image ?? null}
@@ -626,108 +642,30 @@ export function FieldAppShell({
                   />
                 ) : (
                   <span className="rounded-full border border-border bg-white px-3 py-1.5 text-xs font-semibold text-muted-foreground">
-                    {ownerStatus === "loading" ? "Memeriksa…" : "Belum masuk"}
+                    Belum masuk
                   </span>
                 )}
               </div>
             </div>
           </header>
 
-          {/* Mobile Top Status Bars & Mobile Header (hidden on desktop) */}
-          <header className="sticky top-0 z-30 lg:hidden">
-            <div className="flex h-8 items-center justify-between bg-peat-forest px-5 text-[11px] font-semibold text-white">
-              <span aria-label="Waktu perangkat">{deviceTime}</span>
-              <span className="flex items-center gap-2" aria-live="polite">
-                {isConnected ? (
-                  <Wifi aria-hidden="true" size={15} />
-                ) : (
-                  <WifiOff aria-hidden="true" size={15} />
-                )}
-                <span>
-                  {ownerStatus === "signed-out"
-                    ? "Masuk untuk menyimpan laporan"
-                    : ownerStatus === "loading"
-                      ? "Memeriksa sesi relawan…"
-                      : ownerStatus === "unavailable"
-                        ? "Akun perangkat belum dikenali"
-                        : ownerStatus === "offline-known"
-                          ? "Offline · akun terakhir dikenali"
-                          : isConnected
-                            ? "Online · terhubung ke posko"
-                            : "Offline · tersimpan di perangkat"}
-                </span>
-              </span>
-            </div>
-            <div className="flex h-10 items-center justify-between bg-peat-forest/90 px-4 text-xs text-white">
-              <span className="flex min-w-0 items-center gap-2">
-                <span
-                  aria-hidden="true"
-                  className={`size-2 shrink-0 rounded-full ${isConnected ? "bg-peat-leaf" : "bg-offline"}`}
-                />
-                <span className="truncate">
-                  {ownerStatus === "authenticated"
-                    ? isConnected
-                      ? "Sesi relawan aktif"
-                      : "Antrean tersimpan"
-                    : ownerStatus === "offline-known"
-                      ? "Draf terkait akun terakhir"
-                      : "Akun belum diverifikasi"}
-                </span>
-              </span>
-              <span className="flex items-center gap-2">
-                <span>Simulasi</span>
-                <button
-                  type="button"
-                  aria-label="Simulasikan mode offline"
-                  aria-pressed={simulatedOffline}
-                  onClick={toggleSimulatedOffline}
-                  className={`relative h-7 w-12 cursor-pointer rounded-full transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-white ${simulatedOffline ? "bg-offline" : "bg-white/35"}`}
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`absolute top-1 size-5 rounded-full bg-white shadow transition-transform ${simulatedOffline ? "translate-x-6" : "translate-x-1"}`}
-                  />
-                </button>
-                {queueCount > 0 ? (
-                  <span className="rounded-full bg-white px-2 py-0.5 font-semibold text-peat-forest">
-                    Antrean {queueCount}
-                  </span>
-                ) : null}
-              </span>
-            </div>
-            <div className="flex h-[58px] items-center justify-between border-b border-border bg-background px-5">
-              <FieldBrand compact />
-              {ownerStatus === "authenticated" && sessionUser ? (
-                <div className="flex items-center gap-2">
-                  <GlobalSearch />
-                  <UserAccountMenu
-                    compactOnMobile
-                    email={sessionUser.email}
-                    image={sessionUser.image ?? null}
-                    name={sessionUser.name}
-                    role="RELAWAN"
-                  />
-                </div>
-              ) : (
-                <span className="rounded-full border border-border bg-white px-3 py-1 text-[11px] font-semibold text-muted-foreground">
-                  {ownerStatus === "signed-out"
-                    ? "Belum masuk"
-                    : ownerStatus === "loading"
-                      ? "Memeriksa sesi"
-                      : ownerStatus === "offline-known"
-                        ? "Relawan offline"
-                        : ownerStatus === "unavailable"
-                          ? "Akun belum dikenal"
-                          : "Akun relawan"}
-                </span>
-              )}
-            </div>
-          </header>
+          <FieldMobileHeader
+            user={loggedOut ? null : sessionUser}
+            connection={{
+              isConnected,
+              isSyncing,
+              ownerStatus,
+              queueCount,
+              simulatedOffline,
+              syncNow,
+              toggleSimulatedOffline,
+            }}
+          />
 
           {/* Notice banner */}
           {notice ? (
             <div
-              className="fixed top-20 left-1/2 z-50 w-[min(calc(100%-2rem),28rem)] -translate-x-1/2 lg:top-24"
+              className="fixed top-28 left-1/2 z-50 w-[min(calc(100%-2rem),28rem)] -translate-x-1/2 lg:top-24"
               role="status"
               aria-live="polite"
             >
@@ -746,7 +684,7 @@ export function FieldAppShell({
           ) : null}
 
           {/* Main content */}
-          <main className="mx-auto w-full max-w-[1600px] flex-1 pb-24 lg:p-7 lg:pb-12 xl:p-9">
+          <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:p-7 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-7 xl:p-9">
             {children}
           </main>
 

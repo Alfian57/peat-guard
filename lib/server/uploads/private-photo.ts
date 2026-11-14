@@ -170,6 +170,38 @@ export async function savePrivateReportPhoto(
   return fileName;
 }
 
+export async function restorePrivateReportPhoto(
+  fileName: string,
+  bytes: Buffer,
+  directory = getPrivateUploadsDirectory(),
+): Promise<boolean> {
+  if (!VALID_PHOTO_NAME.test(fileName)) {
+    throw new Error(
+      "Refusing to restore a path outside private report storage.",
+    );
+  }
+
+  const filePath = join(directory, fileName);
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  await chmod(directory, 0o700);
+  try {
+    await writeFile(filePath, bytes, { flag: "wx", mode: 0o600 });
+    return true;
+  } catch (error) {
+    if (isNodeError(error) && error.code === "EEXIST") return false;
+    try {
+      await rm(filePath, { force: true });
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        "Private report photo restore failed and its partial file could not be removed.",
+      );
+    }
+
+    throw error;
+  }
+}
+
 export async function removePrivateReportPhoto(
   fileName: string,
   directory = getPrivateUploadsDirectory(),
@@ -183,6 +215,10 @@ export async function removePrivateReportPhoto(
   await rm(/*turbopackIgnore: true*/ join(directory, fileName), {
     force: true,
   });
+}
+
+export function isPrivateReportPhotoFileName(fileName: string): boolean {
+  return VALID_PHOTO_NAME.test(fileName);
 }
 
 export async function readPrivateReportPhoto(

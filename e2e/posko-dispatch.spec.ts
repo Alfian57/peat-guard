@@ -10,7 +10,7 @@ test.describe("Posko Dispatcher & Incident Management Journey", () => {
 
     // 1. Posko navigates to incidents queue
     await page.goto(APP_ROUTES.command.reports);
-    await expect(page.locator("h1")).toContainText(/Daftar insiden/i);
+    await expect(page.locator("h1")).toContainText(/Antrean laporan/i);
 
     // 2. Locate first report in the list
     const firstReportLink = page
@@ -53,8 +53,8 @@ test.describe("Posko Dispatcher & Incident Management Journey", () => {
     await saveBtn.click();
 
     // 8. Assert status badge changed or success message is visible
-    await expect(
-      page.getByText(/Status laporan berhasil diperbarui/i),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Status laporan diperbarui/i)).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

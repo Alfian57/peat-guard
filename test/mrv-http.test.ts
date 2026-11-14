@@ -2,11 +2,61 @@ import { describe, expect, mock, test } from "bun:test";
 
 import {
   createMrvPrivateHandler,
+  isMrvSameOrigin,
   readBoundedRequestBody,
 } from "@/lib/server/mrv/http";
 import { AuthorizationError } from "@/lib/role-access";
 
 const request = new Request("http://localhost/api/command/mrv/summary");
+
+test("MRV mutations recognize same-origin browser requests behind a Docker bind address", () => {
+  const requestWithHeaders = (headers: HeadersInit) =>
+    new Request("http://0.0.0.0:3000/api/command/mrv/generate", {
+      method: "POST",
+      headers,
+    });
+
+  const appUrl = "http://localhost:3000";
+  expect(isMrvSameOrigin(requestWithHeaders({ Origin: appUrl }), appUrl)).toBe(
+    true,
+  );
+  expect(
+    isMrvSameOrigin(
+      requestWithHeaders({
+        Origin: "http://peat-guard.local:3000",
+        "Sec-Fetch-Site": "same-origin",
+      }),
+      appUrl,
+    ),
+  ).toBe(true);
+  expect(
+    isMrvSameOrigin(
+      requestWithHeaders({
+        Origin: "http://untrusted.example",
+        "Sec-Fetch-Site": "same-site",
+      }),
+      appUrl,
+    ),
+  ).toBe(false);
+  expect(
+    isMrvSameOrigin(
+      requestWithHeaders({
+        Origin: "http://untrusted.example",
+        "Sec-Fetch-Site": "cross-site",
+      }),
+      appUrl,
+    ),
+  ).toBe(false);
+  expect(
+    isMrvSameOrigin(
+      requestWithHeaders({ "Sec-Fetch-Site": "same-origin" }),
+      "invalid",
+    ),
+  ).toBe(true);
+  expect(
+    isMrvSameOrigin(requestWithHeaders({ Origin: appUrl }), "invalid"),
+  ).toBe(false);
+});
 
 describe("private MRV handler", () => {
   test("returns 401 before reading data for an anonymous caller", async () => {

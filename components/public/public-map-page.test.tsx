@@ -28,6 +28,8 @@ function emptyMapResponse() {
       configured: false,
       checkedAt: timestamp,
       lastSuccessfulAt: null,
+      lastDataSyncAt: null,
+      failedSources: [],
       expectedIntervalMinutes: 30,
     },
   };

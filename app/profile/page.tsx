@@ -4,6 +4,7 @@ import { KeyRound, UserRound } from "lucide-react";
 import { PasswordChangeForm } from "@/components/profile/password-change-form";
 import { ProfileDetailsForm } from "@/components/profile/profile-details-form";
 import { ProfileShell } from "@/components/profile/profile-shell";
+import { WorkspacePageHeading } from "@/components/workspace/workspace-page-heading";
 import { getServerSession } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { isAppRole } from "@/lib/roles";
@@ -38,37 +39,31 @@ export default async function ProfilePage() {
         role: user.role,
       }}
     >
-      <div className="mx-auto w-full max-w-4xl">
-        <div className="mb-6">
-          <h1 className="font-heading text-4xl leading-none font-bold text-peat-forest sm:text-5xl">
-            Profil Anda
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-peat-forest/70 sm:text-base">
-            Kelola informasi akun, foto profil, dan keamanan akses ruang kerja.
-          </p>
-        </div>
+      <div className="w-full min-w-0">
+        <WorkspacePageHeading
+          title="Profil Anda"
+          description="Kelola informasi akun, foto profil, dan keamanan akses ruang kerja."
+        />
 
-        <div className="grid gap-5">
+        <div className="grid max-w-4xl gap-5">
           <section
             aria-labelledby="profile-data-title"
             className="rounded-2xl border border-peat-forest/10 bg-white p-5 shadow-xs sm:p-6"
           >
-            <div className="mb-5 flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <span className="grid size-10 place-items-center rounded-xl bg-[#edf2e9] text-peat-green">
                 <UserRound aria-hidden="true" size={18} />
               </span>
-              <div>
-                <h2
-                  className="font-heading text-xl font-bold text-peat-forest"
-                  id="profile-data-title"
-                >
-                  Informasi profil
-                </h2>
-                <p className="mt-0.5 text-xs text-peat-forest/55">
-                  Kelola foto profil, nama lengkap, dan data akun Anda.
-                </p>
-              </div>
+              <h2
+                className="font-heading text-xl font-bold text-peat-forest"
+                id="profile-data-title"
+              >
+                Informasi profil
+              </h2>
             </div>
+            <p className="mt-3 mb-5 text-sm leading-6 text-muted-foreground">
+              Kelola foto profil, nama lengkap, dan data akun Anda.
+            </p>
             <ProfileDetailsForm
               canEditVillage={user.role === "RELAWAN"}
               email={user.email}
@@ -82,22 +77,20 @@ export default async function ProfilePage() {
             aria-labelledby="password-title"
             className="rounded-2xl border border-peat-forest/10 bg-white p-5 shadow-xs sm:p-6"
           >
-            <div className="mb-5 flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <span className="grid size-10 place-items-center rounded-xl bg-[#f7efdc] text-[#8a6822]">
                 <KeyRound aria-hidden="true" size={18} />
               </span>
-              <div>
-                <h2
-                  className="font-heading text-xl font-bold text-peat-forest"
-                  id="password-title"
-                >
-                  Kata sandi
-                </h2>
-                <p className="mt-0.5 text-xs text-peat-forest/55">
-                  Gunakan kata sandi baru minimal 10 karakter.
-                </p>
-              </div>
+              <h2
+                className="font-heading text-xl font-bold text-peat-forest"
+                id="password-title"
+              >
+                Kata sandi
+              </h2>
             </div>
+            <p className="mt-3 mb-5 text-sm leading-6 text-muted-foreground">
+              Gunakan kata sandi baru minimal 10 karakter.
+            </p>
             <PasswordChangeForm />
           </section>
         </div>

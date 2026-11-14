@@ -21,12 +21,10 @@ import {
 } from "@/components/command/routes";
 import { ZoneApprovalResetDialog } from "@/components/command/zones/zone-approval-reset-dialog";
 import { ZoneEditorForm } from "@/components/command/zones/zone-editor-form";
+import { ZoneBoundaryControls } from "@/components/command/zones/zone-boundary-controls";
 import { ZoneMapPanel } from "@/components/command/zones/zone-map-panel";
 import { toast } from "@/components/ui/toast";
-import {
-  polygonFromVertices,
-  polygonWithUpdatedOuterRing,
-} from "@/components/command/zones/zone-geometry";
+import { polygonFromVertices } from "@/components/command/zones/zone-geometry";
 import type { CommandMapData } from "@/components/command/command-api";
 import type { MapPoint, MapZone } from "@/lib/maps/types";
 import type { CommandZone } from "@/lib/server/zones/data";
@@ -48,7 +46,14 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
   const [zoneName, setZoneName] = useState("");
   const [villageName, setVillageName] = useState("");
   const [peatDepth, setPeatDepth] = useState("1.5");
-  const [geometry, setGeometry] = useState<ZonePolygon | null>(null);
+  const [vertices, setVertices] = useState<[number, number][]>([]);
+  const [innerRings, setInnerRings] = useState<ZonePolygon["coordinates"]>([]);
+  const geometry = useMemo(() => {
+    const outer = polygonFromVertices(vertices);
+    return outer
+      ? { ...outer, coordinates: [...outer.coordinates, ...innerRings] }
+      : null;
+  }, [innerRings, vertices]);
   const [drawBoundary, setDrawBoundary] = useState(false);
   const [movingVertex, setMovingVertex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -98,7 +103,8 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
           setZoneName(currentZone.name);
           setVillageName(currentZone.villageName ?? "");
           setPeatDepth(String(currentZone.peatDepthMeters));
-          setGeometry(currentZone.geometry);
+          setVertices(currentZone.geometry.coordinates[0].slice(0, -1));
+          setInnerRings(currentZone.geometry.coordinates.slice(1));
           setLoadError("");
           setScreenState("ready");
         } else {
@@ -123,7 +129,6 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
     setRetryKey((current) => current + 1);
   }
 
-  const vertices = geometry?.coordinates[0]?.slice(0, -1) ?? [];
   const mapZones = useMemo<MapZone[]>(() => {
     const existingZones = (mapData?.zones ?? []).map((item) => ({
       id: item.id,
@@ -133,25 +138,16 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
       isDemoData: item.isDemoData,
     }));
 
-    if (!geometry || vertices.length < 3) return existingZones;
+    if (!geometry) return existingZones.filter((item) => item.id !== zoneId);
 
     const preview: MapZone = {
       id: "draft-" + (zoneId ?? "new"),
       name: zoneName || "Batas zona baru",
       areaHectares: zone?.areaHectares ?? 0,
-      geometry: geometry as MapZone["geometry"],
+      geometry,
     };
-    return zoneId
-      ? existingZones.map((item) => (item.id === zoneId ? preview : item))
-      : [...existingZones, preview];
-  }, [
-    geometry,
-    mapData?.zones,
-    vertices.length,
-    zone?.areaHectares,
-    zoneId,
-    zoneName,
-  ]);
+    return [...existingZones.filter((item) => item.id !== zoneId), preview];
+  }, [geometry, mapData?.zones, zone?.areaHectares, zoneId, zoneName]);
   const mapPoints = useMemo<MapPoint[]>(() => {
     const waterPoints: MapPoint[] = (mapData?.waterPoints ?? []).map(
       (point) => ({
@@ -177,22 +173,16 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
       Number(coordinates[1].toFixed(6)),
     ];
 
-    if (movingVertex !== null && geometry) {
-      const nextVertices = geometry.coordinates[0].slice(0, -1);
-      nextVertices[movingVertex] = rounded;
-      setGeometry(polygonWithUpdatedOuterRing(geometry, nextVertices));
+    if (movingVertex !== null) {
+      setVertices((current) =>
+        current.map((point, index) =>
+          index === movingVertex ? rounded : point,
+        ),
+      );
       setMovingVertex(null);
       setSavedMessage("");
-      return;
-    }
-
-    if (drawBoundary) {
-      const nextVertices = [...vertices, rounded];
-      setGeometry(
-        geometry
-          ? polygonWithUpdatedOuterRing(geometry, nextVertices)
-          : polygonFromVertices(nextVertices),
-      );
+    } else if (drawBoundary) {
+      setVertices((current) => [...current, rounded]);
       setSavedMessage("");
     }
   }
@@ -257,7 +247,8 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
       setZoneName(savedZone.name);
       setVillageName(savedZone.villageName ?? "");
       setPeatDepth(String(savedZone.peatDepthMeters));
-      setGeometry(savedZone.geometry);
+      setVertices(savedZone.geometry.coordinates[0].slice(0, -1));
+      setInnerRings(savedZone.geometry.coordinates.slice(1));
       const area = new Intl.NumberFormat("id-ID", {
         maximumFractionDigits: 2,
       }).format(savedZone.areaHectares);
@@ -334,40 +325,50 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
         title={isCreate ? "Buat zona" : "Ubah zona"}
       />
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(280px,390px)_minmax(0,1fr)]">
-        <ZoneEditorForm
+      <ZoneEditorForm
+        formError={formError}
+        isCreate={isCreate}
+        isSaving={isSaving}
+        onCancel={() => router.push(COMMAND_ROUTES.zones)}
+        onPeatDepthChange={setPeatDepth}
+        onSubmit={onSubmit}
+        onVillageNameChange={setVillageName}
+        onZoneNameChange={setZoneName}
+        peatDepth={peatDepth}
+        savedMessage={savedMessage}
+        villageName={villageName}
+        zone={zone}
+        zoneName={zoneName}
+      >
+        <ZoneBoundaryControls
+          disabled={isSaving}
           drawBoundary={drawBoundary}
-          formError={formError}
-          geometry={geometry}
           isCreate={isCreate}
-          isSaving={isSaving}
-          mapError={mapError}
           movingVertex={movingVertex}
           onDrawBoundaryChange={setDrawBoundary}
-          onGeometryChange={(nextGeometry) => {
-            setGeometry(nextGeometry);
+          onUndo={() => {
+            setVertices((current) => current.slice(0, -1));
+            setSavedMessage("");
+          }}
+          onReset={() => {
+            setVertices([]);
+            setInnerRings([]);
+            setMovingVertex(null);
             setSavedMessage("");
           }}
           onMovingVertexChange={setMovingVertex}
-          onPeatDepthChange={setPeatDepth}
-          onSubmit={onSubmit}
-          onVillageNameChange={setVillageName}
-          onZoneNameChange={setZoneName}
-          peatDepth={peatDepth}
-          savedMessage={savedMessage}
-          villageName={villageName}
           vertices={vertices}
-          zone={zone}
-          zoneName={zoneName}
         />
         <ZoneMapPanel
-          draftEditing={drawBoundary || movingVertex !== null}
+          draftEditing={!isSaving && (drawBoundary || movingVertex !== null)}
           mapError={mapError}
-          onMapClick={handleMapClick}
+          onMapClick={(coordinates) => {
+            if (!isSaving) handleMapClick(coordinates);
+          }}
           points={mapPoints}
           zones={mapZones}
         />
-      </div>
+      </ZoneEditorForm>
 
       {confirmApprovalReset && zone ? (
         <ZoneApprovalResetDialog

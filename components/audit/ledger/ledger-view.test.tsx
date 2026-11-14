@@ -1,5 +1,5 @@
 import { mock, test, expect } from "bun:test";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { parseLedgerFilters } from "@/lib/server/mrv/validation";
@@ -71,6 +71,7 @@ const ledger = {
       statusHistory: [],
       syncedAt: "2026-11-15T02:31:00.000Z",
       villageName: "Desa Contoh",
+      zoneName: "Zona Contoh",
       zoneImpactContext: null,
     },
   ],
@@ -136,9 +137,114 @@ test("ledger shows factual GPS evidence, private photo viewer, filters, and pagi
       .getAttribute("href"),
   ).toContain("page=2");
   expect(
-    screen.getByText(/Estimasi emisi zona ditampilkan sebagai konteks/),
+    screen.getByText(
+      /Estimasi emisi dicegah per zona ditampilkan sebagai konteks/,
+    ),
   ).toBeTruthy();
-  expect(screen.getByText("Peninjauan bukti · belum ditinjau")).toBeTruthy();
+  expect(screen.getByRole("columnheader", { name: "Aksi" })).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Peninjauan bukti laporan 61000000" }),
+  ).toBeTruthy();
+  expect(screen.getByText("Belum ditinjau")).toBeTruthy();
+  expect(screen.queryByRole("dialog") === null).toBe(true);
+  expect(
+    screen.queryByText(
+      "Snapshot audit awal belum tersedia untuk laporan ini.",
+    ) === null,
+  ).toBe(true);
+});
+
+test("status history opens from Aksi and returns focus after closing its empty state", async () => {
+  const user = userEvent.setup();
+  render(
+    <LedgerView
+      filterError={null}
+      filters={filters}
+      from=""
+      ledger={ledger}
+      to=""
+      zones={[]}
+    />,
+  );
+
+  const trigger = screen.getByRole("button", {
+    name: "Riwayat status laporan 61000000",
+  });
+  const cell = trigger.closest("td")!;
+  expect(cell.cellIndex).toBe(8);
+  expect(
+    within(cell).getByRole("button", {
+      name: "Peninjauan bukti laporan 61000000",
+    }),
+  ).toBeTruthy();
+  expect(screen.queryByText("Belum ada perubahan status.") === null).toBe(true);
+
+  await user.click(trigger);
+  const dialog = screen.getByRole("dialog", { name: "Riwayat status" });
+  const closeButton = within(dialog).getByRole("button", {
+    name: "Tutup riwayat status",
+  });
+  expect(within(dialog).getByText("Belum ada perubahan status.")).toBeTruthy();
+  expect(document.activeElement === closeButton).toBe(true);
+  await user.keyboard("{Tab}");
+  expect(document.activeElement === closeButton).toBe(true);
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog") === null).toBe(true);
+  expect(document.activeElement === trigger).toBe(true);
+});
+
+test("status dialog shows only the selected report history", async () => {
+  const user = userEvent.setup();
+  const historyLedger = {
+    ...ledger,
+    rows: [
+      {
+        ...ledger.rows[0],
+        statusHistory: [
+          {
+            actorRole: "POSKO",
+            createdAt: "2026-11-15T03:00:00.000Z",
+            eventId: "63000000-0000-4000-8000-000000000003",
+            previousStatus: "MENUNGGU_TINDAKAN",
+            nextStatus: "DALAM_PENANGANAN",
+          },
+        ],
+      },
+      {
+        ...ledger.rows[0],
+        reportId: "62000000-0000-4000-8000-000000000002",
+      },
+    ],
+  };
+  render(
+    <LedgerView
+      filterError={null}
+      filters={filters}
+      from=""
+      ledger={historyLedger}
+      to=""
+      zones={[]}
+    />,
+  );
+
+  await user.click(
+    screen.getByRole("button", { name: "Riwayat status laporan 61000000" }),
+  );
+  const dialog = screen.getByRole("dialog", { name: "Riwayat status" });
+  expect(
+    within(dialog).getByText("Menunggu tindakan → Dalam penanganan"),
+  ).toBeTruthy();
+  expect(dialog.textContent).toContain("POSKO");
+  await user.click(
+    within(dialog).getByRole("button", { name: "Tutup riwayat status" }),
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Riwayat status laporan 62000000" }),
+  );
+  expect(screen.getByText("Belum ada perubahan status.")).toBeTruthy();
+  expect(
+    screen.queryByText("Menunggu tindakan → Dalam penanganan") === null,
+  ).toBe(true);
 });
 
 test("review timeline exposes stored evidence and permits human review when AI was skipped", async () => {
@@ -200,16 +306,26 @@ test("review timeline exposes stored evidence and permits human review when AI w
     />,
   );
 
-  await user.click(screen.getByText("Peninjauan bukti · belum ditinjau"));
+  const trigger = screen.getByRole("button", {
+    name: "Peninjauan bukti laporan 61000000",
+  });
+  await user.click(trigger);
+  const dialog = screen.getByRole("dialog", { name: "Peninjauan bukti" });
+  expect(
+    document.activeElement ===
+      within(dialog).getByRole("button", { name: "Tutup peninjauan bukti" }),
+  ).toBe(true);
   expect(screen.getByText("Bukti awal dicatat")).toBeTruthy();
   expect(screen.getByText("Koordinat tersimpan")).toBeTruthy();
   expect(screen.getAllByText("-2.3194, 113.9102").length).toBeGreaterThan(1);
   expect(screen.getByText(/Triase: Tidak dianalisis/)).toBeTruthy();
-  expect(screen.getByText("Tidak dianalisis")).toBeTruthy();
+  expect(
+    within(dialog).getByText(/Tidak dianalisis · Belum diklasifikasikan/),
+  ).toBeTruthy();
   expect(screen.getByText(/tidak diverifikasi secara independen/)).toBeTruthy();
 
   const acceptButton = screen.getByRole("button", {
-    name: "Terima bukti 61000000",
+    name: "Terima bukti",
   });
   expect((acceptButton as HTMLButtonElement).disabled).toBe(false);
   expect(
@@ -235,15 +351,117 @@ test("review timeline exposes stored evidence and permits human review when AI w
 
   try {
     await user.click(acceptButton);
+    await screen.findByText("Bukti diterima");
+    expect(screen.queryByRole("dialog") === null).toBe(true);
+    expect(document.activeElement === trigger).toBe(true);
+    await user.click(trigger);
     expect(
-      await screen.findByText("Keputusan tercatat: Bukti diterima."),
-    ).toBeTruthy();
-    expect(
-      screen.getByText("Keputusan peninjauan: bukti diterima"),
+      within(
+        screen.getByRole("dialog", { name: "Peninjauan bukti" }),
+      ).getByText("Keputusan peninjauan: bukti diterima"),
     ).toBeTruthy();
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("review dialog preserves the history and permits retry after a failed decision", async () => {
+  const user = userEvent.setup();
+  render(
+    <LedgerView
+      filterError={null}
+      filters={filters}
+      from=""
+      ledger={ledger}
+      to=""
+      zones={[]}
+    />,
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Peninjauan bukti laporan 61000000" }),
+  );
+  const dialog = screen.getByRole("dialog", { name: "Peninjauan bukti" });
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    Response.json({ error: "Koneksi terputus, coba lagi." }, { status: 503 });
+  try {
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: "Minta tindak lanjut",
+      }),
+    );
+    expect((await within(dialog).findByRole("alert")).textContent).toBe(
+      "Koneksi terputus, coba lagi.",
+    );
+    expect(
+      within(dialog).getByText(
+        "Snapshot audit awal belum tersedia untuk laporan ini.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Belum ditinjau")).toBeTruthy();
+    expect(
+      within(dialog)
+        .getByRole("button", { name: "Minta tindak lanjut" })
+        .hasAttribute("disabled"),
+    ).toBe(false);
+    await user.keyboard("{Escape}");
+    await user.click(
+      screen.getByRole("button", { name: "Peninjauan bukti laporan 61000000" }),
+    );
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Koneksi terputus, coba lagi.",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("review dialog prevents accepting incomplete evidence while keeping follow-up available", async () => {
+  const user = userEvent.setup();
+  render(
+    <LedgerView
+      filterError={null}
+      filters={filters}
+      from=""
+      ledger={{
+        ...ledger,
+        rows: [
+          {
+            ...ledger.rows[0],
+            hasPhoto: false,
+            photoHref: null,
+            evidenceStatus: "incomplete",
+          },
+        ],
+      }}
+      to=""
+      zones={[]}
+    />,
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Peninjauan bukti laporan 61000000" }),
+  );
+  const dialog = screen.getByRole("dialog", { name: "Peninjauan bukti" });
+  const closeButton = within(dialog).getByRole("button", {
+    name: "Tutup peninjauan bukti",
+  });
+  expect(
+    within(dialog)
+      .getByRole("button", { name: "Terima bukti" })
+      .hasAttribute("disabled"),
+  ).toBe(true);
+  expect(
+    within(dialog)
+      .getByRole("button", { name: "Minta tindak lanjut" })
+      .hasAttribute("disabled"),
+  ).toBe(false);
+  await user.keyboard("{Shift>}{Tab}{/Shift}");
+  expect(
+    document.activeElement ===
+      within(dialog).getByRole("button", { name: "Tolak bukti" }),
+  ).toBe(true);
+  await user.keyboard("{Tab}");
+  expect(document.activeElement === closeButton).toBe(true);
 });
 
 test("filter dialog applies supported filters and restores focus on Escape", async () => {
@@ -264,10 +482,10 @@ test("filter dialog applies supported filters and restores focus on Escape", asy
   await user.click(trigger);
 
   const dialog = screen.getByRole("dialog", { name: "Filter buku besar MRV" });
-  const evidenceFilter = screen.getByLabelText(/Status kelengkapan bukti/);
-  const aiFilter = screen.getByLabelText(/Status triase AI/);
+  const evidenceFilter = screen.getByLabelText(/Kelengkapan bukti/);
+  const aiFilter = screen.getByLabelText(/Triase AI/);
 
-  expect(document.activeElement).toBe(screen.getByLabelText(/Wilayah zona/));
+  expect(document.activeElement).toBe(screen.getByLabelText(/Zona gambut/));
   expect(dialog.textContent).toContain("bukan keputusan verifikator");
   await user.selectOptions(evidenceFilter, "complete");
   expect(aiFilter.hasAttribute("disabled")).toBe(false);
@@ -311,30 +529,24 @@ test("filter form submits parsable defaults, evidence-only, and AI-only filters"
   expect(parseLedgerFilters(defaultParams).ok).toBe(true);
 
   await user.selectOptions(
-    screen.getByLabelText(/Status kelengkapan bukti/),
+    screen.getByLabelText(/Kelengkapan bukti/),
     "complete",
   );
   const evidenceParams = submitLedgerFilterForm(form);
   expect(evidenceParams.toString()).toBe("evidence=complete");
   expect(parseLedgerFilters(evidenceParams).ok).toBe(true);
 
-  await user.selectOptions(
-    screen.getByLabelText(/Status kelengkapan bukti/),
-    "all",
-  );
-  await user.selectOptions(screen.getByLabelText(/Status triase AI/), "FAILED");
+  await user.selectOptions(screen.getByLabelText(/Kelengkapan bukti/), "all");
+  await user.selectOptions(screen.getByLabelText(/Triase AI/), "FAILED");
   const aiParams = submitLedgerFilterForm(form);
   expect(aiParams.toString()).toBe("evidence=all&aiState=FAILED");
   expect(parseLedgerFilters(aiParams).ok).toBe(true);
 
   await user.selectOptions(
-    screen.getByLabelText(/Status kelengkapan bukti/),
+    screen.getByLabelText(/Kelengkapan bukti/),
     "complete",
   );
-  await user.selectOptions(
-    screen.getByLabelText(/Status triase AI/),
-    "SKIPPED",
-  );
+  await user.selectOptions(screen.getByLabelText(/Triase AI/), "SKIPPED");
   const evidenceAndAiParams = submitLedgerFilterForm(form);
   expect(evidenceAndAiParams.toString()).toBe(
     "evidence=complete&aiState=SKIPPED",

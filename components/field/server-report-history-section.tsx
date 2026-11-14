@@ -1,9 +1,16 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import {
+  ClipboardCheck,
+  ShieldCheck,
+  TriangleAlert,
+  WifiOff,
+} from "lucide-react";
+import { FieldFeedback } from "./field-feedback";
 import { ServerReportCard } from "./server-report-card";
 import { ReportCard } from "./report-card";
-import { FieldReportCardSkeleton } from "./field-report-card-skeleton";
+import { FieldReportListSkeleton } from "./field-report-list-skeleton";
+import { fieldQueueReportGrid } from "./field-report-layout";
 import {
   findLocalReportForServer,
   splitReportHistory,
@@ -15,11 +22,9 @@ export type ServerHistoryStatus =
   "loading" | "loaded" | "error" | "unavailable";
 
 export function ServerReportHistorySection({
-  hasOwner,
   isConnected,
   localReports,
   onPageChange,
-  onRefresh,
   page,
   pageSize,
   reports,
@@ -27,11 +32,9 @@ export function ServerReportHistorySection({
   total,
   error,
 }: {
-  hasOwner: boolean;
   isConnected: boolean;
   localReports: QueuedFieldReport[];
   onPageChange: (page: number) => void;
-  onRefresh: () => void;
   page: number;
   pageSize: number;
   reports: ServerReportSummary[];
@@ -42,62 +45,51 @@ export function ServerReportHistorySection({
   const { localSentFallback } = splitReportHistory(reports, localReports);
   const localFallbackToShow = status === "loaded" ? [] : localSentFallback;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const isLoading = status === "loading" && reports.length === 0;
 
   return (
-    <section className="mt-6" aria-labelledby="server-history-title">
-      <div className="flex items-center justify-between gap-3">
-        <h2
-          id="server-history-title"
-          className="font-heading text-2xl font-bold text-peat-forest"
-        >
-          Tersimpan di posko
-        </h2>
-        {status !== "unavailable" ? (
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={!isConnected || status === "loading"}
-            aria-label="Muat ulang riwayat server"
-            className="inline-grid size-8 h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full border border-border bg-white text-peat-forest shadow-xs transition-colors hover:bg-peat-paper hover:text-peat-green focus-visible:outline-2 focus-visible:outline-peat-green disabled:opacity-60"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={
-                status === "loading"
-                  ? "animate-spin motion-reduce:animate-none"
-                  : ""
-              }
-              size={14}
-            />
-          </button>
-        ) : null}
-      </div>
-      {hasOwner && !isConnected ? (
-        <p
-          className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-950"
+    <section className="min-w-0" aria-labelledby="server-history-title">
+      <h2
+        id="server-history-title"
+        className="font-heading text-2xl font-bold text-peat-forest"
+      >
+        Tersimpan di posko
+      </h2>
+      {status === "unavailable" ? (
+        <FieldFeedback
+          icon={isConnected ? ShieldCheck : WifiOff}
+          title={
+            isConnected
+              ? "Riwayat posko belum tersedia"
+              : "Riwayat perlu koneksi"
+          }
+          className="mt-2"
           role="status"
         >
-          Riwayat server perlu koneksi. Salinan laporan terkirim dari perangkat
-          ini tetap tersedia di bawah.
-        </p>
+          {isConnected
+            ? "Masuk dengan akun relawan untuk membuka riwayat dari posko."
+            : "Hubungkan perangkat untuk memuat riwayat dari posko."}
+        </FieldFeedback>
       ) : null}
-      {status === "loading" ? (
-        <div className="mt-3 space-y-3">
-          <FieldReportCardSkeleton />
-          <FieldReportCardSkeleton />
-        </div>
+      {isLoading ? (
+        <FieldReportListSkeleton
+          className={fieldQueueReportGrid}
+          count={3}
+          label="Memuat riwayat posko"
+        />
       ) : null}
-      {error ? (
-        <p
-          className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+      {status === "error" ? (
+        <FieldFeedback
+          icon={TriangleAlert}
+          title="Riwayat belum dapat dimuat"
+          className="mt-2"
           role="alert"
         >
-          {error} Salinan lokal tetap tersedia jika pernah disinkronkan di
-          perangkat ini.
-        </p>
+          {error ?? "Gunakan Muat ulang untuk mencoba kembali."}
+        </FieldFeedback>
       ) : null}
       {reports.length ? (
-        <div className="mt-3 space-y-3">
+        <div className={fieldQueueReportGrid}>
           {reports.map((report) => (
             <ServerReportCard
               key={report.id}
@@ -110,16 +102,21 @@ export function ServerReportHistorySection({
           ))}
         </div>
       ) : status === "loaded" ? (
-        <p className="mt-3 rounded-xl border border-dashed border-peat-green/40 bg-white p-4 text-sm text-muted-foreground">
-          Belum ada laporan di riwayat server.
-        </p>
+        <FieldFeedback
+          icon={ClipboardCheck}
+          title="Belum ada laporan terkirim"
+          className="mt-2"
+          variant="empty"
+        >
+          Laporan akan muncul di sini setelah diterima posko.
+        </FieldFeedback>
       ) : null}
       {localFallbackToShow.length ? (
         <div className="mt-4">
           <h3 className="text-sm font-semibold text-peat-forest">
             Salinan terkirim di perangkat ini
           </h3>
-          <div className="mt-2 space-y-3">
+          <div className={fieldQueueReportGrid}>
             {localFallbackToShow.map((report) => (
               <ReportCard key={report.clientReportId} report={report} />
             ))}
@@ -128,14 +125,14 @@ export function ServerReportHistorySection({
       ) : null}
       {status === "loaded" && pageCount > 1 ? (
         <nav
-          className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-border bg-white p-2"
+          className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-peat-forest/10 bg-white px-2"
           aria-label="Halaman riwayat laporan"
         >
           <button
             type="button"
             onClick={() => onPageChange(page - 1)}
             disabled={page <= 1}
-            className="min-h-11 rounded-lg px-3 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green disabled:opacity-50"
+            className="min-h-10 rounded-lg px-2 text-xs font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green disabled:opacity-50"
           >
             Sebelumnya
           </button>
@@ -146,7 +143,7 @@ export function ServerReportHistorySection({
             type="button"
             onClick={() => onPageChange(page + 1)}
             disabled={page >= pageCount}
-            className="min-h-11 rounded-lg px-3 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green disabled:opacity-50"
+            className="min-h-10 rounded-lg px-2 text-xs font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green disabled:opacity-50"
           >
             Berikutnya
           </button>

@@ -1,7 +1,11 @@
 import "server-only";
 
 import { AuthorizationError } from "@/lib/role-access";
-import { ReportInputError } from "@/lib/server/reports/input";
+import {
+  ReportDemoSampleError,
+  ReportInputError,
+  ReportOwnerMismatchError,
+} from "@/lib/server/reports/input";
 import { ReportPhotoError } from "@/lib/server/uploads/private-photo";
 import type { HandlingStatus } from "@/lib/generated/prisma/client";
 
@@ -36,6 +40,20 @@ export function privateJsonResponse(payload: unknown, status = 200): Response {
 export function reportErrorResponse(error: unknown): Response {
   if (error instanceof AuthorizationError) {
     return privateJsonResponse({ error: error.message }, error.status);
+  }
+
+  if (error instanceof ReportOwnerMismatchError) {
+    return privateJsonResponse(
+      { code: "report_owner_mismatch", error: error.message },
+      403,
+    );
+  }
+
+  if (error instanceof ReportDemoSampleError) {
+    return privateJsonResponse(
+      { code: "demo_sample_forbidden", error: error.message },
+      403,
+    );
   }
 
   if (error instanceof ReportInputError || error instanceof ReportPhotoError) {

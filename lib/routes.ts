@@ -11,6 +11,11 @@ export const APP_ROUTES = {
   login: "/login",
   profile: "/profile",
   publicMap: "/peta",
+  pwa: {
+    worker: "/sw.js",
+    manifest: "/manifest.webmanifest",
+    offline: "/offline.html",
+  },
 
   // Field (Relawan)
   field: {
@@ -46,6 +51,7 @@ export const APP_ROUTES = {
     ledgerReport: (reportId: string) =>
       `/audit/ledger?reportId=${encodeURIComponent(reportId)}`,
     generator: "/audit/generator",
+    zones: "/audit/zones",
   },
 } as const;
 

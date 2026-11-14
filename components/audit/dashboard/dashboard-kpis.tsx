@@ -30,7 +30,6 @@ export function DashboardKpis({ dashboard }: { dashboard: MrvDashboard }) {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           description={`${formatCount(dashboard.totals.approvedZoneCount)} zona disetujui · estimasi, bukan kredit tersertifikasi`}
-          featured
           icon={Leaf}
           label="Estimasi emisi dicegah"
           value={formatCarbon(dashboard.totals.estimatedCarbonTons)}

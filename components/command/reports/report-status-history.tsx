@@ -1,16 +1,27 @@
-import { ReportStatusBadge } from "@/components/command/reports/report-status-badge";
+import { ChevronDown } from "lucide-react";
+
 import type { ReportStatusEvent } from "@/components/command/reports/report-contracts";
-import { formatDate } from "@/components/command/reports/report-card";
+import { ReportStatusHistoryEvent } from "@/components/command/reports/report-status-history-event";
+import { cn } from "@/lib/utils";
 
 export function ReportStatusHistory({
+  className,
   events,
 }: {
+  className?: string;
   events: ReportStatusEvent[];
 }) {
+  // The detail endpoint returns history in chronological order.
+  const latestEvent = events.at(-1);
+  const earlierEvents = events.slice(0, -1).toReversed();
+
   return (
     <section
       aria-labelledby="report-history-heading"
-      className="rounded-2xl border border-peat-forest/10 bg-white p-4"
+      className={cn(
+        "rounded-2xl border border-peat-forest/10 bg-white p-5 shadow-xs sm:p-6",
+        className,
+      )}
     >
       <h2
         className="font-heading text-2xl font-bold text-peat-forest"
@@ -18,39 +29,36 @@ export function ReportStatusHistory({
       >
         Riwayat status
       </h2>
-      {events.length === 0 ? (
-        <p className="mt-3 text-sm text-peat-forest/65">
+      {latestEvent ? (
+        <>
+          <ol aria-label="Perubahan status terbaru" className="mt-4">
+            <ReportStatusHistoryEvent event={latestEvent} />
+          </ol>
+          {earlierEvents.length > 0 ? (
+            <details className="group mt-4 border-t border-peat-forest/10">
+              <summary className="flex min-h-11 list-none items-center justify-between gap-3 rounded-lg text-xs font-semibold text-peat-forest/75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green [&::-webkit-details-marker]:hidden">
+                Lihat riwayat sebelumnya ({earlierEvents.length})
+                <ChevronDown
+                  aria-hidden="true"
+                  className="shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none"
+                  size={16}
+                />
+              </summary>
+              <ol
+                aria-label="Perubahan status sebelumnya"
+                className="mt-3 space-y-4"
+              >
+                {earlierEvents.map((event) => (
+                  <ReportStatusHistoryEvent event={event} key={event.id} />
+                ))}
+              </ol>
+            </details>
+          ) : null}
+        </>
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">
           Belum ada perubahan status.
         </p>
-      ) : (
-        <ol className="mt-4 space-y-4">
-          {events.map((event) => (
-            <li
-              className="relative border-l-2 border-peat-leaf pl-4"
-              key={event.id}
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                {event.previousStatus ? (
-                  <>
-                    <ReportStatusBadge status={event.previousStatus} />
-                    <span aria-hidden="true" className="text-peat-forest/45">
-                      →
-                    </span>
-                  </>
-                ) : null}
-                <ReportStatusBadge status={event.nextStatus} />
-              </div>
-              <p className="mt-1 text-xs text-peat-forest/60">
-                {formatDate(event.createdAt)}
-              </p>
-              {event.note ? (
-                <p className="mt-2 text-sm leading-5 whitespace-pre-wrap text-peat-forest/75">
-                  {event.note}
-                </p>
-              ) : null}
-            </li>
-          ))}
-        </ol>
       )}
     </section>
   );

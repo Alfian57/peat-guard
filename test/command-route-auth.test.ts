@@ -31,9 +31,15 @@ mock.module("@/lib/server/zones/data", () => ({ approveCommandZone }));
 const { POST: approveZone } =
   await import("@/app/api/command/zones/[zoneId]/approve/route");
 
-function makeRequest(): Request {
+function makeRequest(expectedRevision?: number): Request {
   return new Request(`http://localhost/api/command/zones/${zoneId}/approve`, {
     method: "POST",
+    ...(expectedRevision === undefined
+      ? {}
+      : {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ expectedRevision }),
+        }),
   });
 }
 
@@ -66,9 +72,9 @@ describe("command route authorization", () => {
   test("allows VERIFIKATOR approval and calls the service", async () => {
     activeRole = "VERIFIKATOR";
 
-    const response = await approveZone(makeRequest(), makeContext());
+    const response = await approveZone(makeRequest(0), makeContext());
 
     expect(response.status).toBe(201);
-    expect(approveCommandZone).toHaveBeenCalledWith(zoneId, "actor-id");
+    expect(approveCommandZone).toHaveBeenCalledWith(zoneId, "actor-id", 0);
   });
 });

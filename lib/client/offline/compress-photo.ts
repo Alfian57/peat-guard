@@ -9,8 +9,6 @@ const SUPPORTED_PHOTO_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
-  "image/heic",
-  "image/heif",
 ]);
 
 function canvasToBlob(
@@ -34,8 +32,16 @@ function canvasToBlob(
 }
 
 export async function compressPhoto(file: File): Promise<CompressedPhoto> {
+  if (
+    /^image\/hei[cf](?:-sequence)?$/i.test(file.type) ||
+    /\.hei[cf]$/i.test(file.name)
+  ) {
+    throw new Error(
+      "Ubah foto HEIC/HEIF ke JPEG, PNG, atau WebP, lalu pilih kembali.",
+    );
+  }
   if (!SUPPORTED_PHOTO_TYPES.has(file.type)) {
-    throw new Error("Pilih berkas foto dengan format gambar.");
+    throw new Error("Pilih foto berformat JPEG, PNG, atau WebP.");
   }
 
   let bitmap: ImageBitmap | null = null;

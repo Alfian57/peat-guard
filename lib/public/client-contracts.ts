@@ -1,4 +1,14 @@
-import { DEMO_HOTSPOT_SOURCE, FIRMS_SOURCES } from "@/lib/firms-sources";
+import {
+  DEMO_HOTSPOT_SOURCE,
+  FIRMS_INGEST_SOURCES,
+  FIRMS_SOURCES,
+} from "@/lib/firms-sources";
+import {
+  PUBLIC_MAP_CONFIDENCE_FILTERS,
+  PUBLIC_MAP_PERIODS,
+  PUBLIC_MAP_SOURCES,
+} from "@/lib/public/contracts";
+import { hotspotConfidenceLabel, hotspotSourceLabel } from "@/lib/firms-labels";
 import type { MapPoint, MapZone, MapViewport } from "@/lib/maps/types";
 import type { PublicMapData, PublicMetrics } from "@/lib/public/contracts";
 
@@ -7,21 +17,13 @@ export type PublicMapViewData = Omit<PublicMapData, "zones" | "hotspots"> & {
   hotspots: MapPoint[];
 };
 
-const PERIODS = ["24h", "7d", "30d", "all"] as const;
 const FRESHNESS_STATUSES = [
   "fresh",
+  "partial",
   "stale",
   "unavailable",
   "not_configured",
-] as const;
-const SOURCES = ["all", "demo", ...FIRMS_SOURCES] as const;
-const CONFIDENCE_FILTERS = [
-  "all",
-  "low",
-  "nominal",
-  "high",
-  "numeric",
-  "unknown",
+  "configuration_error",
 ] as const;
 
 export function parsePublicMapData(value: unknown): PublicMapViewData {
@@ -38,9 +40,9 @@ export function parsePublicMapData(value: unknown): PublicMapViewData {
     "freshness",
   ]);
   const viewport = parseViewport(data.viewport);
-  const period = parseEnum(data.period, PERIODS);
-  const source = parseEnum(data.source, SOURCES);
-  const confidence = parseEnum(data.confidence, CONFIDENCE_FILTERS);
+  const period = parseEnum(data.period, PUBLIC_MAP_PERIODS);
+  const source = parseEnum(data.source, PUBLIC_MAP_SOURCES);
+  const confidence = parseEnum(data.confidence, PUBLIC_MAP_CONFIDENCE_FILTERS);
   const freshness = parseFreshness(data.freshness);
   const truncated = asRecord(data.truncated);
   assertExactKeys(truncated, ["zones", "hotspots"]);
@@ -163,14 +165,10 @@ function parseHotspot(value: unknown, index: number): MapPoint {
   const acquiredAt = parseIsoTimestamp(hotspot.acquiredAt);
   const confidence = hotspot.confidence as string | null;
   const brightnessKelvin = hotspot.brightnessKelvin as number | null;
-  const displaySource = isDemoData ? "Ilustrasi sintetis" : source;
+  const displaySource = hotspotSourceLabel(source);
   const description = [
     displaySource,
-    confidence
-      ? /^\d+$/.test(confidence)
-        ? `Keyakinan numerik ${confidence}`
-        : `Keyakinan ${confidence}`
-      : "Keyakinan tidak tersedia",
+    `Keyakinan deteksi ${hotspotConfidenceLabel(confidence)}`,
     brightnessKelvin === null ? null : `${brightnessKelvin} K`,
     new Intl.DateTimeFormat("id-ID", {
       dateStyle: "medium",
@@ -185,7 +183,7 @@ function parseHotspot(value: unknown, index: number): MapPoint {
     id: `public-hotspot-${index}`,
     coordinates,
     kind: "hotspot",
-    label: isDemoData ? "Titik panas contoh" : "NASA FIRMS hotspot",
+    label: isDemoData ? "Titik panas contoh" : "Hotspot NASA FIRMS",
     description,
     source,
     isDemoData,
@@ -200,6 +198,8 @@ function parseFreshness(value: unknown): PublicMapData["freshness"] {
     "configured",
     "checkedAt",
     "lastSuccessfulAt",
+    "lastDataSyncAt",
+    "failedSources",
     "expectedIntervalMinutes",
   ]);
 
@@ -209,11 +209,18 @@ function parseFreshness(value: unknown): PublicMapData["freshness"] {
     !FRESHNESS_STATUSES.includes(
       freshness.status as (typeof FRESHNESS_STATUSES)[number],
     ) ||
-    !Number.isInteger(freshness.expectedIntervalMinutes) ||
-    (freshness.expectedIntervalMinutes as number) < 5 ||
-    (freshness.expectedIntervalMinutes as number) > 1_440 ||
+    (freshness.expectedIntervalMinutes !== null &&
+      (!Number.isInteger(freshness.expectedIntervalMinutes) ||
+        (freshness.expectedIntervalMinutes as number) < 5 ||
+        (freshness.expectedIntervalMinutes as number) > 1_440)) ||
     (freshness.lastSuccessfulAt !== null &&
-      !isIsoTimestamp(freshness.lastSuccessfulAt))
+      !isIsoTimestamp(freshness.lastSuccessfulAt)) ||
+    (freshness.lastDataSyncAt !== null &&
+      !isIsoTimestamp(freshness.lastDataSyncAt)) ||
+    !Array.isArray(freshness.failedSources) ||
+    !freshness.failedSources.every((source) =>
+      (FIRMS_INGEST_SOURCES as readonly unknown[]).includes(source),
+    )
   ) {
     throw new Error("Invalid public map response.");
   }
@@ -227,7 +234,16 @@ function parseFreshness(value: unknown): PublicMapData["freshness"] {
       freshness.lastSuccessfulAt === null
         ? null
         : parseIsoTimestamp(freshness.lastSuccessfulAt),
-    expectedIntervalMinutes: freshness.expectedIntervalMinutes as number,
+    lastDataSyncAt:
+      freshness.lastDataSyncAt === null
+        ? null
+        : parseIsoTimestamp(freshness.lastDataSyncAt),
+    failedSources:
+      freshness.failedSources as PublicMapData["freshness"]["failedSources"],
+    expectedIntervalMinutes:
+      freshness.expectedIntervalMinutes === null
+        ? null
+        : (freshness.expectedIntervalMinutes as number),
   };
 }
 

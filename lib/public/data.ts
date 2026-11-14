@@ -1,13 +1,19 @@
 import "server-only";
 
 import { Prisma } from "@/lib/generated/prisma/client";
-import { DEMO_HOTSPOT_SOURCE, FIRMS_SOURCES } from "@/lib/firms-sources";
+import {
+  DEMO_HOTSPOT_SOURCE,
+  FIRMS_INGEST_SOURCES,
+  FIRMS_SOURCES,
+} from "@/lib/firms-sources";
 import { prisma } from "@/lib/prisma";
 import type { Polygon } from "geojson";
 import type { PublicMapData, PublicMetrics } from "@/lib/public/contracts";
 import type { PublicMapQuery } from "@/lib/public/query";
 import { MAX_PUBLIC_ZONE_LIMIT } from "@/lib/public/query";
 import { getFirmsSyncIntervalMinutes } from "@/lib/server/firms/config";
+import { getFirmsFreshnessStatus } from "@/lib/server/firms/status";
+import { isRecord } from "@/lib/server/command/http";
 
 type ZoneRow = {
   name: string;
@@ -172,24 +178,49 @@ export async function getPublicMapData(
   query: PublicMapQuery,
 ): Promise<PublicMapData> {
   const checkedAt = new Date();
-  const [zoneRows, hotspotRows, lastSuccessfulSync] = await Promise.all([
-    prisma.$queryRaw<ZoneRow[]>(buildPublicZoneQuery(query)),
-    prisma.$queryRaw<HotspotRow[]>(buildPublicHotspotQuery(query, checkedAt)),
-    prisma.auditEvent.findFirst({
-      where: {
-        aggregateType: "NASA_FIRMS_SYNC",
-        eventType: "FIRMS_SYNC_SUCCEEDED",
-      },
-      orderBy: { createdAt: "desc" },
-      select: { createdAt: true },
-    }),
-  ]);
-  const expectedIntervalMinutes = getFirmsSyncIntervalMinutes();
+  const [zoneRows, hotspotRows, lastSuccessfulSync, latestDataSync] =
+    await Promise.all([
+      prisma.$queryRaw<ZoneRow[]>(buildPublicZoneQuery(query)),
+      prisma.$queryRaw<HotspotRow[]>(buildPublicHotspotQuery(query, checkedAt)),
+      prisma.auditEvent.findFirst({
+        where: {
+          aggregateType: "NASA_FIRMS_SYNC",
+          eventType: "FIRMS_SYNC_SUCCEEDED",
+        },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      }),
+      prisma.auditEvent.findFirst({
+        where: {
+          aggregateType: "NASA_FIRMS_SYNC",
+          eventType: { in: ["FIRMS_SYNC_SUCCEEDED", "FIRMS_SYNC_PARTIAL"] },
+        },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true, eventType: true, payload: true },
+      }),
+    ]);
+  let expectedIntervalMinutes: number | null = null;
+  let configurationValid = true;
+  try {
+    expectedIntervalMinutes = getFirmsSyncIntervalMinutes();
+  } catch {
+    configurationValid = false;
+  }
+  const configured = Boolean(process.env.NASA_FIRMS_MAP_KEY?.trim());
   const freshness = getPublicFreshness({
-    configured: Boolean(process.env.NASA_FIRMS_MAP_KEY?.trim()),
+    configured,
+    configurationValid,
     checkedAt,
     expectedIntervalMinutes,
     lastSuccessfulAt: lastSuccessfulSync?.createdAt ?? null,
+    lastDataSyncAt: latestDataSync?.createdAt ?? null,
+    lastDataOutcome:
+      latestDataSync?.eventType === "FIRMS_SYNC_PARTIAL"
+        ? "partial"
+        : latestDataSync?.eventType === "FIRMS_SYNC_SUCCEEDED"
+          ? "success"
+          : null,
+    failedSources: readFailedSources(latestDataSync?.payload),
   });
 
   return {
@@ -224,31 +255,60 @@ export async function getPublicMapData(
 
 function getPublicFreshness(args: {
   configured: boolean;
+  configurationValid: boolean;
   checkedAt: Date;
-  expectedIntervalMinutes: number;
+  expectedIntervalMinutes: number | null;
   lastSuccessfulAt: Date | null;
+  lastDataSyncAt: Date | null;
+  lastDataOutcome: "success" | "partial" | null;
+  failedSources: PublicMapData["freshness"]["failedSources"];
 }): PublicMapData["freshness"] {
-  const { configured, checkedAt, expectedIntervalMinutes, lastSuccessfulAt } =
-    args;
-  const staleAfterMs = (expectedIntervalMinutes + 5) * 60_000;
-  const isStale =
-    lastSuccessfulAt !== null &&
-    checkedAt.getTime() - lastSuccessfulAt.getTime() > staleAfterMs;
+  const {
+    configured,
+    configurationValid,
+    checkedAt,
+    expectedIntervalMinutes,
+    lastSuccessfulAt,
+    lastDataSyncAt,
+    lastDataOutcome,
+    failedSources,
+  } = args;
 
   return {
     provider: "NASA FIRMS",
     configured,
     checkedAt: checkedAt.toISOString(),
     lastSuccessfulAt: lastSuccessfulAt?.toISOString() ?? null,
+    lastDataSyncAt: lastDataSyncAt?.toISOString() ?? null,
+    failedSources,
     expectedIntervalMinutes,
-    status: !configured
-      ? "not_configured"
-      : lastSuccessfulAt === null
-        ? "unavailable"
-        : isStale
-          ? "stale"
-          : "fresh",
+    status: getFirmsFreshnessStatus({
+      configured,
+      configurationValid,
+      checkedAt,
+      expectedIntervalMinutes,
+      lastDataSyncAt,
+      lastDataOutcome,
+    }),
   };
+}
+
+function readFailedSources(
+  value: unknown,
+): PublicMapData["freshness"]["failedSources"] {
+  if (!isRecord(value) || !Array.isArray(value.failedSources)) return [];
+  return value.failedSources.flatMap((item) => {
+    if (
+      isRecord(item) &&
+      typeof item.source === "string" &&
+      FIRMS_INGEST_SOURCES.includes(
+        item.source as (typeof FIRMS_INGEST_SOURCES)[number],
+      )
+    ) {
+      return [item.source as (typeof FIRMS_INGEST_SOURCES)[number]];
+    }
+    return [];
+  });
 }
 
 async function getApprovedZoneMetrics(): Promise<PublicMetrics> {

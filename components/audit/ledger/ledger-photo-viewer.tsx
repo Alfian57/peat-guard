@@ -71,7 +71,7 @@ export function LedgerPhotoViewer({
       >
         <Image
           alt=""
-          className="size-16 rounded-lg border border-border object-cover transition group-hover:brightness-95"
+          className="size-16 rounded-lg border border-peat-forest/10 object-cover transition group-hover:brightness-95"
           height={64}
           src={row.photoHref}
           unoptimized
@@ -127,7 +127,7 @@ export function LedgerPhotoViewer({
           />
         </div>
 
-        <dl className="mt-4 grid gap-3 rounded-xl bg-peat-paper/70 p-4 text-sm sm:grid-cols-2">
+        <dl className="mt-4 grid gap-3 rounded-xl border border-peat-forest/15 bg-white p-4 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-xs font-semibold text-muted-foreground">
               Waktu rekam

@@ -55,7 +55,11 @@ test.describe("Offline-First & Field Queue Synchronization", () => {
       },
     );
     await expect(page.getByText(/Sedang offline/i)).toBeVisible();
-    await expect(page.getByText(/Menunggu sinkronisasi/i)).toBeVisible();
+    await expect(
+      page
+        .getByRole("region", { name: "Draf di perangkat" })
+        .getByText(/Menunggu sinkronisasi/i),
+    ).toBeVisible();
 
     // 6. Restore connectivity by toggling simulated offline off
     const restoreToggle = page.locator(

@@ -5,53 +5,40 @@ export function DashboardSkeleton() {
     <div
       aria-busy="true"
       aria-label="Memuat dasbor dampak karbon"
-      className="space-y-6"
+      className="min-w-0 space-y-5"
       role="status"
     >
-      {/* Header with Title and Date Filter */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-60 rounded-xl bg-peat-forest/20" />
-          <Skeleton className="h-4 w-72 rounded-md bg-peat-forest/10" />
-        </div>
-        <Skeleton className="h-11 w-48 rounded-xl bg-peat-forest/10" />
+      <div className="space-y-3">
+        <Skeleton className="h-10 w-60 max-w-full rounded-xl bg-peat-forest/20" />
+        <Skeleton className="h-4 w-80 max-w-full rounded-md bg-peat-forest/10" />
       </div>
-
-      {/* 4 KPI Cards */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Skeleton className="h-4 w-64 max-w-full rounded-md bg-peat-forest/10" />
+        <Skeleton className="h-11 w-36 rounded-full bg-peat-forest/10" />
+      </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }, (_, i) => (
+        {Array.from({ length: 4 }, (_, index) => (
           <div
-            className="rounded-2xl border border-border bg-white p-5 shadow-xs"
-            key={i}
+            className="min-w-0 space-y-3 rounded-2xl border border-peat-forest/10 bg-white p-5 shadow-xs"
+            key={index}
           >
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-4 w-28 rounded-md bg-peat-forest/10" />
-              <Skeleton className="size-8 rounded-xl bg-peat-forest/10" />
-            </div>
-            <Skeleton className="mt-4 h-8 w-24 rounded-lg bg-peat-forest/15" />
-            <Skeleton className="mt-2 h-3 w-36 rounded-md bg-peat-forest/10" />
+            <Skeleton className="h-4 w-28 max-w-full rounded-md bg-peat-forest/10" />
+            <Skeleton className="h-9 w-32 max-w-full rounded-lg bg-peat-forest/15" />
+            <Skeleton className="h-8 w-full rounded-md bg-peat-forest/5" />
           </div>
         ))}
       </div>
-
-      {/* Villages table & Carbon Details grid */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
-        <div className="space-y-3 rounded-2xl border border-border bg-white p-5 shadow-xs">
-          <Skeleton className="h-6 w-44 rounded-md bg-peat-forest/15" />
-          <div className="space-y-2 pt-2">
-            {Array.from({ length: 4 }, (_, i) => (
-              <Skeleton
-                className="h-12 w-full rounded-xl bg-muted/60"
-                key={i}
-              />
-            ))}
-          </div>
-        </div>
-        <div className="space-y-3 rounded-2xl border border-border bg-white p-5 shadow-xs">
-          <Skeleton className="h-6 w-36 rounded-md bg-peat-forest/15" />
-          <Skeleton className="h-32 w-full rounded-xl bg-muted/40" />
-        </div>
+      <div className="space-y-4 rounded-2xl border border-peat-forest/10 bg-white p-5 shadow-xs">
+        <Skeleton className="h-6 w-52 max-w-full rounded-md bg-peat-forest/15" />
+        {Array.from({ length: 4 }, (_, index) => (
+          <Skeleton
+            className="h-12 w-full rounded-xl bg-peat-forest/5"
+            key={index}
+          />
+        ))}
       </div>
+      <Skeleton className="h-16 w-full rounded-xl bg-peat-forest/5" />
+      <Skeleton className="h-20 w-full rounded-2xl bg-peat-forest/5" />
     </div>
   );
 }

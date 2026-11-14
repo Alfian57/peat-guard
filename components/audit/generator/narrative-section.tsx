@@ -3,7 +3,7 @@ import type { MrvGeneratedReport } from "@/lib/server/mrv/contracts";
 export function NarrativeSection({ report }: { report: MrvGeneratedReport }) {
   if (report.narrative.status === "not_requested") {
     return (
-      <p className="rounded-xl bg-peat-paper p-4 text-sm text-muted-foreground">
+      <p className="rounded-xl border border-peat-forest/15 bg-white p-4 text-sm text-muted-foreground">
         Draf narasi AI tidak diminta. Angka laporan tetap dihitung oleh server.
       </p>
     );
@@ -21,7 +21,7 @@ export function NarrativeSection({ report }: { report: MrvGeneratedReport }) {
     }[report.narrative.reason];
 
     return (
-      <p className="rounded-xl border border-warning/20 bg-warning/5 p-4 text-sm leading-6 text-foreground">
+      <p className="rounded-xl border border-warning/20 bg-white p-4 text-sm leading-6 text-foreground">
         {reason}
       </p>
     );

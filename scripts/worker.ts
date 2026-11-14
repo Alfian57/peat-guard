@@ -1,52 +1,82 @@
-import { runFirmsSyncJob } from "@/scripts/jobs/firms-sync";
+import { prisma } from "@/lib/prisma";
 import { getFirmsSyncIntervalMinutes } from "@/lib/server/firms/config";
+import { processNextReportAnalysis } from "@/lib/server/reports/ai-job";
+import { runFirmsSyncJob } from "@/scripts/jobs/firms-sync";
+import { getNextWorkerDelayMs } from "@/scripts/worker-scheduler";
 
-const shutdownSignals = ["SIGINT", "SIGTERM"] as const;
-const hasFirmsKey = Boolean(process.env.NASA_FIRMS_MAP_KEY?.trim());
-
-if (!hasFirmsKey) {
-  console.info(
-    "PEATGUARD worker is idle: NASA_FIRMS_MAP_KEY is not configured.",
-  );
-  await waitForShutdown();
-} else {
-  const syncIntervalMinutes = getFirmsSyncIntervalMinutes();
-  let syncRunning = false;
-
-  const runIfIdle = async () => {
-    if (syncRunning) {
-      return;
-    }
-
-    syncRunning = true;
-
-    try {
-      await runFirmsSyncJob();
-    } finally {
-      syncRunning = false;
-    }
-  };
-
-  await runIfIdle();
-  const timer = setInterval(
-    () => void runIfIdle(),
-    syncIntervalMinutes * 60_000,
-  );
-
-  console.info("PEATGUARD FIRMS worker scheduled.", {
-    intervalMinutes: syncIntervalMinutes,
-  });
-
-  await waitForShutdown();
-  clearInterval(timer);
+const stop = new AbortController();
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.once(signal, () => stop.abort());
 }
 
+const jobs = [
+  scheduleJob(
+    "triase laporan",
+    async () => {
+      await processNextReportAnalysis();
+      return undefined;
+    },
+    2_000,
+  ),
+];
+if (process.env.NASA_FIRMS_MAP_KEY?.trim()) {
+  try {
+    jobs.push(
+      scheduleJob(
+        "NASA FIRMS",
+        runFirmsSyncJob,
+        getFirmsSyncIntervalMinutes() * 60_000,
+      ),
+    );
+  } catch {
+    console.error(
+      "Jadwal NASA FIRMS tidak valid. Triase laporan tetap berjalan.",
+    );
+  }
+}
+console.info("PEATGUARD background worker started.");
+
+if (!stop.signal.aborted) {
+  await new Promise<void>((resolve) =>
+    stop.signal.addEventListener("abort", () => resolve(), { once: true }),
+  );
+}
+const deadline = setTimeout(() => process.exit(0), 25_000);
+try {
+  await Promise.all(jobs.map((job) => job()));
+  await prisma.$disconnect();
+} finally {
+  clearTimeout(deadline);
+}
 console.info("PEATGUARD background worker stopped.");
 
-function waitForShutdown(): Promise<void> {
-  return new Promise((resolve) => {
-    for (const signal of shutdownSignals) {
-      process.once(signal, resolve);
-    }
-  });
+function scheduleJob(
+  label: string,
+  run: () => Promise<number | undefined>,
+  intervalMs: number,
+) {
+  let inFlight: Promise<void> | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  function tick() {
+    if (stop.signal.aborted || inFlight) return;
+    let nextDelayMs = intervalMs;
+    inFlight = run()
+      .then((retryAfterSeconds) => {
+        nextDelayMs = getNextWorkerDelayMs(intervalMs, retryAfterSeconds);
+      })
+      .catch(() => console.error("Pekerjaan worker gagal:", label))
+      .finally(() => {
+        inFlight = undefined;
+        if (!stop.signal.aborted) {
+          timer = setTimeout(tick, nextDelayMs);
+        }
+      });
+  }
+
+  tick();
+  return async () => {
+    if (timer !== undefined) clearTimeout(timer);
+    await inFlight;
+  };
 }

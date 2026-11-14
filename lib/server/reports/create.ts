@@ -8,7 +8,6 @@ import {
   Prisma,
 } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { analyzeNormalizedReportPhoto } from "@/lib/server/ai/deepseek";
 import {
   assertCanCreateReport,
   isLocalDemoVolunteer,
@@ -16,6 +15,7 @@ import {
 } from "@/lib/server/reports/access";
 import {
   parseClientReportId,
+  ReportDemoSampleError,
   parseReportFormData,
 } from "@/lib/server/reports/input";
 import {
@@ -23,16 +23,6 @@ import {
   removePrivateReportPhoto,
   savePrivateReportPhoto,
 } from "@/lib/server/uploads/private-photo";
-import { AuthorizationError } from "@/lib/role-access";
-
-type CreateReportResult =
-  | { created: false; id: string }
-  | {
-      created: true;
-      id: string;
-      aiConsent: boolean;
-      normalizedPhoto: Buffer;
-    };
 
 type SpatialContext = {
   zoneId: string | null;
@@ -49,12 +39,14 @@ async function deriveSpatialContext(
       SELECT zone."id"::text AS "id"
       FROM "forest_zones" AS zone
       WHERE zone."is_approved" = true
+        AND zone."archived_at" IS NULL
         AND ST_Covers(
           zone."boundary",
           ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
         )
       ORDER BY zone."id"
       LIMIT 1
+      FOR SHARE OF zone
     `,
     transaction.$queryRaw<Array<{ distanceMeters: number }>>`
       WITH origin AS (
@@ -110,77 +102,6 @@ async function deriveSpatialContext(
   };
 }
 
-async function persistAiAssessment(
-  reportId: string,
-  assessment: Awaited<ReturnType<typeof analyzeNormalizedReportPhoto>>,
-): Promise<void> {
-  await prisma.$transaction(async (transaction) => {
-    await transaction.fieldReport.update({
-      where: { id: reportId },
-      data: {
-        aiState: AIAnalysisState.COMPLETED,
-        aiCategory: assessment.category,
-        aiUrgency: assessment.urgency,
-        aiConfidence: assessment.confidence.toFixed(3),
-        aiSummary: assessment.summary,
-        aiVisualIndicators: assessment.visualIndicators,
-        aiFalsePositiveCheck: assessment.falsePositiveCheck,
-        aiActionRecommendations: assessment.actionRecommendations,
-        aiAnalyzedAt: new Date(),
-      },
-    });
-    await transaction.auditEvent.create({
-      data: {
-        reportId,
-        actorId: null,
-        aggregateType: "FieldReport",
-        aggregateId: reportId,
-        eventType: "REPORT_AI_ANALYSIS_COMPLETED",
-        payload: { provider: "deepseek", state: "COMPLETED" },
-      },
-    });
-  });
-}
-
-async function persistAiFailure(reportId: string): Promise<void> {
-  await prisma.$transaction(async (transaction) => {
-    await transaction.fieldReport.update({
-      where: { id: reportId },
-      data: {
-        aiState: AIAnalysisState.FAILED,
-        aiAnalyzedAt: new Date(),
-      },
-    });
-    await transaction.auditEvent.create({
-      data: {
-        reportId,
-        actorId: null,
-        aggregateType: "FieldReport",
-        aggregateId: reportId,
-        eventType: "REPORT_AI_ANALYSIS_FAILED",
-        payload: { provider: "deepseek", state: "FAILED" },
-      },
-    });
-  });
-}
-
-async function runConsentAnalysis(
-  reportId: string,
-  normalizedPhoto: Buffer,
-): Promise<void> {
-  try {
-    const assessment = await analyzeNormalizedReportPhoto(normalizedPhoto);
-    await persistAiAssessment(reportId, assessment);
-  } catch {
-    try {
-      await persistAiFailure(reportId);
-    } catch {
-      // The report is already committed. If analysis state cannot be persisted,
-      // leave it PENDING so a later operational check can identify it.
-    }
-  }
-}
-
 export async function createFieldReport(
   actor: ReportActor,
   formData: FormData,
@@ -189,7 +110,7 @@ export async function createFieldReport(
   const clientReportId = parseClientReportId(formData);
   const idempotencyKey = `${actor.id.toLowerCase()}:${clientReportId}`;
   let savedPhotoName: string | undefined;
-  let result: CreateReportResult;
+  let result: { id: string; created: boolean };
 
   try {
     result = await prisma.$transaction(
@@ -214,7 +135,7 @@ export async function createFieldReport(
 
         const input = parseReportFormData(formData);
         if (input.isDemoSample && !isLocalDemoVolunteer(actor)) {
-          throw new AuthorizationError(403);
+          throw new ReportDemoSampleError();
         }
 
         const normalized = await normalizeReportPhoto(input.photo);
@@ -283,12 +204,7 @@ export async function createFieldReport(
           },
         });
 
-        return {
-          created: true,
-          id: reportId,
-          aiConsent: input.aiConsent,
-          normalizedPhoto: normalized.bytes,
-        };
+        return { created: true, id: reportId };
       },
       { maxWait: 5_000, timeout: 30_000 },
     );
@@ -307,9 +223,5 @@ export async function createFieldReport(
     throw error;
   }
 
-  if (result.created && result.aiConsent) {
-    await runConsentAnalysis(result.id, result.normalizedPhoto);
-  }
-
-  return { id: result.id, created: result.created };
+  return result;
 }

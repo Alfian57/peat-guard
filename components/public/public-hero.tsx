@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { PublicHeroHeadline } from "@/components/public/public-hero-headline";
 import { PublicHeroIntro } from "@/components/public/public-hero-intro";
+import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { handleSectionScroll } from "@/components/public/smooth-scroll";
 import { APP_ROUTES } from "@/lib/routes";
 import "./public-hero.css";
@@ -143,6 +144,7 @@ export function PublicHero() {
           markerRef={videoWindowRef}
           prefersReducedMotion={prefersReducedMotion}
         />
+        <PwaInstallButton className="absolute bottom-24 left-5 z-20 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/40 bg-black/30 px-4 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-black/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60 sm:left-8 lg:hidden" />
         <div className="public-hero__controls pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-4 px-5 pb-5 sm:px-8 lg:px-14">
           <div className="public-hero__video-controls pointer-events-auto flex shrink-0 items-center gap-2 rounded-full border border-white/20 bg-black/20 px-2 py-2 text-xs text-white/90 backdrop-blur-sm md:gap-3 md:px-3">
             <span className="hidden md:inline">

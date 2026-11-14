@@ -11,13 +11,13 @@ export function ReportTextList({
       <ul className="mt-2 space-y-2">
         {values.map((value, index) => (
           <li
-            className="flex gap-2 text-sm leading-5 text-peat-forest/80"
+            className="flex gap-2 text-sm leading-6 wrap-anywhere text-peat-forest/80"
             key={index}
           >
             <span aria-hidden="true" className="font-semibold text-peat-green">
               {index + 1}.
             </span>
-            {value}
+            <span className="min-w-0">{value}</span>
           </li>
         ))}
       </ul>

@@ -26,7 +26,7 @@ test("keeps unrated reports neutral in point data and the MapLibre style", () =>
   expect(reportPoint.reportPinState).toBe("neutral");
   expect(feature.properties.urgency).toBe("");
   expect(feature.properties.reportPinState).toBe("neutral");
-  expect(reportPoint.description).toContain("Kategori belum dinilai");
+  expect(reportPoint.description).toContain("Belum diklasifikasikan");
 
   const layers: Array<{ id?: string; paint?: Record<string, unknown> }> = [];
   const map = {

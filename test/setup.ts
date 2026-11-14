@@ -26,12 +26,15 @@ Object.assign(globalThis, {
   window: happyWindow,
   document: happyWindow.document,
   navigator: happyWindow.navigator,
+  Element: happyWindow.Element,
   HTMLElement: happyWindow.HTMLElement,
   HTMLInputElement: happyWindow.HTMLInputElement,
   MutationObserver: happyWindow.MutationObserver,
   Node: happyWindow.Node,
   Event: happyWindow.Event,
   MouseEvent: happyWindow.MouseEvent,
+  requestAnimationFrame: happyWindow.requestAnimationFrame.bind(happyWindow),
+  cancelAnimationFrame: happyWindow.cancelAnimationFrame.bind(happyWindow),
   getComputedStyle: happyWindow.getComputedStyle.bind(happyWindow),
 });
 

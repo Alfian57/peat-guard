@@ -36,7 +36,9 @@ export function ReportMapActiveFilterTags({
             className="text-peat-green"
             size={12}
           />
-          <span>Status: {statusLabel(filters.status as ReportStatus)}</span>
+          <span>
+            Status penanganan: {statusLabel(filters.status as ReportStatus)}
+          </span>
         </span>
       ) : null}
 
@@ -45,8 +47,8 @@ export function ReportMapActiveFilterTags({
           <Sparkles aria-hidden="true" className="text-amber-600" size={12} />
           <span>
             {filters.urgency === "UNRATED"
-              ? "Urgensi: Belum dinilai"
-              : `Urgensi: ${urgencyLabel(filters.urgency as ReportUrgency)}`}
+              ? "Urgensi AI: Belum dinilai"
+              : `Urgensi AI: ${urgencyLabel(filters.urgency as ReportUrgency)}`}
           </span>
         </span>
       ) : null}
@@ -55,8 +57,8 @@ export function ReportMapActiveFilterTags({
         <span className="inline-flex items-center gap-1 rounded-md border border-peat-forest/15 bg-white px-2 py-0.5 text-peat-forest shadow-xs">
           <Calendar aria-hidden="true" className="text-peat-green" size={12} />
           <span>
-            {filters.from ? `Dari ${filters.from}` : "Awal"} –{" "}
-            {filters.to ? `Sampai ${filters.to}` : "Sekarang"}
+            Waktu rekam: {filters.from || "awal"} – {filters.to || "sekarang"}{" "}
+            WIB
           </span>
         </span>
       ) : null}

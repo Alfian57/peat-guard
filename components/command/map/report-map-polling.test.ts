@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  COMMAND_MAP_DATA_REFRESH_INTERVAL_MS,
   REPORT_MAP_REFRESH_INTERVAL_MS,
+  startVisibleCommandMapPolling,
   startVisibleReportMapPolling,
   type ReportMapPollingScheduler,
 } from "@/components/command/map/report-map-polling";
@@ -113,4 +115,30 @@ describe("startVisibleReportMapPolling", () => {
     expect(refreshCount).toBe(1);
     expect(callbacks.size).toBe(0);
   });
+});
+
+test("refreshes command map and FIRMS data every five minutes only while visible", () => {
+  const visibilityDocument = new TestVisibilityDocument();
+  const { callbacks, clearedIntervals, scheduledDelays, scheduler } =
+    createScheduler();
+  let refreshCount = 0;
+
+  const stop = startVisibleCommandMapPolling(
+    visibilityDocument,
+    () => {
+      refreshCount += 1;
+    },
+    scheduler,
+  );
+
+  expect(scheduledDelays).toEqual([COMMAND_MAP_DATA_REFRESH_INTERVAL_MS]);
+  callbacks.get(1)?.();
+  expect(refreshCount).toBe(1);
+  visibilityDocument.setVisibilityState("hidden");
+  callbacks.get(1)?.();
+  expect(refreshCount).toBe(1);
+  visibilityDocument.setVisibilityState("visible");
+  expect(refreshCount).toBe(2);
+  expect(clearedIntervals).toEqual([1]);
+  stop();
 });

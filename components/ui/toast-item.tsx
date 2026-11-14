@@ -22,23 +22,21 @@ export function ToastItem({ className, toast, ...props }: ToastItemProps) {
       {...props}
     >
       <ToastPrimitive.Content
-        className="flex w-full min-w-0 items-start gap-3"
+        className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5"
         data-slot="toast-content"
       >
-        <div className="mt-0.5 shrink-0">
+        <div className="col-start-1 row-start-1 shrink-0">
           <ToastIcon type={toast.type} />
         </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <ToastPrimitive.Title
-            className="text-xs font-semibold text-peat-forest"
-            data-slot="toast-title"
-          />
-          <ToastPrimitive.Description
-            className="text-[11px] leading-relaxed text-peat-forest/70"
-            data-slot="toast-description"
-          />
-        </div>
-        <ToastCloseButton />
+        <ToastPrimitive.Title
+          className="col-start-2 row-start-1 min-w-0 text-xs font-semibold wrap-anywhere text-peat-forest"
+          data-slot="toast-title"
+        />
+        <ToastPrimitive.Description
+          className="col-span-3 col-start-1 row-start-2 min-w-0 text-xs leading-relaxed wrap-anywhere text-muted-foreground"
+          data-slot="toast-description"
+        />
+        <ToastCloseButton className="col-start-3 row-start-1" />
       </ToastPrimitive.Content>
     </ToastPrimitive.Root>
   );

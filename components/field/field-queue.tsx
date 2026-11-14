@@ -1,6 +1,9 @@
 "use client";
 
-import { CloudUpload, RefreshCw } from "lucide-react";
+import { WorkspacePageHeading } from "@/components/workspace/workspace-page-heading";
+import { RefreshCw, ShieldCheck } from "lucide-react";
+import { FieldFeedback } from "./field-feedback";
+import { FieldQueueSummary } from "./field-queue-summary";
 import { useEffect, useRef, useState } from "react";
 import { ownerStatusMessage, useFieldShell } from "./field-app-shell";
 import { FieldOutboxSection } from "./field-outbox-section";
@@ -23,20 +26,25 @@ export function FieldQueue() {
   const history = useFieldReportHistory();
   const [deleteReportId, setDeleteReportId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isReloading, setIsReloading] = useState(false);
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
   const pendingReport = history.localReports.find(
     (report) => report.clientReportId === deleteReportId,
   );
-  const reportHistory = splitReportHistory(
+  const { outboxReports, localSentFallback } = splitReportHistory(
     history.serverReports,
     history.localReports,
   );
-  const waitingCount = reportHistory.outboxReports.length;
+  const waitingCount = outboxReports.length;
+  const isCheckingOwner = ownerStatus === "loading";
+  const initialHistoryLoading =
+    history.serverStatus === "loading" && history.serverReports.length === 0;
   const sentCount =
-    history.serverStatus === "loaded"
+    history.serverStatus === "loaded" || history.serverReports.length
       ? history.serverTotal
-      : history.localReports.filter((report) => report.syncState === "synced")
-          .length;
+      : localSentFallback.length;
+  const reloadPending =
+    isReloading || history.isLoadingLocal || history.serverStatus === "loading";
 
   useEffect(() => {
     const dialog = deleteDialogRef.current;
@@ -49,6 +57,16 @@ export function FieldQueue() {
     await syncNow();
     await history.refreshAll();
     await refreshQueue();
+  }
+
+  async function reloadQueue() {
+    if (reloadPending) return;
+    setIsReloading(true);
+    try {
+      await history.refreshAll();
+    } finally {
+      setIsReloading(false);
+    }
   }
 
   async function confirmDeleteDraft() {
@@ -80,112 +98,71 @@ export function FieldQueue() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl px-4 pt-4 lg:max-w-5xl lg:px-0 lg:pt-0">
-      <h1 className="font-heading text-4xl leading-none font-bold text-peat-forest">
-        Antrean laporan
-      </h1>
-      <p className="mt-2 text-sm leading-5 text-muted-foreground">
-        Draf menunggu aman di perangkat. Laporan yang sudah diterima posko
-        tersedia di riwayat server saat online.
-      </p>
-      {!ownerId ? (
-        <p
-          className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-950"
+    <div className="w-full min-w-0">
+      <WorkspacePageHeading
+        compact
+        className="mb-4 flex-row items-end justify-between gap-2 sm:gap-4"
+        title="Antrean laporan"
+        action={
+          <button
+            type="button"
+            onClick={() => void reloadQueue()}
+            disabled={!ownerId || reloadPending}
+            className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-peat-forest/10 bg-white px-3 text-xs font-semibold text-peat-forest shadow-xs transition-colors hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green disabled:opacity-60"
+          >
+            <RefreshCw
+              aria-hidden="true"
+              className={
+                reloadPending
+                  ? "animate-spin motion-reduce:animate-none"
+                  : undefined
+              }
+              size={14}
+            />
+            Muat ulang
+          </button>
+        }
+        description="Draf aman di perangkat. Pantau pengiriman dan riwayat laporan yang sudah diterima posko."
+      />
+      {ownerId || isCheckingOwner ? (
+        <div className="space-y-4">
+          <FieldQueueSummary
+            hasOwner={Boolean(ownerId)}
+            isLoading={
+              isCheckingOwner || history.isLoadingLocal || initialHistoryLoading
+            }
+            isConnected={isConnected}
+            isSyncing={isSyncing}
+            waitingCount={waitingCount}
+            sentCount={sentCount}
+            onSync={syncAll}
+          />
+          <FieldOutboxSection
+            isLoading={isCheckingOwner || history.isLoadingLocal}
+            drafts={outboxReports}
+            onDelete={setDeleteReportId}
+          />
+          <ServerReportHistorySection
+            isConnected={isConnected}
+            localReports={history.localReports}
+            onPageChange={history.navigateServerPage}
+            page={history.serverPage}
+            pageSize={history.serverPageSize}
+            reports={history.serverReports}
+            status={isCheckingOwner ? "loading" : history.serverStatus}
+            total={history.serverTotal}
+            error={history.serverError}
+          />
+        </div>
+      ) : (
+        <FieldFeedback
+          icon={ShieldCheck}
+          title="Akun relawan belum siap"
           role="status"
         >
           {ownerStatusMessage(ownerStatus)}
-        </p>
-      ) : null}
-
-      <section
-        className="mt-4 rounded-2xl border border-border bg-white p-4"
-        aria-labelledby="queue-status-title"
-      >
-        <div className="flex items-start gap-3">
-          <span
-            className={`grid size-11 shrink-0 place-items-center rounded-full ${isConnected ? "bg-secondary text-peat-green" : "bg-amber-100 text-amber-900"}`}
-          >
-            <CloudUpload aria-hidden="true" size={22} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2
-              id="queue-status-title"
-              className="font-semibold text-peat-forest"
-            >
-              {!ownerId
-                ? "Akun belum diverifikasi"
-                : isConnected
-                  ? "Koneksi tersedia"
-                  : "Sedang offline"}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {ownerId
-                ? `${waitingCount} menunggu · ${sentCount} terkirim ke posko`
-                : "Antrean disembunyikan sampai pemilik terverifikasi"}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          disabled={!ownerId || !isConnected || isSyncing || waitingCount === 0}
-          onClick={() => void syncAll()}
-          className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-peat-green px-4 text-sm font-bold text-white transition hover:bg-peat-forest focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-forest disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
-        >
-          <RefreshCw
-            aria-hidden="true"
-            className={
-              isSyncing ? "animate-spin motion-reduce:animate-none" : ""
-            }
-            size={18}
-          />
-          {isSyncing ? "Menyinkronkan…" : "Sinkronkan semua"}
-        </button>
-        {!isConnected ? (
-          <p className="mt-2 text-center text-xs text-muted-foreground">
-            Draf tetap dapat dibuka dan dihapus offline. Sinkronisasi berjalan
-            saat koneksi tersedia.
-          </p>
-        ) : null}
-      </section>
-
-      <div className="mt-5 flex items-center justify-between gap-3">
-        <h2 className="font-heading text-2xl font-bold text-peat-forest">
-          Laporan lapangan
-        </h2>
-        <button
-          type="button"
-          onClick={() => void history.refreshAll()}
-          disabled={history.isLoadingLocal}
-          className="min-h-11 rounded-lg px-3 text-sm font-semibold text-peat-green focus-visible:outline-3 focus-visible:outline-peat-green disabled:opacity-60"
-        >
-          Muat ulang
-        </button>
-      </div>
-
-      <FieldOutboxSection
-        isLoading={history.isLoadingLocal}
-        reports={history.localReports}
-        onDelete={setDeleteReportId}
-      />
-      <ServerReportHistorySection
-        hasOwner={Boolean(ownerId)}
-        isConnected={isConnected}
-        localReports={history.localReports}
-        onPageChange={history.navigateServerPage}
-        onRefresh={history.refreshServerHistory}
-        page={history.serverPage}
-        pageSize={history.serverPageSize}
-        reports={history.serverReports}
-        status={history.serverStatus}
-        total={history.serverTotal}
-        error={history.serverError}
-      />
-
-      <p className="mt-5 rounded-xl bg-secondary/70 px-4 py-3 text-xs leading-5 text-secondary-foreground">
-        Antrean tersimpan di browser perangkat ini. Riwayat server hanya dimuat
-        untuk akun relawan aktif; API dan foto privat tidak disimpan service
-        worker.
-      </p>
+        </FieldFeedback>
+      )}
 
       <dialog
         ref={deleteDialogRef}
@@ -195,7 +172,7 @@ export function FieldQueue() {
           event.preventDefault();
           setDeleteReportId(null);
         }}
-        className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-border bg-white p-5 shadow-xl backdrop:bg-black/40"
+        className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-peat-forest/10 bg-white p-5 shadow-xl backdrop:bg-black/40"
       >
         <h2
           id="delete-draft-title"

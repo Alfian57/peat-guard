@@ -58,11 +58,11 @@ test("shows filter controls and the empty state when no reports match", async ()
 
   expect(await screen.findByText("Tidak ada laporan yang sesuai")).toBeTruthy();
   await user.click(screen.getByRole("button", { name: /Filter/ }));
-  expect(screen.getByLabelText(/Status laporan/)).toBeTruthy();
+  expect(screen.getByLabelText(/Status penanganan/)).toBeTruthy();
   expect(screen.getByLabelText(/Zona gambut/)).toBeTruthy();
-  expect(screen.getByLabelText(/Dari tanggal/)).toBeTruthy();
-  expect(screen.getByLabelText(/Sampai tanggal/)).toBeTruthy();
-  expect(screen.getByLabelText(/Data demonstrasi/)).toBeTruthy();
+  expect(screen.getByLabelText(/Waktu kejadian dari/)).toBeTruthy();
+  expect(screen.getByLabelText(/Waktu kejadian sampai/)).toBeTruthy();
+  expect(screen.getByLabelText(/Jenis data/)).toBeTruthy();
 });
 
 test("shows a retry action when the report endpoint fails", async () => {
@@ -111,13 +111,15 @@ test("applies status and zone filters and shows the requested page", async () =>
 
   await user.click(screen.getByRole("button", { name: /Filter/ }));
   await user.selectOptions(
-    screen.getByLabelText(/Status laporan/),
+    screen.getByLabelText(/Status penanganan/),
     "DALAM_PENANGANAN",
   );
   await user.selectOptions(screen.getByLabelText(/Zona gambut/), zone.id);
   await user.click(screen.getByRole("button", { name: /Terapkan/ }));
-  expect(await screen.findByText("Status: Dalam penanganan")).toBeTruthy();
-  expect(await screen.findByText("Zona: Zona Utara")).toBeTruthy();
+  expect(
+    await screen.findByText("Status penanganan: Dalam penanganan"),
+  ).toBeTruthy();
+  expect(await screen.findByText("Zona gambut: Zona Utara")).toBeTruthy();
   expect(requestedUrls.some((url) => url.includes(`zoneId=${zone.id}`))).toBe(
     true,
   );

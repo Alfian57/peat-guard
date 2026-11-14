@@ -1,12 +1,16 @@
 import { randomUUID } from "node:crypto";
 
 import { Prisma } from "@/lib/generated/prisma/client";
+import { hotspotConfidenceLabel, hotspotSourceLabel } from "@/lib/firms-labels";
 import { prisma } from "@/lib/prisma";
 import type { MapPoint } from "@/lib/maps/types";
 import type { FirmsHotspot } from "@/lib/server/firms/csv";
 import type { AreaBounds } from "@/lib/server/firms/client";
+import type { FirmsIngestSource } from "@/lib/firms-sources";
 import { isRecord } from "@/lib/server/command/http";
 import { evaluateFirmsSyncRateLimit } from "@/lib/server/firms/rate-limit";
+import { getFirmsSyncIntervalMinutes } from "@/lib/server/firms/config";
+import { getFirmsFreshnessStatus } from "@/lib/server/firms/status";
 
 const SYNC_AGGREGATE_TYPE = "NASA_FIRMS_SYNC";
 const SYNC_RATE_LIMIT_AGGREGATE_ID = "f1a1f1a1-0000-4000-8000-000000000001";
@@ -14,9 +18,14 @@ const UPSERT_CHUNK_SIZE = 400;
 
 export type FirmsSyncStatus = {
   configured: boolean;
+  freshness: ReturnType<typeof getFirmsFreshnessStatus>;
+  expectedIntervalMinutes: number | null;
   lastSuccessfulAt: string | null;
+  lastDataSyncAt: string | null;
   lastAttemptAt: string | null;
+  lastOutcome: "success" | "partial" | "failed" | null;
   lastErrorCode: string | null;
+  lastFailedSources: FirmsIngestSource[];
   lastProcessedCount: number | null;
   storedHotspotCount: number;
 };
@@ -87,6 +96,8 @@ export async function reserveFirmsSyncSlot(args: {
 
 export async function upsertAndRecordSuccess(args: {
   hotspots: FirmsHotspot[];
+  successfulSources: FirmsIngestSource[];
+  failedSources: Array<{ source: FirmsIngestSource; errorCode: string }>;
   actorId: string | null;
   area: AreaBounds;
 }): Promise<void> {
@@ -144,12 +155,14 @@ export async function upsertAndRecordSuccess(args: {
         actorId: args.actorId,
         aggregateType: SYNC_AGGREGATE_TYPE,
         aggregateId: randomUUID(),
-        eventType: "FIRMS_SYNC_SUCCEEDED",
+        eventType:
+          args.failedSources.length > 0
+            ? "FIRMS_SYNC_PARTIAL"
+            : "FIRMS_SYNC_SUCCEEDED",
         payload: {
           processedCount: args.hotspots.length,
-          sources: Array.from(
-            new Set(args.hotspots.map(({ source }) => source)),
-          ),
+          sources: args.successfulSources,
+          failedSources: args.failedSources,
           area: args.area,
         },
       },
@@ -160,6 +173,7 @@ export async function upsertAndRecordSuccess(args: {
 export async function recordSyncFailure(args: {
   actorId: string | null;
   errorCode: string;
+  failedSources: Array<{ source: FirmsIngestSource; errorCode: string }>;
 }): Promise<void> {
   await prisma.auditEvent.create({
     data: {
@@ -167,7 +181,10 @@ export async function recordSyncFailure(args: {
       aggregateType: SYNC_AGGREGATE_TYPE,
       aggregateId: randomUUID(),
       eventType: "FIRMS_SYNC_FAILED",
-      payload: { errorCode: args.errorCode },
+      payload: {
+        errorCode: args.errorCode,
+        failedSources: args.failedSources,
+      },
     },
   });
 }
@@ -175,7 +192,13 @@ export async function recordSyncFailure(args: {
 export async function getFirmsSyncStatus(
   configured: boolean,
 ): Promise<FirmsSyncStatus> {
-  const [latestSuccess, latestAttempt, storedHotspotCount] = await Promise.all([
+  const [
+    latestSuccess,
+    latestDataSync,
+    latestAttempt,
+    latestOutcome,
+    storedHotspotCount,
+  ] = await Promise.all([
     prisma.auditEvent.findFirst({
       where: {
         aggregateType: SYNC_AGGREGATE_TYPE,
@@ -185,34 +208,105 @@ export async function getFirmsSyncStatus(
       select: { createdAt: true, payload: true },
     }),
     prisma.auditEvent.findFirst({
+      where: {
+        aggregateType: SYNC_AGGREGATE_TYPE,
+        eventType: { in: ["FIRMS_SYNC_SUCCEEDED", "FIRMS_SYNC_PARTIAL"] },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true, eventType: true, payload: true },
+    }),
+    prisma.auditEvent.findFirst({
       where: { aggregateType: SYNC_AGGREGATE_TYPE },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true, eventType: true, payload: true },
+    }),
+    prisma.auditEvent.findFirst({
+      where: {
+        aggregateType: SYNC_AGGREGATE_TYPE,
+        eventType: {
+          in: [
+            "FIRMS_SYNC_SUCCEEDED",
+            "FIRMS_SYNC_PARTIAL",
+            "FIRMS_SYNC_FAILED",
+          ],
+        },
+      },
       orderBy: { createdAt: "desc" },
       select: { createdAt: true, eventType: true, payload: true },
     }),
     prisma.satelliteHotspot.count({ where: { isDemoData: false } }),
   ]);
-  const successPayload = isRecord(latestSuccess?.payload)
-    ? latestSuccess.payload
+  const successPayload = isRecord(latestDataSync?.payload)
+    ? latestDataSync.payload
     : null;
-  const attemptPayload = isRecord(latestAttempt?.payload)
-    ? latestAttempt.payload
+  const outcomePayload = isRecord(latestOutcome?.payload)
+    ? latestOutcome.payload
     : null;
+  let expectedIntervalMinutes: number | null = null;
+  let configurationValid = true;
+
+  try {
+    expectedIntervalMinutes = getFirmsSyncIntervalMinutes();
+  } catch {
+    configurationValid = false;
+  }
+  const checkedAt = new Date();
+  const lastDataOutcome =
+    latestDataSync?.eventType === "FIRMS_SYNC_PARTIAL"
+      ? "partial"
+      : latestDataSync?.eventType === "FIRMS_SYNC_SUCCEEDED"
+        ? "success"
+        : null;
 
   return {
     configured,
+    freshness: getFirmsFreshnessStatus({
+      configured,
+      configurationValid,
+      checkedAt,
+      expectedIntervalMinutes,
+      lastDataSyncAt: latestDataSync?.createdAt ?? null,
+      lastDataOutcome,
+    }),
+    expectedIntervalMinutes,
     lastSuccessfulAt: latestSuccess?.createdAt.toISOString() ?? null,
+    lastDataSyncAt: latestDataSync?.createdAt.toISOString() ?? null,
     lastAttemptAt: latestAttempt?.createdAt.toISOString() ?? null,
+    lastOutcome:
+      latestOutcome?.eventType === "FIRMS_SYNC_SUCCEEDED"
+        ? "success"
+        : latestOutcome?.eventType === "FIRMS_SYNC_PARTIAL"
+          ? "partial"
+          : latestOutcome?.eventType === "FIRMS_SYNC_FAILED"
+            ? "failed"
+            : null,
     lastErrorCode:
-      latestAttempt?.eventType === "FIRMS_SYNC_FAILED" &&
-      typeof attemptPayload?.errorCode === "string"
-        ? attemptPayload.errorCode
+      latestOutcome?.eventType === "FIRMS_SYNC_FAILED" &&
+      typeof outcomePayload?.errorCode === "string"
+        ? outcomePayload.errorCode
         : null,
+    lastFailedSources: parseFailedSources(outcomePayload?.failedSources),
     lastProcessedCount:
       typeof successPayload?.processedCount === "number"
         ? successPayload.processedCount
         : null,
     storedHotspotCount,
   };
+}
+
+function parseFailedSources(value: unknown): FirmsIngestSource[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item): FirmsIngestSource[] => {
+    if (!isRecord(item) || typeof item.source !== "string") return [];
+    if (
+      item.source === "VIIRS_NOAA20_NRT" ||
+      item.source === "VIIRS_NOAA21_NRT"
+    ) {
+      return [item.source];
+    }
+    return [];
+  });
 }
 
 export async function listCommandHotspots(): Promise<CommandHotspot[]> {
@@ -236,10 +330,10 @@ export async function listCommandHotspots(): Promise<CommandHotspot[]> {
     id: hotspot.id,
     coordinates: [hotspot.longitude, hotspot.latitude],
     kind: "hotspot",
-    label: hotspot.isDemoData ? "Titik panas contoh" : "NASA FIRMS hotspot",
+    label: hotspot.isDemoData ? "Titik panas contoh" : "Hotspot NASA FIRMS",
     description: [
-      hotspot.isDemoData ? "Ilustrasi sintetis" : "NASA FIRMS",
-      hotspot.confidence ? `Keyakinan ${hotspot.confidence}` : null,
+      hotspotSourceLabel(hotspot.source),
+      `Keyakinan deteksi ${hotspotConfidenceLabel(hotspot.confidence)}`,
       hotspot.brightnessKelvin !== null
         ? `${Number(hotspot.brightnessKelvin)} K`
         : null,

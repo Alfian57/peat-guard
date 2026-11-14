@@ -1,11 +1,13 @@
 import {
-  FIRMS_SOURCES,
   FirmsDataError,
   parseFirmsCsv,
   type FirmsHotspot,
-  type FirmsSource,
 } from "@/lib/server/firms/csv";
 import { FirmsProviderError } from "@/lib/server/firms/errors";
+import {
+  FIRMS_INGEST_SOURCES,
+  type FirmsIngestSource,
+} from "@/lib/firms-sources";
 
 export type AreaBounds = {
   west: number;
@@ -20,7 +22,7 @@ const DEFAULT_AREA: AreaBounds = {
   east: 117,
   north: 2,
 };
-const DAY_RANGE = 1;
+const DAY_RANGE = 2;
 const MAX_RESPONSE_BYTES = 20_000_000;
 const REQUEST_TIMEOUT_MS = 20_000;
 
@@ -43,12 +45,15 @@ export function getFirmsConfiguration(): {
 }
 
 export function parseAreaBounds(value: string): AreaBounds {
-  const values = value.split(",").map((part) => Number(part.trim()));
+  const parts = value.split(",").map((part) => part.trim());
 
-  if (
-    values.length !== 4 ||
-    values.some((number) => !Number.isFinite(number))
-  ) {
+  if (parts.length !== 4 || parts.some((part) => part === "")) {
+    throw new FirmsProviderError("invalid_area_configuration");
+  }
+
+  const values = parts.map(Number);
+
+  if (values.some((number) => !Number.isFinite(number))) {
     throw new FirmsProviderError("invalid_area_configuration");
   }
 
@@ -77,31 +82,72 @@ export async function fetchRecentHotspots(
   apiKey: string,
   area: AreaBounds,
   fetchImplementation: typeof fetch = fetch,
-): Promise<FirmsHotspot[]> {
-  const sources: FirmsSource[] = [...FIRMS_SOURCES];
+): Promise<FirmsSourceBatch> {
   const responses = await Promise.all(
-    sources.map(async (source) => ({
-      source,
-      csv: await fetchSourceCsv(apiKey, source, area, fetchImplementation),
-    })),
+    FIRMS_INGEST_SOURCES.map(async (source) => {
+      try {
+        const csv = await fetchSourceCsv(
+          apiKey,
+          source,
+          area,
+          fetchImplementation,
+        );
+        return {
+          source,
+          hotspots: parseSourceCsv(csv, source),
+          errorCode: null,
+        };
+      } catch (error) {
+        return {
+          source,
+          hotspots: [],
+          errorCode:
+            error instanceof FirmsProviderError
+              ? error.code
+              : "provider_request_failed",
+        };
+      }
+    }),
   );
 
-  return responses.flatMap(({ source, csv }) => {
-    try {
-      return parseFirmsCsv(csv, source);
-    } catch (error) {
-      if (error instanceof FirmsDataError) {
-        throw new FirmsProviderError(error.code);
-      }
+  return {
+    hotspots: responses.flatMap(({ hotspots }) => hotspots),
+    successfulSources: responses
+      .filter(({ errorCode }) => errorCode === null)
+      .map(({ source }) => source),
+    failedSources: responses
+      .filter((response) => response.errorCode !== null)
+      .map(({ source, errorCode }) => ({
+        source,
+        errorCode: errorCode as string,
+      })),
+  };
+}
 
-      throw error;
+export type FirmsSourceBatch = {
+  hotspots: FirmsHotspot[];
+  successfulSources: FirmsIngestSource[];
+  failedSources: Array<{
+    source: FirmsIngestSource;
+    errorCode: string;
+  }>;
+};
+
+function parseSourceCsv(csv: string, source: FirmsIngestSource) {
+  try {
+    return parseFirmsCsv(csv, source);
+  } catch (error) {
+    if (error instanceof FirmsDataError) {
+      throw new FirmsProviderError(error.code);
     }
-  });
+
+    throw error;
+  }
 }
 
 function buildAreaUrl(
   apiKey: string,
-  source: FirmsSource,
+  source: FirmsIngestSource,
   area: AreaBounds,
 ): string {
   const coordinates = [area.west, area.south, area.east, area.north].join(",");
@@ -111,7 +157,7 @@ function buildAreaUrl(
 
 async function fetchSourceCsv(
   apiKey: string,
-  source: FirmsSource,
+  source: FirmsIngestSource,
   area: AreaBounds,
   fetchImplementation: typeof fetch,
 ): Promise<string> {

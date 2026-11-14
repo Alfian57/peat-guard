@@ -7,6 +7,7 @@ import { motion } from "motion/react";
 import type { RefObject } from "react";
 
 import { useHeroPanelReveal } from "@/components/public/use-hero-panel-reveal";
+import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { handleSectionScroll } from "@/components/public/smooth-scroll";
 import { APP_ROUTES } from "@/lib/routes";
 
@@ -91,6 +92,9 @@ export function PublicHeroIntro({
               Kenali cara kerjanya
               <ArrowDown aria-hidden="true" size={16} />
             </a>
+            {prefersReducedMotion ? (
+              <PwaInstallButton className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-peat-forest/25 bg-white px-5 text-sm font-semibold text-peat-forest transition-colors hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-peat-forest disabled:opacity-60 lg:hidden" />
+            ) : null}
           </div>
         </div>
       </div>

@@ -48,8 +48,8 @@ export function ReportQueueResults({
             Tidak ada laporan yang sesuai
           </h2>
           <p className="mt-2 max-w-lg text-sm leading-6 text-peat-forest/70">
-            Ubah status atau rentang tanggal, atau tampilkan kembali semua
-            laporan.
+            Ubah filter status penanganan, zona gambut, waktu kejadian, atau
+            jenis data, atau tampilkan semua laporan.
           </p>
           <Link
             className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-peat-forest px-4 text-sm font-semibold text-white transition-colors hover:bg-peat-green"
@@ -83,26 +83,29 @@ export function ReportQueueResults({
       </p>
       <div className="overflow-hidden rounded-2xl border border-peat-forest/10 bg-white shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] border-collapse text-left">
+          <table className="w-full min-w-[1060px] border-collapse text-left">
             <caption className="sr-only">
               Antrean laporan patroli gambut
             </caption>
             <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-peat-forest/70">
               <tr>
                 <th className="px-4 py-3.5" scope="col">
-                  ID Laporan
+                  ID laporan
                 </th>
                 <th className="px-4 py-3.5" scope="col">
-                  Zona & Lokasi
+                  Jenis data
                 </th>
                 <th className="px-4 py-3.5" scope="col">
-                  Klasifikasi AI
+                  Zona gambut & lokasi
                 </th>
                 <th className="px-4 py-3.5" scope="col">
-                  Urgensi
+                  Triase AI
                 </th>
                 <th className="px-4 py-3.5" scope="col">
-                  Status
+                  Urgensi AI
+                </th>
+                <th className="px-4 py-3.5" scope="col">
+                  Status penanganan
                 </th>
                 <th className="px-4 py-3.5 text-right" scope="col">
                   Aksi

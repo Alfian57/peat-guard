@@ -17,12 +17,10 @@ import {
   type ReportDetail,
   type ReportStatus,
 } from "@/components/command/reports/report-contracts";
-import {
-  ReportAiAnalysis,
-  ReportEvidence,
-  ReportLocationDetails,
-  ReportStatusHistory,
-} from "@/components/command/reports/report-detail-sections";
+import { ReportAiAnalysis } from "@/components/command/reports/report-ai-analysis";
+import { ReportEvidence } from "@/components/command/reports/report-evidence";
+import { ReportLocationDetails } from "@/components/command/reports/report-location-details";
+import { ReportStatusHistory } from "@/components/command/reports/report-status-history";
 import { ReportStatusBadge } from "@/components/command/reports/report-status-badge";
 import { ReportStatusDialog } from "@/components/command/reports/report-status-dialog";
 import { toast } from "@/components/ui/toast";
@@ -45,7 +43,6 @@ export function ReportDetailScreen({ reportId }: { reportId: string }) {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [statusError, setStatusError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [updateMessage, setUpdateMessage] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -72,7 +69,6 @@ export function ReportDetailScreen({ reportId }: { reportId: string }) {
         setReport(payload.report);
         setZones(availableZones);
         setPhotoAvailable(true);
-        setUpdateMessage("");
         setState("ready");
       })
       .catch((cause: unknown) => {
@@ -92,7 +88,6 @@ export function ReportDetailScreen({ reportId }: { reportId: string }) {
     if (!report) return;
     setIsSaving(true);
     setStatusError("");
-    setUpdateMessage("");
 
     const trimmedNote = note.trim();
     try {
@@ -117,11 +112,6 @@ export function ReportDetailScreen({ reportId }: { reportId: string }) {
         current ? { ...current, handlingStatus: payload.status } : current,
       );
       setStatusDialogOpen(false);
-      setUpdateMessage("Status laporan berhasil diperbarui.");
-      toast.success(
-        "Status laporan diperbarui",
-        "Status penanganan insiden berhasil disimpan.",
-      );
 
       try {
         const refreshed = await requestCommandJson(reportApiRoute(report.id), {
@@ -133,10 +123,16 @@ export function ReportDetailScreen({ reportId }: { reportId: string }) {
           throw new Error("Detail laporan dari server tidak sesuai format.");
         }
       } catch {
-        setUpdateMessage(
-          "Status berhasil diperbarui. Riwayat belum dapat dimuat ulang; coba muat ulang halaman.",
+        toast.warning(
+          "Status laporan tersimpan",
+          "Riwayat belum dapat dimuat ulang. Muat ulang halaman untuk melihat pembaruan terbaru.",
         );
+        return;
       }
+      toast.success(
+        "Status laporan diperbarui",
+        "Status penanganan insiden berhasil disimpan.",
+      );
     } catch (cause) {
       if (
         typeof cause === "object" &&
@@ -219,7 +215,7 @@ export function ReportDetailScreen({ reportId }: { reportId: string }) {
       <CommandPageHeading
         action={
           <button
-            className="inline-flex h-8 min-h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-peat-forest px-3 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-peat-green"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-peat-forest px-4 text-xs font-semibold text-white transition-colors hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
             onClick={() => {
               setStatusError("");
               setStatusDialogOpen(true);
@@ -234,33 +230,29 @@ export function ReportDetailScreen({ reportId }: { reportId: string }) {
         title={`Insiden ${displayId}`}
       />
 
-      <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-peat-forest/10 bg-white p-4">
-        <span className="text-sm font-semibold text-peat-forest">
-          Status penanganan
-        </span>
+      <div className="-mt-2 mb-6 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span className="text-xs text-muted-foreground">Status penanganan</span>
         <ReportStatusBadge status={report.handlingStatus} />
         {report.isDemoSample ? (
           <span className="rounded-full bg-peat-sun/25 px-3 py-1 text-xs font-semibold text-peat-forest">
             Sampel demo
           </span>
         ) : null}
-        {updateMessage ? (
-          <p aria-live="polite" className="text-sm text-safe" role="status">
-            {updateMessage}
-          </p>
-        ) : null}
       </div>
 
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)]">
+      <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <ReportEvidence
           onPhotoError={() => setPhotoAvailable(false)}
           photoAvailable={photoAvailable}
           report={report}
         />
-        <div className="space-y-4">
+        <div className="flex min-w-0 flex-col gap-5">
           <ReportAiAnalysis report={report} />
           <ReportLocationDetails report={report} zoneName={zoneName} />
-          <ReportStatusHistory events={report.statusEvents} />
+          <ReportStatusHistory
+            className="xl:flex-1"
+            events={report.statusEvents}
+          />
         </div>
       </div>
 

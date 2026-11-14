@@ -10,7 +10,7 @@ export function AuditAccessDenied({ requiredRole }: { requiredRole: string }) {
     >
       <section
         aria-labelledby="audit-access-denied-title"
-        className="rounded-3xl border border-warning/20 bg-white p-7 shadow-sm sm:p-10"
+        className="rounded-3xl border border-warning/20 bg-white p-7 shadow-xs sm:p-10"
       >
         <AlertCircle aria-hidden="true" className="text-warning" size={28} />
         <h1

@@ -76,7 +76,7 @@ export function DashboardDateFilterDialog({
       aria-describedby="dashboard-date-filter-desc"
       aria-labelledby="dashboard-date-filter-title"
       aria-modal="true"
-      className="m-auto max-h-[min(90vh,700px)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-3xl border border-border bg-white p-6 shadow-2xl backdrop:bg-black/50 sm:p-7"
+      className="m-auto max-h-[min(90vh,700px)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-3xl border border-peat-forest/10 bg-white p-6 shadow-2xl backdrop:bg-black/50 sm:p-7"
       id="dashboard-date-filter-dialog"
       onCancel={(event) => {
         event.preventDefault();
@@ -103,12 +103,11 @@ export function DashboardDateFilterDialog({
             className="mt-1 text-sm text-muted-foreground"
             id="dashboard-date-filter-desc"
           >
-            Pilih rentang tanggal aktivitas untuk mempersempit ringkasan audit
-            karbon.
+            Pilih rentang tanggal aktivitas untuk mempersempit ringkasan audit.
           </p>
         </div>
         <button
-          aria-label="Tutup dialog filter tanggal"
+          aria-label="Tutup dialog filter periode aktivitas"
           className="grid size-9 shrink-0 place-items-center rounded-xl text-muted-foreground transition hover:bg-peat-paper hover:text-peat-forest"
           onClick={onClose}
           type="button"

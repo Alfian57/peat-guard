@@ -10,9 +10,20 @@ export type CommandMapData = {
 
 export type FirmsSyncStatus = {
   configured: boolean;
+  freshness:
+    | "fresh"
+    | "partial"
+    | "stale"
+    | "unavailable"
+    | "not_configured"
+    | "configuration_error";
+  expectedIntervalMinutes: number | null;
   lastSuccessfulAt: string | null;
+  lastDataSyncAt: string | null;
   lastAttemptAt: string | null;
+  lastOutcome: "success" | "partial" | "failed" | null;
   lastErrorCode: string | null;
+  lastFailedSources: string[];
   lastProcessedCount: number | null;
   storedHotspotCount: number;
 };
@@ -120,12 +131,37 @@ export function isWaterPointResponse(
 }
 
 export function isFirmsSyncStatus(value: unknown): value is FirmsSyncStatus {
+  const allowedFreshness = [
+    "fresh",
+    "partial",
+    "stale",
+    "unavailable",
+    "not_configured",
+    "configuration_error",
+  ];
   return (
     isRecord(value) &&
     typeof value.configured === "boolean" &&
+    typeof value.freshness === "string" &&
+    allowedFreshness.includes(value.freshness) &&
+    (value.expectedIntervalMinutes === null ||
+      (typeof value.expectedIntervalMinutes === "number" &&
+        Number.isInteger(value.expectedIntervalMinutes) &&
+        value.expectedIntervalMinutes >= 5 &&
+        value.expectedIntervalMinutes <= 1_440)) &&
     isNullableString(value.lastSuccessfulAt) &&
+    isNullableString(value.lastDataSyncAt) &&
     isNullableString(value.lastAttemptAt) &&
+    (value.lastOutcome === null ||
+      value.lastOutcome === "success" ||
+      value.lastOutcome === "partial" ||
+      value.lastOutcome === "failed") &&
     isNullableString(value.lastErrorCode) &&
+    Array.isArray(value.lastFailedSources) &&
+    value.lastFailedSources.every(
+      (source) =>
+        source === "VIIRS_NOAA20_NRT" || source === "VIIRS_NOAA21_NRT",
+    ) &&
     isNullableNumber(value.lastProcessedCount) &&
     typeof value.storedHotspotCount === "number"
   );

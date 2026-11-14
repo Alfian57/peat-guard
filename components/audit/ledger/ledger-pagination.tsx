@@ -24,7 +24,7 @@ export function LedgerPagination({
   return (
     <nav
       aria-label="Halaman log audit"
-      className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-4 sm:px-5"
+      className="flex flex-wrap items-center justify-between gap-3 border-t border-peat-forest/10 px-4 py-4 sm:px-5"
     >
       <p aria-live="polite" className="text-sm text-muted-foreground">
         Menampilkan {formatCount(firstRow)}–{formatCount(lastRow)} dari{" "}
@@ -37,7 +37,7 @@ export function LedgerPagination({
         {page > 1 ? (
           <Link
             aria-label="Halaman sebelumnya"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-border bg-white text-peat-forest hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-peat-forest/10 bg-white text-peat-forest hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             href={getLedgerPageHref(filters, page - 1)}
           >
             <ChevronLeft aria-hidden="true" size={19} />
@@ -45,7 +45,7 @@ export function LedgerPagination({
         ) : (
           <span
             aria-disabled="true"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-border bg-muted/40 text-muted-foreground"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-peat-forest/10 bg-muted/40 text-muted-foreground"
           >
             <ChevronLeft aria-hidden="true" size={19} />
           </span>
@@ -53,7 +53,7 @@ export function LedgerPagination({
         {page < pageCount ? (
           <Link
             aria-label="Halaman berikutnya"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-border bg-white text-peat-forest hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-peat-forest/10 bg-white text-peat-forest hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             href={getLedgerPageHref(filters, page + 1)}
           >
             <ChevronRight aria-hidden="true" size={19} />
@@ -61,7 +61,7 @@ export function LedgerPagination({
         ) : (
           <span
             aria-disabled="true"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-border bg-muted/40 text-muted-foreground"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-peat-forest/10 bg-muted/40 text-muted-foreground"
           >
             <ChevronRight aria-hidden="true" size={19} />
           </span>

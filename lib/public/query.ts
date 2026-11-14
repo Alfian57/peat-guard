@@ -1,7 +1,12 @@
-import { FIRMS_SOURCES } from "@/lib/firms-sources";
 import type {
   PublicMapConfidenceFilter,
+  PublicMapPeriod as PublicMapPeriodValue,
   PublicMapSourceFilter,
+} from "@/lib/public/contracts";
+import {
+  PUBLIC_MAP_CONFIDENCE_FILTERS,
+  PUBLIC_MAP_PERIODS,
+  PUBLIC_MAP_SOURCES,
 } from "@/lib/public/contracts";
 import type { MapViewport } from "@/lib/maps/types";
 
@@ -15,11 +20,11 @@ export const PUBLIC_DEFAULT_VIEWPORT: MapViewport = {
 export const MAX_PUBLIC_RESULT_LIMIT = 500;
 export const MAX_PUBLIC_ZONE_LIMIT = 100;
 
-export type PublicMapPeriod = "24h" | "7d" | "30d" | "all";
+export type { PublicMapPeriod } from "@/lib/public/contracts";
 
 export type PublicMapQuery = {
   viewport: MapViewport;
-  period: PublicMapPeriod;
+  period: PublicMapPeriodValue;
   source: PublicMapSourceFilter;
   confidence: PublicMapConfidenceFilter;
   limit: number;
@@ -36,15 +41,9 @@ const ALLOWED_PARAMETERS = new Set([
   "confidence",
   "limit",
 ]);
-const ALLOWED_PERIODS = new Set<PublicMapPeriod>(["24h", "7d", "30d", "all"]);
-const ALLOWED_CONFIDENCE = new Set<PublicMapConfidenceFilter>([
-  "all",
-  "low",
-  "nominal",
-  "high",
-  "numeric",
-  "unknown",
-]);
+const ALLOWED_PERIODS = new Set<string>(PUBLIC_MAP_PERIODS);
+const ALLOWED_SOURCES = new Set<string>(PUBLIC_MAP_SOURCES);
+const ALLOWED_CONFIDENCE = new Set<string>(PUBLIC_MAP_CONFIDENCE_FILTERS);
 
 export function parsePublicMapQuery(
   searchParams: URLSearchParams,
@@ -68,7 +67,7 @@ export function parsePublicMapQuery(
 
   if (
     !viewport ||
-    !ALLOWED_PERIODS.has(periodValue as PublicMapPeriod) ||
+    !ALLOWED_PERIODS.has(periodValue as PublicMapPeriodValue) ||
     !isAllowedSource(sourceValue) ||
     !ALLOWED_CONFIDENCE.has(confidenceValue as PublicMapConfidenceFilter) ||
     limit === null
@@ -80,7 +79,7 @@ export function parsePublicMapQuery(
     success: true,
     data: {
       viewport,
-      period: periodValue as PublicMapPeriod,
+      period: periodValue as PublicMapPeriodValue,
       source: sourceValue,
       confidence: confidenceValue as PublicMapConfidenceFilter,
       limit,
@@ -89,11 +88,7 @@ export function parsePublicMapQuery(
 }
 
 function isAllowedSource(value: string): value is PublicMapSourceFilter {
-  return value === "all" || value === "demo" || isFirmsSource(value);
-}
-
-function isFirmsSource(value: string): value is (typeof FIRMS_SOURCES)[number] {
-  return (FIRMS_SOURCES as readonly string[]).includes(value);
+  return ALLOWED_SOURCES.has(value);
 }
 
 function parseLimit(value: string): number | null {

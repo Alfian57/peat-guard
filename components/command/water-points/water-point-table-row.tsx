@@ -8,6 +8,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { CommandWaterPoint } from "@/lib/server/water/data";
+import { waterPointTypeLabel } from "@/lib/water-point-labels";
 
 export function WaterPointTableRow({
   onDelete,
@@ -30,7 +31,7 @@ export function WaterPointTableRow({
               </span>
               {point.isDemoData ? (
                 <span className="rounded-full bg-peat-sun/25 px-2 py-0.5 text-[10px] font-semibold text-peat-forest">
-                  Data ilustrasi
+                  Data ilustratif
                 </span>
               ) : null}
             </div>
@@ -91,15 +92,4 @@ export function WaterPointTableRow({
       </td>
     </tr>
   );
-}
-
-function waterPointTypeLabel(type: CommandWaterPoint["type"]): string {
-  switch (type) {
-    case "SEKAT_KANAL":
-      return "Sekat kanal";
-    case "EMBUNG":
-      return "Embung";
-    case "SUMBER_AIR":
-      return "Sumber air";
-  }
 }

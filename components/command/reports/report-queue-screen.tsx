@@ -147,7 +147,7 @@ export function ReportQueueScreen() {
     <div>
       <CommandPageHeading
         description="Tinjau bukti lapangan, nilai urgensi AI, dan koordinasikan penanganan POSKO."
-        title="Daftar insiden"
+        title="Antrean laporan"
       />
       <ReportQueueFilters
         draftFilters={draftFilters}

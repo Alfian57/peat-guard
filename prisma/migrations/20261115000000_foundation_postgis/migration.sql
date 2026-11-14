@@ -72,11 +72,14 @@ CREATE TABLE "forest_zones" (
     "boundary" geometry(Polygon,4326) NOT NULL,
     "carbon_parameter_set_id" UUID NOT NULL,
     "is_approved" BOOLEAN NOT NULL DEFAULT false,
+    "archived_at" TIMESTAMPTZ(6),
+    "review_revision" INTEGER NOT NULL DEFAULT 0,
     "is_demo_data" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(6) NOT NULL,
 
-    CONSTRAINT "forest_zones_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "forest_zones_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "forest_zones_archived_approval_check" CHECK ("archived_at" IS NULL OR NOT "is_approved")
 );
 
 -- CreateTable
@@ -135,6 +138,9 @@ CREATE TABLE "field_reports" (
     "ai_false_positive_check" TEXT,
     "ai_action_recommendations" JSONB,
     "ai_analyzed_at" TIMESTAMPTZ(6),
+    "ai_attempts" INTEGER NOT NULL DEFAULT 0,
+    "ai_lease_token" UUID,
+    "ai_lease_until" TIMESTAMPTZ(6),
     "handling_status" "HandlingStatus" NOT NULL DEFAULT 'MENUNGGU_TINDAKAN',
     "nearest_water_distance_m" DECIMAL(12,2),
     "is_demo_sample" BOOLEAN NOT NULL DEFAULT false,
@@ -276,6 +282,32 @@ ALTER TABLE "carbon_parameter_sets"
     ADD CONSTRAINT "carbon_parameter_sets_conversion_factor_check" CHECK ("co2_conversion_factor" > 0),
     ADD CONSTRAINT "carbon_parameter_sets_incentive_nonnegative_check" CHECK ("incentive_per_ton_idr" >= 0);
 
+CREATE INDEX "field_reports_ai_state_ai_lease_until_created_at_idx"
+    ON "field_reports"("ai_state", "ai_lease_until", "created_at");
+
+-- Lock the zone while adding a reference, so archiving and linking serialize.
+CREATE FUNCTION require_active_zone_reference() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF NEW.zone_id IS NOT NULL THEN
+        PERFORM 1 FROM forest_zones WHERE id = NEW.zone_id AND archived_at IS NULL FOR SHARE;
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'Zone is archived or does not exist' USING ERRCODE = '23503';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER water_points_require_active_zone
+    BEFORE INSERT OR UPDATE OF zone_id ON water_points
+    FOR EACH ROW EXECUTE FUNCTION require_active_zone_reference();
+
+CREATE TRIGGER field_reports_require_active_zone
+    BEFORE INSERT OR UPDATE OF zone_id ON field_reports
+    FOR EACH ROW EXECUTE FUNCTION require_active_zone_reference();
+
 -- Keep area values derived from the spatial boundary, not from form input.
 CREATE FUNCTION set_forest_zone_area_hectares() RETURNS trigger
     LANGUAGE plpgsql
@@ -369,7 +401,7 @@ BEGIN
     FROM "forest_zones" AS zone
     INNER JOIN "carbon_parameter_sets" AS parameters
         ON parameters."id" = zone."carbon_parameter_set_id"
-    WHERE parameters."id" = NEW."id";
+    WHERE parameters."id" = NEW."id" AND zone."archived_at" IS NULL;
 
     RETURN NEW;
 END;

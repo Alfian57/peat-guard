@@ -105,13 +105,30 @@ export function mrvPrivateJsonResponse(
   return addPrivateHeaders(Response.json(payload, { status }));
 }
 
-export function isMrvSameOrigin(request: Request): boolean {
+export function isMrvSameOrigin(
+  request: Request,
+  configuredAppUrl = process.env.BETTER_AUTH_URL?.trim(),
+): boolean {
   const requestOrigin = request.headers.get("origin");
+  const fetchSite = request.headers.get("sec-fetch-site")?.trim().toLowerCase();
+  const browserConfirmsSameOrigin = fetchSite === "same-origin";
 
-  if (!requestOrigin) return false;
+  if (!requestOrigin) return browserConfirmsSameOrigin;
 
   try {
-    return new URL(requestOrigin).origin === new URL(request.url).origin;
+    const origin = new URL(requestOrigin).origin;
+    if (origin === new URL(request.url).origin) return true;
+
+    // Next.js can use the internal bind address for request.url in Docker.
+    // The configured app URL identifies the browser origin in that setup.
+    if (configuredAppUrl && origin === new URL(configuredAppUrl).origin) {
+      return true;
+    }
+
+    // Behind a proxy, request.url may expose an internal origin. Fetch
+    // Metadata still lets browsers distinguish the exact same origin from a
+    // sibling site or a cross-site request.
+    return browserConfirmsSameOrigin;
   } catch {
     return false;
   }

@@ -28,11 +28,12 @@ export function ZoneDeleteDialog({
           className="font-heading text-3xl font-bold text-peat-forest"
           id="delete-zone-title"
         >
-          Hapus zona?
+          Arsipkan zona?
         </h2>
         <p className="mt-2 text-sm leading-6 text-peat-forest/75">
-          Zona <strong>{zone.name}</strong> akan dihapus. Zona yang masih
-          dipakai laporan atau titik sumber air akan ditolak server.
+          Zona <strong>{zone.name}</strong> akan disembunyikan dari daftar
+          aktif. Riwayat karbon tetap tersimpan. Zona yang masih dipakai laporan
+          atau titik sumber air akan ditolak server.
         </p>
         {error ? (
           <p className="mt-3 text-sm leading-5 text-red-800" role="alert">
@@ -54,7 +55,7 @@ export function ZoneDeleteDialog({
             onClick={onConfirm}
             type="button"
           >
-            {deleting ? "Menghapus…" : "Hapus zona"}
+            {deleting ? "Mengarsipkan…" : "Arsipkan zona"}
           </button>
         </div>
       </section>

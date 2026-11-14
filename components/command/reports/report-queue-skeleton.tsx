@@ -14,23 +14,26 @@ export function ReportQueueSkeleton() {
 
       <div className="overflow-hidden rounded-2xl border border-peat-forest/10 bg-white shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] border-collapse text-left">
+          <table className="w-full min-w-[1060px] border-collapse text-left">
             <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-peat-forest/70">
               <tr>
                 <th className="px-4 py-3.5" scope="col">
-                  ID Laporan
+                  ID laporan
                 </th>
                 <th className="px-4 py-3.5" scope="col">
-                  Zona & Lokasi
+                  Jenis data
                 </th>
                 <th className="px-4 py-3.5" scope="col">
-                  Klasifikasi AI
+                  Zona gambut & lokasi
                 </th>
                 <th className="px-4 py-3.5" scope="col">
-                  Urgensi
+                  Triase AI
                 </th>
                 <th className="px-4 py-3.5" scope="col">
-                  Status
+                  Urgensi AI
+                </th>
+                <th className="px-4 py-3.5" scope="col">
+                  Status penanganan
                 </th>
                 <th className="px-4 py-3.5 text-right" scope="col">
                   Aksi
@@ -40,13 +43,15 @@ export function ReportQueueSkeleton() {
             <tbody className="divide-y divide-peat-forest/10 text-sm">
               {Array.from({ length: 5 }, (_, index) => (
                 <tr key={index}>
-                  {/* ID & Date */}
+                  {/* Report ID */}
                   <td className="px-4 py-3.5 align-middle">
-                    <div className="flex items-center gap-1.5">
-                      <Skeleton className="h-4 w-24 rounded-md bg-peat-forest/15 font-mono" />
-                      <Skeleton className="h-4 w-16 rounded-full bg-peat-forest/10" />
-                    </div>
+                    <Skeleton className="h-4 w-24 rounded-md bg-peat-forest/15 font-mono" />
                     <Skeleton className="mt-1.5 h-3 w-28 rounded-md bg-peat-forest/10" />
+                  </td>
+
+                  {/* Data type */}
+                  <td className="px-4 py-3.5 align-middle">
+                    <Skeleton className="h-5 w-20 rounded-full bg-peat-forest/10" />
                   </td>
 
                   {/* Zone & Location */}

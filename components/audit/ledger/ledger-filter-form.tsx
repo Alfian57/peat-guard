@@ -8,6 +8,7 @@ import type {
   ApprovedZoneValues,
   LedgerFilters,
 } from "@/lib/server/mrv/contracts";
+import { REPORT_AI_STATES, aiAnalysisStateLabel } from "@/lib/report-labels";
 
 import { LedgerDialog, useLedgerDialog } from "./ledger-dialog";
 import { APP_ROUTES } from "@/lib/routes";
@@ -24,13 +25,6 @@ type LedgerFilterFormProps = {
 
 const fieldClassName =
   "h-11 w-full rounded-xl border border-input bg-white px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
-const aiStateLabels: Record<NonNullable<LedgerFilters["aiState"]>, string> = {
-  COMPLETED: "Selesai",
-  FAILED: "Gagal",
-  PENDING: "Menunggu",
-  SKIPPED: "Tidak dianalisis",
-};
-
 export function LedgerFilterForm({
   aiState,
   evidence,
@@ -56,7 +50,7 @@ export function LedgerFilterForm({
     selectedZoneName ??
     (selectedZone
       ? `Zona ${selectedZone.slice(0, 8)}… (tidak tersedia)`
-      : "Semua zona");
+      : "Semua zona gambut");
 
   const activeFiltersCount =
     (selectedZone ? 1 : 0) +
@@ -73,33 +67,33 @@ export function LedgerFilterForm({
         {hasActiveFilter ? (
           <div className="flex flex-wrap items-center gap-2 text-xs">
             {selectedZoneName ? (
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
-                Zona: {selectedZoneName}
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-peat-forest/10 bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
+                Zona gambut: {selectedZoneName}
               </span>
             ) : null}
             {selectedEvidence && selectedEvidence !== "all" ? (
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
-                Bukti lengkap
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-peat-forest/10 bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
+                Kelengkapan bukti: Koordinat dan foto tersedia
               </span>
             ) : null}
             {selectedAiState ? (
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
-                Triase: {aiStateLabels[selectedAiState]}
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-peat-forest/10 bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
+                Triase AI: {aiAnalysisStateLabel(selectedAiState)}
               </span>
             ) : null}
             {selectedFrom || selectedTo ? (
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
-                {selectedFrom ? `Dari ${selectedFrom}` : "Awal"} –{" "}
-                {selectedTo ? `Sampai ${selectedTo}` : "Sekarang"}
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-peat-forest/10 bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
+                Waktu rekam: {selectedFrom || "awal"} –{" "}
+                {selectedTo || "sekarang"} WIB
               </span>
             ) : null}
             {reportId ? (
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
-                Laporan: {reportId.slice(0, 8)}…
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-peat-forest/10 bg-peat-paper px-2.5 py-1 font-medium text-peat-forest">
+                ID laporan: {reportId.slice(0, 8)}…
               </span>
             ) : null}
             <Link
-              className="inline-flex min-h-7 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted-foreground transition hover:text-red-700"
+              className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted-foreground transition hover:text-red-700"
               href={APP_ROUTES.audit.ledger}
             >
               <X aria-hidden="true" size={13} />
@@ -118,7 +112,7 @@ export function LedgerFilterForm({
         aria-controls={open ? "ledger-filter-dialog" : undefined}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="inline-flex h-8 min-h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-border bg-white px-3 text-xs font-semibold text-peat-forest shadow-xs transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+        className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full border border-peat-forest/10 bg-white px-3 text-xs font-semibold text-peat-forest shadow-xs transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
         onClick={openDialog}
         ref={triggerRef}
         type="button"
@@ -156,8 +150,8 @@ export function LedgerFilterForm({
               className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground"
               id="ledger-filter-description"
             >
-              Pilih wilayah, kelengkapan bukti, triase, atau rentang tanggal
-              untuk mempersempit catatan.
+              Pilih zona gambut, kelengkapan bukti, triase AI, atau rentang
+              waktu rekam untuk mempersempit catatan.
             </p>
           </div>
           <button
@@ -170,13 +164,13 @@ export function LedgerFilterForm({
           </button>
         </header>
 
-        <div className="mt-5 rounded-xl bg-peat-paper/70 p-4">
+        <div className="mt-5 rounded-xl border border-peat-forest/15 bg-white p-4">
           <h3 className="text-xs font-semibold text-peat-forest">
             Pilihan filter
           </h3>
           <dl className="mt-2 grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
             <div>
-              <dt className="text-muted-foreground">Wilayah</dt>
+              <dt className="text-muted-foreground">Zona gambut</dt>
               <dd className="font-semibold text-peat-forest">
                 {selectedZoneLabel}
               </dd>
@@ -186,23 +180,23 @@ export function LedgerFilterForm({
               <dd className="font-semibold text-peat-forest">
                 {selectedEvidence === "complete"
                   ? "Koordinat dan foto tersedia"
-                  : "Semua catatan"}
+                  : "Semua kelengkapan"}
               </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Triase AI</dt>
               <dd className="font-semibold text-peat-forest">
                 {selectedAiState
-                  ? aiStateLabels[selectedAiState]
-                  : "Semua status"}
+                  ? aiAnalysisStateLabel(selectedAiState)
+                  : "Semua status triase AI"}
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Tanggal WIB</dt>
+              <dt className="text-muted-foreground">Waktu rekam (WIB)</dt>
               <dd className="font-semibold text-peat-forest">
                 {selectedFrom || selectedTo
                   ? `${selectedFrom || "Awal"} – ${selectedTo || "sekarang"}`
-                  : "Semua tanggal"}
+                  : "Semua waktu rekam"}
               </dd>
             </div>
           </dl>
@@ -222,7 +216,7 @@ export function LedgerFilterForm({
                 className="block text-xs font-semibold text-peat-forest"
                 htmlFor="ledger-zone"
               >
-                Wilayah zona{" "}
+                Zona gambut{" "}
                 <span className="text-[11px] font-normal text-muted-foreground">
                   (opsional)
                 </span>
@@ -235,7 +229,7 @@ export function LedgerFilterForm({
                 onChange={(event) => setSelectedZone(event.currentTarget.value)}
                 value={selectedZone}
               >
-                <option value="">Semua zona</option>
+                <option value="">Semua zona gambut</option>
                 {selectedZone && !selectedZoneName ? (
                   <option value={selectedZone}>{selectedZoneLabel}</option>
                 ) : null}
@@ -253,7 +247,7 @@ export function LedgerFilterForm({
                 className="block text-xs font-semibold text-peat-forest"
                 htmlFor="ledger-evidence"
               >
-                Status kelengkapan bukti{" "}
+                Kelengkapan bukti{" "}
                 <span className="text-[11px] font-normal text-muted-foreground">
                   (opsional)
                 </span>
@@ -270,7 +264,7 @@ export function LedgerFilterForm({
                 }}
                 value={selectedEvidence}
               >
-                <option value="all">Semua laporan</option>
+                <option value="all">Semua kelengkapan</option>
                 <option value="complete">Koordinat dan foto tersedia</option>
               </select>
               <p
@@ -287,7 +281,7 @@ export function LedgerFilterForm({
                 className="block text-xs font-semibold text-peat-forest"
                 htmlFor="ledger-ai-state"
               >
-                Status triase AI{" "}
+                Triase AI{" "}
                 <span className="text-[11px] font-normal text-muted-foreground">
                   (opsional)
                 </span>
@@ -303,11 +297,12 @@ export function LedgerFilterForm({
                 }
                 value={selectedAiState ?? ""}
               >
-                <option value="">Semua status</option>
-                <option value="COMPLETED">Selesai</option>
-                <option value="PENDING">Menunggu</option>
-                <option value="FAILED">Gagal</option>
-                <option value="SKIPPED">Tidak dianalisis</option>
+                <option value="">Semua status triase AI</option>
+                {REPORT_AI_STATES.map((state) => (
+                  <option key={state} value={state}>
+                    {aiAnalysisStateLabel(state)}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -316,7 +311,7 @@ export function LedgerFilterForm({
                 className="block text-xs font-semibold text-peat-forest"
                 htmlFor="ledger-from"
               >
-                Dari tanggal (WIB){" "}
+                Waktu rekam dari (WIB){" "}
                 <span className="text-[11px] font-normal text-muted-foreground">
                   (opsional)
                 </span>
@@ -338,7 +333,7 @@ export function LedgerFilterForm({
                 className="block text-xs font-semibold text-peat-forest"
                 htmlFor="ledger-to"
               >
-                Sampai tanggal (WIB){" "}
+                Waktu rekam sampai (WIB){" "}
                 <span className="text-[11px] font-normal text-muted-foreground">
                   (opsional)
                 </span>
@@ -357,16 +352,16 @@ export function LedgerFilterForm({
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-border pt-3">
+          <div className="flex items-center justify-end gap-2 border-t border-peat-forest/10 pt-3">
             <button
-              className="inline-flex h-9 min-h-9 items-center justify-center rounded-xl border border-border px-4 text-xs font-semibold text-peat-forest transition hover:bg-peat-paper"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-peat-forest/10 px-4 text-xs font-semibold text-peat-forest transition hover:bg-peat-paper"
               onClick={closeDialog}
               type="button"
             >
               Batal
             </button>
             <button
-              className="inline-flex h-9 min-h-9 items-center justify-center gap-1.5 rounded-xl bg-peat-forest px-4 text-xs font-semibold text-white transition hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-peat-forest px-4 text-xs font-semibold text-white transition hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               type="submit"
             >
               <Filter aria-hidden="true" size={14} />

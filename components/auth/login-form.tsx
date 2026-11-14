@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 
+import { publishFieldAuthEvent } from "@/lib/client/offline/owner-store";
 import { authClient } from "@/lib/auth-client";
 import { BrandMark } from "@/components/auth/brand-mark";
 import { APP_ROUTES } from "@/lib/routes";
@@ -56,6 +57,7 @@ export function LoginForm() {
         }
       }
 
+      publishFieldAuthEvent("login");
       router.replace(targetRoute);
       router.refresh();
     } catch {
@@ -78,7 +80,7 @@ export function LoginForm() {
           alt="Petugas patroli memeriksa sekat kanal di lahan gambut"
           fill
           sizes="50vw"
-          className="object-cover"
+          className="object-cover object-[80%_center]"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#102d24]/95 via-[#102d24]/20 to-[#102d24]/40" />
         <div className="relative z-10 flex w-full flex-col justify-between p-10 text-white xl:p-14">
@@ -225,7 +227,7 @@ export function LoginForm() {
             </button>
           </form>
 
-          <p className="mt-auto pt-8 text-center text-xs leading-5 text-muted-foreground lg:mt-12">
+          <p className="mt-5 text-center text-xs leading-5 text-muted-foreground">
             Akses diberikan oleh administrator organisasi. Pendaftaran mandiri
             tidak tersedia.
           </p>

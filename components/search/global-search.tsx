@@ -49,7 +49,7 @@ function isSearchPayload(value: unknown): value is { results: SearchResult[] } {
 export function GlobalSearch({
   variant = "icon",
 }: {
-  variant?: "icon" | "bar";
+  variant?: "icon" | "bar" | "bare";
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -63,6 +63,7 @@ export function GlobalSearch({
     message: string;
   } | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const normalizedQuery = query.trim();
   const results = resultSet?.query === normalizedQuery ? resultSet.results : [];
@@ -82,7 +83,12 @@ export function GlobalSearch({
 
   useEffect(() => {
     function onShortcut(event: WindowEventMap["keydown"]) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      if (
+        !event.defaultPrevented &&
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === "k" &&
+        triggerRef.current?.getClientRects().length
+      ) {
         event.preventDefault();
         setOpen(true);
       }
@@ -160,12 +166,15 @@ export function GlobalSearch({
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger
+        ref={triggerRef}
         aria-label="Cari di ruang kerja (Ctrl+K)"
         aria-keyshortcuts="Control+K Meta+K"
         className={
           variant === "bar"
             ? "flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#e2e5dc] bg-white text-left text-sm text-peat-forest/55 shadow-sm transition hover:border-peat-green/35 hover:bg-[#fff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green lg:w-auto lg:max-w-[28rem] lg:min-w-0 lg:flex-1 lg:justify-start lg:gap-3 lg:px-3"
-            : "inline-grid size-10 shrink-0 place-items-center rounded-xl border border-peat-forest/10 bg-white text-peat-forest transition hover:bg-peat-forest/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
+            : variant === "bare"
+              ? "inline-grid size-11 shrink-0 place-items-center rounded-full text-peat-forest transition hover:bg-peat-forest/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
+              : "inline-grid size-10 shrink-0 place-items-center rounded-xl border border-peat-forest/10 bg-white text-peat-forest transition hover:bg-peat-forest/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
         }
         type="button"
       >

@@ -8,7 +8,6 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { Satellite } from "lucide-react";
 
 import { CommandPageHeading } from "@/components/command/command-page-heading";
 import {
@@ -22,8 +21,8 @@ import {
 import { COMMAND_API_ROUTES } from "@/components/command/routes";
 import { CommandMapFrame } from "@/components/command/map/command-map-frame";
 import { CommandMapSidePanel } from "@/components/command/map/command-map-side-panel";
-import { MapSummaryGrid } from "@/components/command/map/map-summary-grid";
 import {
+  startVisibleCommandMapPolling,
   startVisibleReportMapPolling,
   type VisibilitySource,
 } from "@/components/command/map/report-map-polling";
@@ -39,6 +38,7 @@ import {
   type ReportMapFilters,
 } from "@/components/command/reports/report-map-query";
 import type { MapPoint, MapViewport, MapZone } from "@/lib/maps/types";
+import { waterPointTypeLabel } from "@/lib/water-point-labels";
 
 type LoadState = "loading" | "ready" | "error";
 
@@ -78,10 +78,16 @@ export function CommandMapScreen() {
   const [reportFiltersError, setReportFiltersError] = useState("");
 
   function refreshMap() {
-    setState("loading");
+    setState((currentState) =>
+      currentState === "ready" ? "ready" : "loading",
+    );
     setError("");
     setRetryKey((current) => current + 1);
   }
+
+  const refreshLiveData = useCallback(() => {
+    setRetryKey((current) => current + 1);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -91,6 +97,7 @@ export function CommandMapScreen() {
       signal: controller.signal,
     })
       .then((payload) => {
+        if (controller.signal.aborted) return;
         if (!isCommandMapData(payload)) {
           throw new CommandRequestError(
             "Data peta dari server tidak sesuai format.",
@@ -106,7 +113,9 @@ export function CommandMapScreen() {
             ? cause.message
             : "Peta belum dapat dimuat. Coba kembali.",
         );
-        setState("error");
+        setState((currentState) =>
+          currentState === "ready" ? "ready" : "error",
+        );
       });
 
     requestCommandJson(COMMAND_API_ROUTES.firms, {
@@ -114,6 +123,7 @@ export function CommandMapScreen() {
       signal: controller.signal,
     })
       .then((payload) => {
+        if (controller.signal.aborted) return;
         if (!isFirmsSyncStatus(payload)) {
           throw new CommandRequestError(
             "Status NASA FIRMS tidak sesuai format.",
@@ -133,6 +143,25 @@ export function CommandMapScreen() {
 
     return () => controller.abort();
   }, [retryKey]);
+
+  useEffect(() => {
+    const visibilitySource: VisibilitySource = {
+      get visibilityState() {
+        return document.visibilityState;
+      },
+      addVisibilityChangeListener(listener) {
+        document.addEventListener("visibilitychange", listener);
+      },
+      removeVisibilityChangeListener(listener) {
+        document.removeEventListener("visibilitychange", listener);
+      },
+    };
+
+    return startVisibleCommandMapPolling(visibilitySource, refreshLiveData, {
+      setInterval: (callback, delayMs) => window.setInterval(callback, delayMs),
+      clearInterval: (intervalId) => window.clearInterval(intervalId),
+    });
+  }, [refreshLiveData]);
 
   useEffect(() => {
     if (!reportViewport || !showReports) return;
@@ -210,7 +239,7 @@ export function CommandMapScreen() {
       coordinates: [point.longitude, point.latitude],
       kind: "water",
       label: point.name,
-      description: [point.type.replaceAll("_", " "), point.zoneName]
+      description: [waterPointTypeLabel(point.type), point.zoneName]
         .filter(Boolean)
         .join(" · "),
       isDemoData: point.isDemoData,
@@ -233,18 +262,19 @@ export function CommandMapScreen() {
     const current = reportViewportRef.current;
     if (
       current &&
-      current.west === viewport.west &&
-      current.south === viewport.south &&
-      current.east === viewport.east &&
-      current.north === viewport.north
+      buildReportMapQuery(current, DEFAULT_REPORT_MAP_FILTERS) ===
+        buildReportMapQuery(viewport, DEFAULT_REPORT_MAP_FILTERS)
     ) {
       return;
     }
 
     reportViewportRef.current = viewport;
     setReportViewport(viewport);
-    setReportMapResult(null);
-    setReportMapState("loading");
+    // Keep the last result during viewport refreshes. Replacing it with a
+    // skeleton resizes the aligned map, emitting another viewport update.
+    setReportMapState((currentState) =>
+      currentState === "idle" ? "loading" : currentState,
+    );
     setSelectedPoint(null);
   }
 
@@ -257,10 +287,22 @@ export function CommandMapScreen() {
       draftReportFilters.from > draftReportFilters.to
     ) {
       setReportFiltersError("Tanggal awal tidak boleh setelah tanggal akhir.");
-      return;
+      return false;
     }
 
-    setReportFilters(draftReportFilters);
+    commitReportFilters(draftReportFilters);
+    return true;
+  }
+
+  function commitReportFilters(next: ReportMapFilters) {
+    if (
+      next.from === reportFilters.from &&
+      next.to === reportFilters.to &&
+      next.status === reportFilters.status &&
+      next.urgency === reportFilters.urgency
+    )
+      return;
+    setReportFilters(next);
     setReportMapResult(null);
     setReportMapState(reportViewport ? "loading" : "idle");
     setSelectedPoint(null);
@@ -269,10 +311,12 @@ export function CommandMapScreen() {
   function resetReportFilters() {
     setReportFiltersError("");
     setDraftReportFilters(DEFAULT_REPORT_MAP_FILTERS);
-    setReportFilters(DEFAULT_REPORT_MAP_FILTERS);
-    setReportMapResult(null);
-    setReportMapState(reportViewport ? "loading" : "idle");
-    setSelectedPoint(null);
+    commitReportFilters(DEFAULT_REPORT_MAP_FILTERS);
+  }
+
+  function discardReportFilterDraft() {
+    setDraftReportFilters(reportFilters);
+    setReportFiltersError("");
   }
 
   function retryReportPoints() {
@@ -307,32 +351,13 @@ export function CommandMapScreen() {
   return (
     <div>
       <CommandPageHeading
-        action={
-          <button
-            className="inline-flex h-8 min-h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-peat-forest px-3 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-peat-green focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-peat-green disabled:cursor-wait disabled:opacity-70"
-            disabled={syncing || firmsStatus?.configured === false}
-            onClick={() => void syncHotspots()}
-            type="button"
-          >
-            <Satellite aria-hidden="true" size={14} />
-            {syncing ? "Menyinkronkan…" : "Sinkronkan NASA FIRMS"}
-          </button>
-        }
-        description="Pantau zona gambut, titik sumber air, dan indikasi hotspot satelit di wilayah kerja."
+        description="Pantau zona gambut, sumber air, hotspot satelit, dan laporan lapangan di wilayah kerja."
         title="Peta komando"
-      />
-
-      <MapSummaryGrid
-        hotspotCount={data?.hotspots.length}
-        reportCount={reportMapResult?.points.length}
-        reportTruncated={reportMapResult?.truncated ?? false}
-        waterPointCount={data?.waterPoints.length}
-        zoneCount={data?.zones.length}
       />
 
       <section
         aria-label="Peta komando dan layer"
-        className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_290px]"
+        className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,1fr)_320px]"
       >
         <CommandMapFrame
           error={error}
@@ -354,6 +379,8 @@ export function CommandMapScreen() {
           firmsError={firmsError}
           firmsNotice={firmsNotice}
           firmsStatus={firmsStatus}
+          hotspotCount={data?.hotspots.length}
+          onSync={() => void syncHotspots()}
           selectedPoint={selectedPoint}
           selectedZone={selectedZone}
           setShowHotspots={setShowHotspots}
@@ -362,14 +389,19 @@ export function CommandMapScreen() {
           showHotspots={showHotspots}
           showWaterPoints={showWaterPoints}
           showZones={showZones}
+          syncing={syncing}
+          waterPointCount={data?.waterPoints.length}
+          zoneCount={data?.zones.length}
           reportControls={{
             draftFilters: draftReportFilters,
+            appliedFilters: reportFilters,
             error: reportMapError,
             filtersError: reportFiltersError,
             isVisible: showReports,
             limit: reportMapResult?.limit ?? null,
             loadState: reportMapState,
             onApply: applyReportFilters,
+            onDiscardDraft: discardReportFilterDraft,
             onDraftChange: setDraftReportFilters,
             onReset: resetReportFilters,
             onRetry: retryReportPoints,

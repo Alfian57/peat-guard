@@ -3,6 +3,8 @@ import { FilePlus2, Home, ListChecks } from "lucide-react";
 
 import { APP_ROUTES } from "@/lib/routes";
 
+import { fieldNavigationRoute } from "./field-navigation-state";
+
 const navigation = [
   { href: APP_ROUTES.field.home, label: "Beranda patroli", icon: Home },
   {
@@ -22,12 +24,15 @@ export function FieldNavigation({
   onNavigate?: () => void;
   queueCount?: number;
 }) {
+  const activeHref = {
+    home: APP_ROUTES.field.home,
+    create: APP_ROUTES.field.createReport,
+    queue: APP_ROUTES.field.queue,
+  }[fieldNavigationRoute(pathname)];
   return (
     <nav aria-label="Navigasi relawan sidebar" className="space-y-2">
       {navigation.map(({ href, label, icon: Icon }) => {
-        const isActive =
-          pathname === href ||
-          (href !== APP_ROUTES.field.home && pathname.startsWith(`${href}/`));
+        const isActive = href === activeHref;
 
         return (
           <Link

@@ -5,36 +5,28 @@ export function KpiCard({
   value,
   description,
   icon: Icon,
-  featured = false,
 }: {
   label: string;
   value: string;
   description: string;
   icon: LucideIcon;
-  featured?: boolean;
 }) {
   return (
-    <article
-      className={`audit-print-card rounded-2xl border p-5 shadow-sm sm:p-6 ${featured ? "border-peat-forest bg-peat-forest text-white" : "border-border bg-white text-peat-forest"}`}
-    >
+    <article className="audit-print-card flex min-w-0 flex-col rounded-2xl border border-peat-forest/10 bg-white p-5 text-peat-forest shadow-xs">
       <div className="flex items-start justify-between gap-4">
-        <p
-          className={`text-sm font-semibold ${featured ? "text-white/80" : "text-muted-foreground"}`}
-        >
+        <p className="text-xs leading-5 font-medium text-muted-foreground">
           {label}
         </p>
         <Icon
           aria-hidden="true"
-          className={featured ? "text-white/75" : "text-peat-green"}
+          className="shrink-0 text-peat-forest"
           size={19}
         />
       </div>
-      <p className="mt-5 font-heading text-4xl leading-none font-bold tracking-wide sm:text-5xl">
+      <p className="mt-3 font-heading text-3xl leading-tight font-bold wrap-anywhere text-peat-forest tabular-nums sm:text-4xl">
         {value}
       </p>
-      <p
-        className={`mt-3 text-sm ${featured ? "text-white/75" : "text-muted-foreground"}`}
-      >
+      <p className="mt-3 text-xs leading-5 text-muted-foreground">
         {description}
       </p>
     </article>

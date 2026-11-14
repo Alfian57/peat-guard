@@ -1,16 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { ClipboardCheck, LoaderCircle, X } from "lucide-react";
+import { useId, useState } from "react";
 
 import type {
   EvidenceReviewDecision,
   MrvLedgerAuditEntry,
 } from "@/lib/server/mrv/contracts";
 import { parseMrvLedgerAuditEntry } from "@/lib/mrv/audit-history";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { toast } from "@/components/ui/toast";
 import { API_ROUTES } from "@/lib/routes";
 
-import { formatDateTime, formatDecimal } from "../audit-formatters";
-import { EvidenceSnapshotDetails } from "./evidence-snapshot-details";
+import { LedgerAuditTimeline } from "./ledger-audit-timeline";
+import { LedgerDialog, useLedgerDialog } from "./ledger-dialog";
 
 const decisionLabels: Record<EvidenceReviewDecision, string> = {
   ACCEPTED: "Bukti diterima",
@@ -18,25 +25,11 @@ const decisionLabels: Record<EvidenceReviewDecision, string> = {
   REJECTED: "Bukti tidak diterima",
 };
 
-const aiStateLabels: Record<string, string> = {
-  COMPLETED: "Selesai",
-  FAILED: "Gagal",
-  PENDING: "Menunggu",
-  SKIPPED: "Tidak dianalisis",
+const decisionStatusClasses: Record<EvidenceReviewDecision, string> = {
+  ACCEPTED: "border-safe/15 bg-safe/5 text-safe",
+  NEEDS_FOLLOW_UP: "border-warning/20 bg-warning/5 text-warning",
+  REJECTED: "border-critical/20 bg-critical/5 text-critical",
 };
-
-function eventTitle(event: MrvLedgerAuditEntry): string {
-  if (event.eventType === "REPORT_EVIDENCE_RECORDED") {
-    return "Bukti awal dicatat";
-  }
-  if (event.eventType === "REPORT_AI_ANALYSIS_COMPLETED") {
-    return "Hasil triase AI dicatat";
-  }
-  if (event.eventType === "REPORT_AI_ANALYSIS_FAILED") {
-    return "Kegagalan triase AI dicatat";
-  }
-  return `Keputusan peninjauan: ${event.decision ? decisionLabels[event.decision].toLowerCase() : "tidak tersedia"}`;
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -83,10 +76,16 @@ export function LedgerReviewControl({
   photoHref: string | null;
   reportId: string;
 }) {
+  const { closeDialog, dialogRef, onKeyDown, open, openDialog, triggerRef } =
+    useLedgerDialog();
+  const dialogId = useId();
+  const titleId = `${dialogId}-title`;
+  const descriptionId = `${dialogId}-description`;
+  const shortId = reportId.slice(0, 8);
   const [history, setHistory] = useState(auditHistory);
-  const [pending, setPending] = useState(false);
+  const [pendingDecision, setPendingDecision] =
+    useState<EvidenceReviewDecision | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const latestReview = [...history]
     .reverse()
     .find((event) => event.eventType === "MRV_EVIDENCE_REVIEWED");
@@ -101,9 +100,10 @@ export function LedgerReviewControl({
     photoHref !== null;
 
   async function submitDecision(decision: EvidenceReviewDecision) {
-    setPending(true);
+    if (pendingDecision) return;
+
+    setPendingDecision(decision);
     setError(null);
-    setMessage(null);
 
     try {
       const response = await fetch(
@@ -130,106 +130,170 @@ export function LedgerReviewControl({
       }
 
       setHistory((current) => [...current, review]);
-      setMessage(`Keputusan tercatat: ${decisionLabels[decision]}.`);
+      toast.success(
+        "Keputusan peninjauan tersimpan",
+        `${decisionLabels[decision]} · Laporan ${shortId}`,
+      );
+      closeDialog();
     } catch {
       setError("Peninjauan bukti belum dapat disimpan. Periksa koneksi.");
     } finally {
-      setPending(false);
+      setPendingDecision(null);
     }
   }
 
   return (
-    <details className="mt-3 max-w-80 rounded-lg border border-border bg-white px-2.5 py-2 text-xs">
-      <summary className="min-h-8 cursor-pointer font-semibold text-peat-green">
-        Peninjauan bukti
+    <>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <button
+              aria-controls={open ? dialogId : undefined}
+              aria-expanded={open}
+              aria-haspopup="dialog"
+              aria-label={`Peninjauan bukti laporan ${shortId}`}
+              className="inline-grid size-9 shrink-0 place-items-center rounded-full border border-border bg-white text-peat-green shadow-xs transition-colors hover:border-peat-forest/25 hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              onClick={openDialog}
+              ref={triggerRef}
+              type="button"
+            >
+              <ClipboardCheck aria-hidden="true" size={16} />
+            </button>
+          }
+        />
+        <TooltipContent>Peninjauan bukti</TooltipContent>
+      </Tooltip>
+      <p
+        className={`col-span-2 max-w-full rounded-full border px-2 py-1 text-center text-[11px] leading-4 font-medium ${latestReview?.decision ? decisionStatusClasses[latestReview.decision] : "border-peat-forest/10 bg-white text-muted-foreground"}`}
+      >
         {latestReview?.decision
-          ? ` · ${decisionLabels[latestReview.decision]}`
-          : " · belum ditinjau"}
-      </summary>
-      <p className="mt-2 leading-5 text-muted-foreground">
-        Keputusan ini menilai bukti yang tersimpan. Koordinat dan akurasi
-        berasal dari perangkat dan tidak diverifikasi secara independen.
+          ? decisionLabels[latestReview.decision]
+          : "Belum ditinjau"}
       </p>
-      <ol className="mt-3 space-y-3 border-l border-peat-green/20 pl-3">
-        {history.length > 0 ? (
-          history.map((event) => (
-            <li key={event.eventId}>
-              <p className="font-semibold text-peat-forest">
-                {eventTitle(event)}
-              </p>
-              <p className="mt-0.5 text-muted-foreground">
-                {formatDateTime(event.createdAt)}
-                {event.actorRole ? ` · ${event.actorRole}` : ""}
-              </p>
-              {event.classification ? (
-                <p className="mt-1 text-peat-forest">
-                  {aiStateLabels[event.classification.state] ??
-                    event.classification.state}
-                  {event.classification.category
-                    ? ` · ${event.classification.category}`
-                    : ""}
-                  {event.classification.urgency
-                    ? ` · ${event.classification.urgency}`
-                    : ""}
-                  {event.classification.confidence !== null
-                    ? ` · ${formatDecimal(event.classification.confidence * 100)}%`
-                    : ""}
-                </p>
-              ) : null}
-              <EvidenceSnapshotDetails event={event} />
-            </li>
-          ))
-        ) : (
-          <li className="text-muted-foreground">
-            Snapshot audit awal belum tersedia untuk laporan ini.
-          </li>
-        )}
-      </ol>
-      <p className="mt-3 rounded-lg bg-peat-paper px-3 py-2 leading-5 text-foreground">
-        Untuk menerima bukti diperlukan koordinat dalam batas dan foto yang
-        tersimpan. Triase AI dapat berstatus tidak dianalisis.
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          className="min-h-9 rounded-lg bg-peat-green px-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={!canAccept || pending}
-          onClick={() => void submitDecision("ACCEPTED")}
-          type="button"
-        >
-          Terima bukti {reportId.slice(0, 8)}
-        </button>
-        <button
-          className="min-h-9 rounded-lg border border-border px-3 font-semibold text-peat-forest disabled:opacity-50"
-          disabled={pending}
-          onClick={() => void submitDecision("NEEDS_FOLLOW_UP")}
-          type="button"
-        >
-          Minta tindak lanjut {reportId.slice(0, 8)}
-        </button>
-        <button
-          className="min-h-9 rounded-lg border border-warning/30 px-3 font-semibold text-warning disabled:opacity-50"
-          disabled={pending}
-          onClick={() => void submitDecision("REJECTED")}
-          type="button"
-        >
-          Tolak bukti {reportId.slice(0, 8)}
-        </button>
-      </div>
-      {pending ? (
-        <p className="mt-2 text-muted-foreground" role="status">
-          Mencatat keputusan peninjauan…
+      <LedgerDialog
+        describedBy={descriptionId}
+        dialogRef={dialogRef}
+        id={dialogId}
+        onClose={closeDialog}
+        onKeyDown={onKeyDown}
+        open={open}
+        titleId={titleId}
+      >
+        <header className="flex items-start justify-between gap-4">
+          <div>
+            <h2
+              className="font-heading text-2xl font-bold text-peat-forest"
+              id={titleId}
+            >
+              Peninjauan bukti
+            </h2>
+            <p
+              className="mt-2 text-sm text-muted-foreground"
+              id={descriptionId}
+            >
+              Bukti dan keputusan peninjauan laporan {shortId}.
+            </p>
+          </div>
+          <button
+            aria-label="Tutup peninjauan bukti"
+            className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl text-peat-forest hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            data-autofocus
+            onClick={closeDialog}
+            type="button"
+          >
+            <X aria-hidden="true" size={19} />
+          </button>
+        </header>
+        <p className="mt-5 text-sm leading-6 text-muted-foreground">
+          Keputusan ini menilai bukti yang tersimpan. Koordinat dan akurasi
+          berasal dari perangkat dan tidak diverifikasi secara independen.
         </p>
-      ) : null}
-      {message ? (
-        <p className="mt-2 font-semibold text-peat-green" role="status">
-          {message}
+        <LedgerAuditTimeline history={history} />
+        <p className="mt-5 rounded-xl border border-peat-forest/15 bg-white p-4 text-sm leading-6 text-foreground">
+          Untuk menerima bukti diperlukan koordinat dalam batas dan foto yang
+          tersimpan. Triase AI dapat berstatus tidak dianalisis.
         </p>
-      ) : null}
-      {error ? (
-        <p className="mt-2 font-semibold text-warning" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </details>
+        {error ? (
+          <p
+            className="mt-4 rounded-xl bg-warning/10 p-3 text-sm text-warning"
+            role="alert"
+          >
+            {error}
+          </p>
+        ) : null}
+        <div
+          aria-busy={pendingDecision !== null}
+          className="mt-5 flex flex-wrap justify-end gap-2 border-t border-peat-forest/10 pt-4 text-sm"
+        >
+          <span className="sr-only" role="status">
+            {pendingDecision
+              ? `Menyimpan keputusan: ${decisionLabels[pendingDecision]}.`
+              : ""}
+          </span>
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-peat-green px-4 font-semibold text-white hover:bg-peat-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!canAccept || pendingDecision !== null}
+            onClick={() => void submitDecision("ACCEPTED")}
+            type="button"
+          >
+            {pendingDecision === "ACCEPTED" ? (
+              <LoaderCircle
+                aria-hidden="true"
+                className="animate-spin"
+                size={16}
+              />
+            ) : null}
+            {pendingDecision === "ACCEPTED" ? (
+              <span className="sr-only">Menyimpan keputusan</span>
+            ) : null}
+            <span aria-hidden={pendingDecision === "ACCEPTED" || undefined}>
+              Terima bukti
+            </span>
+          </button>
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-peat-forest/10 px-4 font-semibold text-peat-forest hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
+            disabled={pendingDecision !== null}
+            onClick={() => void submitDecision("NEEDS_FOLLOW_UP")}
+            type="button"
+          >
+            {pendingDecision === "NEEDS_FOLLOW_UP" ? (
+              <LoaderCircle
+                aria-hidden="true"
+                className="animate-spin"
+                size={16}
+              />
+            ) : null}
+            {pendingDecision === "NEEDS_FOLLOW_UP" ? (
+              <span className="sr-only">Menyimpan keputusan</span>
+            ) : null}
+            <span
+              aria-hidden={pendingDecision === "NEEDS_FOLLOW_UP" || undefined}
+            >
+              Minta tindak lanjut
+            </span>
+          </button>
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-warning/30 px-4 font-semibold text-warning hover:bg-warning/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
+            disabled={pendingDecision !== null}
+            onClick={() => void submitDecision("REJECTED")}
+            type="button"
+          >
+            {pendingDecision === "REJECTED" ? (
+              <LoaderCircle
+                aria-hidden="true"
+                className="animate-spin"
+                size={16}
+              />
+            ) : null}
+            {pendingDecision === "REJECTED" ? (
+              <span className="sr-only">Menyimpan keputusan</span>
+            ) : null}
+            <span aria-hidden={pendingDecision === "REJECTED" || undefined}>
+              Tolak bukti
+            </span>
+          </button>
+        </div>
+      </LedgerDialog>
+    </>
   );
 }

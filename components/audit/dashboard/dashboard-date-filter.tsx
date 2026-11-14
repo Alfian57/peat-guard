@@ -41,12 +41,11 @@ export function DashboardDateFilter({
                 size={13}
               />
               <span>
-                {from ? `Dari ${from}` : "Awal waktu"} –{" "}
-                {to ? `Sampai ${to}` : "Sekarang"}
+                Periode aktivitas: {from || "awal"} – {to || "sekarang"} WIB
               </span>
             </span>
             <Link
-              className="inline-flex min-h-7 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted-foreground transition hover:text-red-700"
+              className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted-foreground transition hover:text-red-700"
               href={APP_ROUTES.audit.dashboard}
             >
               <X aria-hidden="true" size={13} />
@@ -55,17 +54,17 @@ export function DashboardDateFilter({
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Menampilkan seluruh data tanpa batasan rentang tanggal.
+            Menampilkan seluruh aktivitas tanpa batasan periode.
           </p>
         )}
       </div>
 
       <button
-        aria-label="Filter periode tanggal"
+        aria-label="Filter periode aktivitas"
         aria-controls="dashboard-date-filter-dialog"
         aria-expanded={isOpen}
         aria-haspopup="dialog"
-        className="inline-flex h-8 min-h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-border bg-white px-3 text-xs font-semibold text-peat-forest shadow-xs transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+        className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full border border-peat-forest/10 bg-white px-3 text-xs font-semibold text-peat-forest shadow-xs transition hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
         onClick={handleOpen}
         type="button"
       >
@@ -89,7 +88,7 @@ export function DashboardDateFilter({
               className="block text-xs font-semibold text-peat-forest"
               htmlFor="dashboard-from"
             >
-              Dari tanggal{" "}
+              Tanggal mulai periode (WIB){" "}
               <span className="text-[11px] font-normal text-muted-foreground">
                 (opsional)
               </span>
@@ -112,7 +111,7 @@ export function DashboardDateFilter({
               className="block text-xs font-semibold text-peat-forest"
               htmlFor="dashboard-to"
             >
-              Sampai tanggal{" "}
+              Tanggal akhir periode (WIB){" "}
               <span className="text-[11px] font-normal text-muted-foreground">
                 (opsional)
               </span>
@@ -129,20 +128,20 @@ export function DashboardDateFilter({
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-border pt-3">
+          <div className="flex items-center justify-end gap-2 border-t border-peat-forest/10 pt-3">
             <button
-              className="inline-flex h-9 min-h-9 items-center justify-center rounded-xl border border-border px-4 text-xs font-semibold text-peat-forest transition hover:bg-peat-paper"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-peat-forest/10 px-4 text-xs font-semibold text-peat-forest transition hover:bg-peat-paper"
               onClick={handleClose}
               type="button"
             >
               Batal
             </button>
             <button
-              className="inline-flex h-9 min-h-9 items-center justify-center gap-1.5 rounded-xl bg-peat-forest px-4 text-xs font-semibold text-white transition hover:bg-peat-green"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-peat-forest px-4 text-xs font-semibold text-white transition hover:bg-peat-green"
               type="submit"
             >
               <CalendarDays aria-hidden="true" size={14} />
-              Terapkan tanggal
+              Terapkan periode
             </button>
           </div>
         </form>

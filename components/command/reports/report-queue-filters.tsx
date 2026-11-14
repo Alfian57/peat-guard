@@ -51,8 +51,8 @@ export function ReportQueueFilters({
             />
           ) : (
             <p className="text-xs text-muted-foreground">
-              Menampilkan seluruh insiden tanpa filter status, zona, atau
-              rentang tanggal khusus.
+              Menampilkan seluruh laporan tanpa filter status penanganan, zona
+              gambut, waktu kejadian, atau jenis data.
             </p>
           )}
         </div>

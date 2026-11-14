@@ -1,19 +1,13 @@
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { APP_ROUTES } from "@/lib/routes";
 import type { AppRole } from "@/lib/roles";
+import { handlingStatusLabel } from "@/lib/report-labels";
 
 export type GlobalSearchResult = {
   id: string;
   title: string;
   description: string;
-  kind:
-    | "Laporan"
-    | "Zona"
-    | "Titik air"
-    | "Hotspot"
-    | "Audit MRV"
-    | "Akun"
-    | "Menu";
+  kind: "Laporan" | "Zona" | "Titik air" | "Hotspot" | "Audit MRV" | "Menu";
   group: "menu" | "data";
   href: string;
 };
@@ -82,14 +76,6 @@ export function buildReportSearchWhere(
     OR.push({ createdAt: { gt: new Date(0) } });
   }
 
-  if (role !== "RELAWAN") {
-    OR.push(
-      { reporter: { is: { name: contains } } },
-      { reporter: { is: { email: contains } } },
-      { reporter: { is: { villageName: contains } } },
-    );
-  }
-
   if (UUID_QUERY.test(trimmed)) {
     OR.push({ id: trimmed }, { clientReportId: trimmed });
   }
@@ -137,9 +123,11 @@ export function toGlobalSearchReportResult(
     id: `report-${report.id}`,
     title: `Laporan ${report.id.slice(0, 8)}`,
     description: [
-      report.zone?.zoneName ?? report.zone?.villageName ?? "Belum terkait zona",
-      report.handlingStatus.replaceAll("_", " "),
-      report.isDemoSample ? "Data ilustratif" : null,
+      report.zone?.zoneName ??
+        report.zone?.villageName ??
+        "Zona belum ditetapkan",
+      handlingStatusLabel(report.handlingStatus),
+      report.isDemoSample ? "Sampel demo" : null,
     ]
       .filter(Boolean)
       .join(" · "),

@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { ChartNoAxesCombined, ClipboardList, FileText } from "lucide-react";
+import {
+  ChartNoAxesCombined,
+  ClipboardList,
+  FileText,
+  MapPinned,
+} from "lucide-react";
 
 import { APP_ROUTES } from "@/lib/routes";
 
@@ -9,6 +14,7 @@ const navigation = [
     label: "Dampak karbon",
     icon: ChartNoAxesCombined,
   },
+  { href: APP_ROUTES.audit.zones, label: "Verifikasi zona", icon: MapPinned },
   {
     href: APP_ROUTES.audit.ledger,
     label: "Log audit MRV",
@@ -23,14 +29,17 @@ const navigation = [
 
 export function AuditNavigation({
   pathname,
+  canVerifyZones = false,
   onNavigate,
 }: {
   pathname: string;
+  canVerifyZones?: boolean;
   onNavigate: () => void;
 }) {
   return (
     <nav aria-label="Navigasi Verifikator" className="space-y-2">
       {navigation.map(({ href, label, icon: Icon }) => {
+        if (href === APP_ROUTES.audit.zones && !canVerifyZones) return null;
         const isActive = pathname === href || pathname.startsWith(`${href}/`);
 
         return (

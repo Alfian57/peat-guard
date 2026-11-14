@@ -114,8 +114,8 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
   }
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.28fr)]">
-      <section className="audit-hide-on-print h-fit rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-6">
+    <div className="grid min-w-0 items-stretch gap-5 xl:grid-cols-[minmax(280px,0.75fr)_minmax(0,1.5fr)] print:block">
+      <section className="audit-hide-on-print min-w-0 rounded-2xl border border-peat-forest/10 bg-white p-5 shadow-xs sm:p-6">
         <h2 className="font-heading text-2xl font-bold text-peat-forest">
           Pilih data yang dirangkum
         </h2>
@@ -127,7 +127,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
               className="block text-sm font-semibold text-peat-forest"
               htmlFor="generator-zone"
             >
-              Wilayah zona gambut{" "}
+              Zona gambut{" "}
               <span className="font-normal text-muted-foreground">
                 (opsional)
               </span>
@@ -138,7 +138,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
               id="generator-zone"
               name="zoneId"
             >
-              <option value="">Semua zona</option>
+              <option value="">Semua zona gambut</option>
               {zones.map((zone) => (
                 <option key={zone.zoneId} value={zone.zoneId}>
                   {zone.zoneName}
@@ -150,7 +150,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
 
           <fieldset className="space-y-2">
             <legend className="text-sm font-semibold text-peat-forest">
-              Rentang tanggal{" "}
+              Periode laporan{" "}
               <span className="font-normal text-muted-foreground">
                 (opsional)
               </span>
@@ -161,7 +161,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
                   className="block text-xs font-medium text-muted-foreground"
                   htmlFor="generator-from"
                 >
-                  Dari tanggal
+                  Tanggal mulai periode (WIB)
                 </label>
                 <input
                   className="h-11 w-full rounded-xl border border-input bg-white px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -176,7 +176,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
                   className="block text-xs font-medium text-muted-foreground"
                   htmlFor="generator-to"
                 >
-                  Sampai tanggal
+                  Tanggal akhir periode (WIB)
                 </label>
                 <input
                   className="h-11 w-full rounded-xl border border-input bg-white px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -192,7 +192,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
             </p>
           </fieldset>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-peat-paper/70 p-4 focus-within:ring-3 focus-within:ring-peat-green/20">
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-peat-forest/15 bg-white p-4 focus-within:ring-3 focus-within:ring-peat-green/20">
             <input
               className="mt-1 size-4 shrink-0 accent-peat-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               name="aiConsent"
@@ -225,7 +225,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
             {isPending ? (
               <LoaderCircle
                 aria-hidden="true"
-                className="animate-spin"
+                className="animate-spin motion-reduce:animate-none"
                 size={17}
               />
             ) : (
@@ -243,7 +243,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
       <section
         aria-busy={isPending}
         aria-live="polite"
-        className="min-w-0 space-y-3"
+        className="flex min-w-0 flex-col gap-5 rounded-2xl border border-peat-forest/10 bg-white p-5 shadow-xs sm:p-6 print:block print:rounded-none print:border-0 print:p-0 print:shadow-none"
       >
         <div className="audit-hide-on-print flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -258,7 +258,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
           </div>
           {report ? (
             <button
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold text-peat-green hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-peat-forest/10 bg-white px-4 text-sm font-semibold text-peat-green hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               onClick={printReport}
               type="button"
             >
@@ -268,10 +268,10 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
           ) : null}
         </div>
         {isPending && !report ? (
-          <div className="rounded-2xl border border-border bg-white p-8 text-center shadow-sm">
+          <div className="flex min-h-64 flex-1 flex-col items-center justify-center px-4 py-10 text-center">
             <LoaderCircle
               aria-hidden="true"
-              className="mx-auto animate-spin text-peat-green"
+              className="mx-auto animate-spin text-peat-green motion-reduce:animate-none"
               size={26}
             />
             <p className="mt-3 text-sm font-semibold text-peat-forest">
@@ -281,7 +281,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
         ) : report ? (
           <GeneratorReportPreview report={report} />
         ) : (
-          <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-white/70 px-6 py-10 text-center">
+          <div className="flex min-h-64 flex-1 flex-col items-center justify-center px-4 py-10 text-center">
             <span className="grid size-12 place-items-center rounded-2xl bg-peat-paper text-peat-green">
               <TriangleAlert aria-hidden="true" size={23} />
             </span>

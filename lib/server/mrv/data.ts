@@ -234,6 +234,7 @@ function toLedgerRow(report: {
     })),
     syncedAt: report.syncedAt.toISOString(),
     villageName: report.zone?.villageName ?? null,
+    zoneName: report.zone?.zoneName ?? null,
     zoneImpactContext: getCurrentZoneContext(report),
   };
 }

@@ -7,7 +7,7 @@ import {
   readJsonObject,
 } from "@/lib/server/command/http";
 import {
-  deleteCommandZone,
+  archiveCommandZone,
   getCommandZone,
   updateCommandZone,
 } from "@/lib/server/zones/data";
@@ -46,7 +46,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     const session = await requireRole(["POSKO"]);
     const { zoneId } = await context.params;
     assertZoneId(zoneId);
-    await deleteCommandZone(zoneId, session.user.id);
+    await archiveCommandZone(zoneId, session.user.id);
 
     return jsonResponse({ deleted: true });
   } catch (error) {

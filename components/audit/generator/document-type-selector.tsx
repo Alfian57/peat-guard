@@ -7,8 +7,8 @@ export function DocumentTypeSelector() {
           *
         </span>
       </legend>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex min-h-[5.5rem] cursor-pointer items-start gap-3 rounded-xl border border-border bg-white p-4 transition hover:border-peat-green has-[:checked]:border-peat-green has-[:checked]:bg-peat-green/5 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-peat-green/25">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+        <label className="flex min-h-16 cursor-pointer items-start gap-3 rounded-xl border border-peat-forest/10 bg-white p-3 transition hover:border-peat-green has-[:checked]:border-peat-green has-[:checked]:bg-peat-green/5 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-peat-green/25">
           <input
             className="mt-1 size-4 accent-peat-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             defaultChecked
@@ -25,7 +25,7 @@ export function DocumentTypeSelector() {
             </span>
           </span>
         </label>
-        <label className="flex min-h-[5.5rem] cursor-pointer items-start gap-3 rounded-xl border border-border bg-white p-4 transition hover:border-peat-green has-[:checked]:border-peat-green has-[:checked]:bg-peat-green/5 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-peat-green/25">
+        <label className="flex min-h-16 cursor-pointer items-start gap-3 rounded-xl border border-peat-forest/10 bg-white p-3 transition hover:border-peat-green has-[:checked]:border-peat-green has-[:checked]:bg-peat-green/5 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-peat-green/25">
           <input
             className="mt-1 size-4 accent-peat-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             name="documentType"

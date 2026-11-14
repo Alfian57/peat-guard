@@ -4,6 +4,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { zoneEditRoute } from "@/components/command/routes";
 import { ZoneCardMetric } from "@/components/command/zones/zone-card-metric";
 import type { CommandZone } from "@/lib/server/zones/data";
+import { zoneVerificationStatusLabel } from "@/lib/zone-labels";
 
 export function ZoneCard({
   onDelete,
@@ -33,13 +34,13 @@ export function ZoneCard({
               : "bg-peat-sun/30 text-peat-forest")
           }
         >
-          {zone.isApproved ? "Disetujui" : "Menunggu verifikasi"}
+          {zoneVerificationStatusLabel(zone.isApproved)}
         </span>
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-peat-paper p-3">
         <ZoneCardMetric
-          label="Luas terhitung"
+          label="Luas zona"
           value={formatNumber(zone.areaHectares, 1) + " ha"}
         />
         <ZoneCardMetric
@@ -47,18 +48,18 @@ export function ZoneCard({
           value={formatNumber(zone.peatDepthMeters, 2) + " m"}
         />
         <ZoneCardMetric
-          label="Faktor karbon"
-          value={formatNumber(zone.carbonFactor, 2)}
+          label="Biomassa gambut"
+          value={formatNumber(zone.carbonFactor, 2) + " t C/ha"}
         />
         <ZoneCardMetric
           label="Titik sumber air"
-          value={formatNumber(waterPointCount)}
+          value={formatNumber(waterPointCount) + " titik"}
         />
       </div>
 
       {zone.isDemoData ? (
         <p className="mt-3 text-xs font-medium text-peat-forest/60">
-          Data ilustrasi
+          Data ilustratif
         </p>
       ) : null}
 
@@ -71,7 +72,7 @@ export function ZoneCard({
           Ubah zona
         </Link>
         <button
-          aria-label={"Hapus zona " + zone.name}
+          aria-label={"Arsipkan zona " + zone.name}
           className="inline-grid min-h-11 min-w-11 place-items-center rounded-xl border border-border text-red-600 hover:bg-red-50 hover:text-red-700"
           onClick={() => onDelete(zone)}
           type="button"

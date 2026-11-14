@@ -1,9 +1,9 @@
 import {
   HandlingStatus,
-  ReportUrgency,
   type HandlingStatus as HandlingStatusValue,
   type ReportUrgency as ReportUrgencyValue,
 } from "@/lib/generated/prisma/enums";
+import { handlingStatusLabel, reportUrgencyLabel } from "@/lib/report-labels";
 
 export { ReportUrgencyBadge } from "./report-urgency-badge";
 export { ReportCategoryLabel } from "./report-category-label";
@@ -30,23 +30,9 @@ export function ReportStatusBadge({ status }: { status: HandlingStatusValue }) {
 }
 
 export function statusLabel(status: HandlingStatusValue): string {
-  switch (status) {
-    case HandlingStatus.MENUNGGU_TINDAKAN:
-      return "Menunggu tindakan";
-    case HandlingStatus.DALAM_PENANGANAN:
-      return "Dalam penanganan";
-    case HandlingStatus.SELESAI:
-      return "Selesai";
-  }
+  return handlingStatusLabel(status);
 }
 
 export function urgencyLabel(urgency: ReportUrgencyValue): string {
-  switch (urgency) {
-    case ReportUrgency.KRITIS:
-      return "Kritis";
-    case ReportUrgency.WASPADA:
-      return "Waspada";
-    case ReportUrgency.RENDAH:
-      return "Rendah";
-  }
+  return reportUrgencyLabel(urgency);
 }

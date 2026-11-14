@@ -1,4 +1,5 @@
 import type { PublicMapData } from "@/lib/public/contracts";
+import { hotspotSourceLabel } from "@/lib/firms-labels";
 
 function formatDate(value: string | null) {
   if (value === null) {
@@ -17,13 +18,18 @@ export function PublicMapFreshness({
 }: {
   freshness: PublicMapData["freshness"];
 }) {
-  const lastSuccessfulAt = formatDate(freshness.lastSuccessfulAt);
+  const lastSuccessfulAt = formatDate(freshness.lastDataSyncAt);
   const descriptions = {
     fresh: `Sinkronisasi berhasil ${lastSuccessfulAt}.`,
+    partial: freshness.failedSources.length
+      ? `Pembaruan parsial ${lastSuccessfulAt}. Sumber gagal: ${freshness.failedSources.map(hotspotSourceLabel).join(", ")}.`
+      : `Pembaruan parsial tercatat ${lastSuccessfulAt}.`,
     stale: `Pembaruan terakhir ${lastSuccessfulAt}; data mungkin tertinggal dari kondisi terbaru.`,
     unavailable: "Belum ada sinkronisasi NASA FIRMS yang berhasil tercatat.",
     not_configured:
       "Sinkronisasi NASA FIRMS belum dikonfigurasi di lingkungan ini.",
+    configuration_error:
+      "Jadwal sinkronisasi NASA FIRMS tidak valid. Data peta tetap ditampilkan.",
   } as const;
 
   return (
@@ -44,7 +50,9 @@ export function PublicMapFreshness({
       </p>
       {freshness.configured ? (
         <p className="mt-2 text-[.7rem] leading-5 text-peat-forest/60">
-          Worker dijadwalkan setiap {freshness.expectedIntervalMinutes} menit.
+          {freshness.expectedIntervalMinutes === null
+            ? "Interval worker tidak tersedia karena konfigurasi perlu diperbaiki."
+            : `Worker dijadwalkan setiap ${freshness.expectedIntervalMinutes} menit.`}
           Penanda ini mengikuti catatan sinkronisasi sukses terakhir.
         </p>
       ) : null}

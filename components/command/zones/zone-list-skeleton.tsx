@@ -27,22 +27,22 @@ export function ZoneListSkeleton() {
             <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-peat-forest/70">
               <tr>
                 <th className="px-4 py-3.5" scope="col">
-                  Nama Zona & Desa
+                  Nama zona & desa
                 </th>
                 <th className="px-4 py-3.5" scope="col">
-                  Status Verifikasi
+                  Status verifikasi
                 </th>
                 <th className="px-4 py-3.5" scope="col">
-                  Luas Terhitung
+                  Luas zona
                 </th>
                 <th className="px-4 py-3.5" scope="col">
-                  Kedalaman
+                  Kedalaman gambut
                 </th>
                 <th className="px-4 py-3.5" scope="col">
-                  Faktor Karbon
+                  Biomassa gambut (t C/ha)
                 </th>
                 <th className="px-4 py-3.5" scope="col">
-                  Sumber Air
+                  Titik sumber air
                 </th>
                 <th className="px-4 py-3.5 text-right" scope="col">
                   Aksi

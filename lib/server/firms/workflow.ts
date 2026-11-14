@@ -1,6 +1,7 @@
 import { FirmsProviderError } from "@/lib/server/firms/errors";
 import type { FirmsHotspot } from "@/lib/server/firms/csv";
-import type { AreaBounds } from "@/lib/server/firms/client";
+import type { AreaBounds, FirmsSourceBatch } from "@/lib/server/firms/client";
+import type { FirmsIngestSource } from "@/lib/firms-sources";
 
 export type FirmsSyncResult =
   | { status: "skipped"; reason: "not_configured" }
@@ -8,6 +9,14 @@ export type FirmsSyncResult =
       status: "success";
       processedCount: number;
       completedAt: string;
+      successfulSources: FirmsIngestSource[];
+    }
+  | {
+      status: "partial";
+      processedCount: number;
+      completedAt: string;
+      successfulSources: FirmsIngestSource[];
+      failedSources: FirmsSourceBatch["failedSources"];
     };
 
 export class FirmsSyncError extends Error {
@@ -22,7 +31,10 @@ export class FirmsSyncError extends Error {
 }
 
 export type FirmsSyncDependencies = {
-  fetchHotspots: (apiKey: string, area: AreaBounds) => Promise<FirmsHotspot[]>;
+  fetchHotspots: (
+    apiKey: string,
+    area: AreaBounds,
+  ) => Promise<FirmsSourceBatch>;
   reserveSyncSlot: (args: {
     actorId: string | null;
     intervalMinutes: number;
@@ -31,12 +43,15 @@ export type FirmsSyncDependencies = {
   >;
   persistSuccess: (args: {
     hotspots: FirmsHotspot[];
+    successfulSources: FirmsIngestSource[];
+    failedSources: FirmsSourceBatch["failedSources"];
     actorId: string | null;
     area: AreaBounds;
   }) => Promise<void>;
   persistFailure: (args: {
     actorId: string | null;
     errorCode: string;
+    failedSources: FirmsSourceBatch["failedSources"];
   }) => Promise<void>;
   now: () => Date;
 };
@@ -70,10 +85,10 @@ export async function performFirmsSync(
     throw new FirmsSyncError(429, "rate_limited", slot.retryAfterSeconds);
   }
 
-  let hotspots: FirmsHotspot[];
+  let batch: FirmsSourceBatch;
 
   try {
-    hotspots = await dependencies.fetchHotspots(apiKey, args.area);
+    batch = await dependencies.fetchHotspots(apiKey, args.area);
   } catch (error) {
     const errorCode =
       error instanceof FirmsProviderError
@@ -84,6 +99,7 @@ export async function performFirmsSync(
       await dependencies.persistFailure({
         actorId: args.actorId,
         errorCode,
+        failedSources: [],
       });
     } catch {
       // A database outage must not hide the original provider error.
@@ -92,9 +108,25 @@ export async function performFirmsSync(
     throw new FirmsSyncError(502, "provider_unavailable");
   }
 
+  if (batch.successfulSources.length === 0) {
+    try {
+      await dependencies.persistFailure({
+        actorId: args.actorId,
+        errorCode: "all_sources_failed",
+        failedSources: batch.failedSources,
+      });
+    } catch {
+      // Keep the provider failure as the actionable result if audit storage is down.
+    }
+
+    throw new FirmsSyncError(502, "provider_unavailable");
+  }
+
   try {
     await dependencies.persistSuccess({
-      hotspots,
+      hotspots: batch.hotspots,
+      successfulSources: batch.successfulSources,
+      failedSources: batch.failedSources,
       actorId: args.actorId,
       area: args.area,
     });
@@ -102,9 +134,13 @@ export async function performFirmsSync(
     throw new FirmsSyncError(503, "storage_unavailable");
   }
 
-  return {
-    status: "success",
-    processedCount: hotspots.length,
+  const completion = {
+    processedCount: batch.hotspots.length,
     completedAt: dependencies.now().toISOString(),
+    successfulSources: batch.successfulSources,
   };
+
+  return batch.failedSources.length > 0
+    ? { status: "partial", ...completion, failedSources: batch.failedSources }
+    : { status: "success", ...completion };
 }

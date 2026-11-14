@@ -41,18 +41,24 @@ export function FieldStatusWidget({
         <button
           aria-label="Simulasikan mode offline"
           aria-pressed={simulatedOffline}
-          className={`relative h-6 w-11 cursor-pointer rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring ${
-            simulatedOffline ? "bg-offline" : "bg-sidebar-primary/20"
-          }`}
+          className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring"
           onClick={toggleSimulatedOffline}
           type="button"
         >
           <span
             aria-hidden="true"
-            className={`absolute top-0.5 size-5 rounded-full bg-white shadow-xs transition-transform ${
-              simulatedOffline ? "translate-x-5" : "translate-x-0.5"
-            }`}
-          />
+            className={
+              "relative block h-6 w-11 shrink-0 rounded-full " +
+              (simulatedOffline ? "bg-offline" : "bg-sidebar-primary/20")
+            }
+          >
+            <span
+              className={
+                "absolute top-0.5 left-0.5 block size-5 rounded-full bg-white shadow-xs transition-transform motion-reduce:transition-none " +
+                (simulatedOffline ? "translate-x-5" : "translate-x-0")
+              }
+            />
+          </span>
         </button>
       </div>
 
@@ -65,7 +71,7 @@ export function FieldStatusWidget({
             </span>
           </div>
           <button
-            className="mt-2.5 flex min-h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-sidebar-primary px-3 text-xs font-semibold text-sidebar-primary-foreground transition-colors hover:bg-sidebar-primary/90 disabled:cursor-wait disabled:opacity-60"
+            className="mt-2.5 flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-sidebar-primary px-3 text-xs font-semibold text-sidebar-primary-foreground transition-colors hover:bg-sidebar-primary/90 disabled:cursor-wait disabled:opacity-60"
             disabled={
               isSyncing || !isConnected || ownerStatus !== "authenticated"
             }

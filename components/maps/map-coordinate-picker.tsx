@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   LoaderCircle,
   MapPin,
@@ -17,6 +17,7 @@ export type MapCoordinatePickerProps = {
   onChange: (coords: { latitude: number; longitude: number }) => void;
   zones?: MapZone[];
   className?: string;
+  compact?: boolean;
   heightClassName?: string;
   pointKind?: MapPointKind;
   title?: string;
@@ -30,6 +31,7 @@ export function MapCoordinatePicker({
   onChange,
   zones,
   className,
+  compact = false,
   heightClassName = "h-64 sm:h-80",
   pointKind = "water",
   title = "Pilih titik lokasi pada peta",
@@ -37,6 +39,12 @@ export function MapCoordinatePicker({
   showCurrentLocationButton = true,
 }: MapCoordinatePickerProps) {
   const [isLocating, setIsLocating] = useState(false);
+  const [cameraRequest, setCameraRequest] = useState<{
+    id: number;
+    center: [longitude: number, latitude: number];
+    zoom: number;
+  }>();
+  const cameraRequestIdRef = useRef(0);
 
   const hasCoordinates =
     latitude !== null &&
@@ -91,6 +99,12 @@ export function MapCoordinatePicker({
         const lat = Number(position.coords.latitude.toFixed(6));
         const lng = Number(position.coords.longitude.toFixed(6));
         onChange({ latitude: lat, longitude: lng });
+        cameraRequestIdRef.current += 1;
+        setCameraRequest({
+          id: cameraRequestIdRef.current,
+          center: [lng, lat],
+          zoom: 12,
+        });
       },
       () => {
         setIsLocating(false);
@@ -108,21 +122,23 @@ export function MapCoordinatePicker({
           </span>
           <p className="text-[11px] text-peat-forest/65">{hint}</p>
         </div>
-        <div className="flex items-center gap-2">
-          {hasCoordinates && latitude !== null && longitude !== null ? (
-            <span className="inline-flex items-center gap-1 rounded-lg bg-peat-forest/5 px-2.5 py-1 font-mono text-xs font-semibold text-peat-forest">
-              <MapPin
-                aria-hidden="true"
-                className="text-peat-green"
-                size={13}
-              />
-              {latitude.toFixed(6)}, {longitude.toFixed(6)}
-            </span>
-          ) : (
-            <span className="text-xs text-muted-foreground">
-              Belum ada titik dipilih
-            </span>
-          )}
+        <div className="flex items-center gap-2 empty:hidden">
+          {!compact ? (
+            hasCoordinates && latitude !== null && longitude !== null ? (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-peat-forest/5 px-2.5 py-1 font-mono text-xs font-semibold text-peat-forest">
+                <MapPin
+                  aria-hidden="true"
+                  className="text-peat-green"
+                  size={13}
+                />
+                {latitude.toFixed(6)}, {longitude.toFixed(6)}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                Belum ada titik dipilih
+              </span>
+            )
+          ) : null}
           {showCurrentLocationButton ? (
             <button
               className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-peat-forest/15 bg-white px-2.5 py-1 text-xs font-semibold text-peat-forest transition hover:bg-peat-forest/5 focus-visible:outline-2 focus-visible:outline-peat-green disabled:opacity-50"
@@ -149,10 +165,13 @@ export function MapCoordinatePicker({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-peat-forest/15 bg-peat-paper shadow-xs">
+      <div
+        className={`overflow-hidden rounded-xl border border-peat-forest/15 bg-peat-paper shadow-xs [&>[data-map-placeholder]]:min-h-0 [&>[data-map-placeholder]]:rounded-none ${heightClassName}`}
+      >
         <MapCanvasLoader
           autoFit={!hasCoordinates && Boolean(zones && zones.length > 0)}
-          className={`w-full overflow-hidden ${heightClassName}`}
+          cameraRequest={cameraRequest}
+          className="h-full w-full overflow-hidden [&>div:first-child]:min-h-0"
           clusterPoints={false}
           draftEditing={true}
           initialCenter={initialCenter}
@@ -164,15 +183,17 @@ export function MapCoordinatePicker({
         />
       </div>
 
-      <p className="flex items-center gap-1.5 text-[11px] text-peat-forest/65">
-        <MousePointerClick
-          aria-hidden="true"
-          className="shrink-0 text-peat-green"
-          size={13}
-        />
-        Klik pada peta untuk memindahkan pin koordinat. Anda juga dapat
-        menyunting angka lintang & bujur di bawah.
-      </p>
+      {!compact ? (
+        <p className="flex items-center gap-1.5 text-[11px] text-peat-forest/65">
+          <MousePointerClick
+            aria-hidden="true"
+            className="shrink-0 text-peat-green"
+            size={13}
+          />
+          Klik pada peta untuk memindahkan pin koordinat. Anda juga dapat
+          menyunting angka lintang & bujur di bawah.
+        </p>
+      ) : null}
     </div>
   );
 }

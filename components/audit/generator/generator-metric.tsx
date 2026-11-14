@@ -8,7 +8,7 @@ export function GeneratorMetric({
   note?: string;
 }) {
   return (
-    <div className="border-b border-border py-3 last:border-b-0 sm:grid sm:grid-cols-[1fr_auto] sm:items-baseline sm:gap-4">
+    <div className="border-b border-peat-forest/10 py-3 last:border-b-0 sm:grid sm:grid-cols-[1fr_auto] sm:items-baseline sm:gap-4">
       <dt className="text-sm text-muted-foreground">{label}</dt>
       <dd className="mt-1 text-sm font-semibold text-peat-forest sm:mt-0 sm:text-right">
         {value}

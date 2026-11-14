@@ -29,6 +29,7 @@ type ServerReportSnapshot = {
   page: number;
   pageSize: number;
   total: number;
+  syncRevision: number;
   status: "loading" | "loaded" | "error";
   error: string | null;
 };
@@ -39,6 +40,7 @@ export function useFieldReportHistory() {
     ownerId,
     ownerStatus,
     queueCount,
+    syncRevision,
     refreshQueue,
     setNotice,
   } = useFieldShell();
@@ -65,6 +67,7 @@ export function useFieldReportHistory() {
     page: 1,
     pageSize: 25,
     total: 0,
+    syncRevision: 0,
     status: "loading",
     error: null,
   });
@@ -93,7 +96,9 @@ export function useFieldReportHistory() {
       : [];
   const serverStatus: ServerHistoryStatus = canFetchServerHistory
     ? serverSnapshotMatches
-      ? serverSnapshot.status
+      ? serverSnapshot.syncRevision === syncRevision
+        ? serverSnapshot.status
+        : "loading"
       : "loading"
     : "unavailable";
   const serverError =
@@ -144,7 +149,7 @@ export function useFieldReportHistory() {
     return () => {
       isActive = false;
     };
-  }, [ownerId, queueCount, setNotice]);
+  }, [ownerId, queueCount, setNotice, syncRevision]);
 
   useEffect(() => {
     if (!canFetchServerHistory || !ownerId) return;
@@ -164,6 +169,7 @@ export function useFieldReportHistory() {
           page: page.page,
           pageSize: page.pageSize,
           total: page.total,
+          syncRevision,
           status: "loaded",
           error: null,
         });
@@ -176,6 +182,7 @@ export function useFieldReportHistory() {
           page: serverPage,
           pageSize: 25,
           total: 0,
+          syncRevision,
           status: "error",
           error:
             error instanceof Error
@@ -186,7 +193,13 @@ export function useFieldReportHistory() {
     return () => {
       controller.abort();
     };
-  }, [canFetchServerHistory, ownerId, serverPage, serverRefreshKey]);
+  }, [
+    canFetchServerHistory,
+    ownerId,
+    serverPage,
+    serverRefreshKey,
+    syncRevision,
+  ]);
 
   const refreshServerHistory = useCallback(() => {
     if (!canFetchServerHistory) return;

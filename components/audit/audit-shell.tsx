@@ -27,7 +27,11 @@ export function AuditShell({
           <AuditBrand />
         </div>
         <div className="px-6 pt-6 pb-7">
-          <AuditNavigation onNavigate={() => undefined} pathname={pathname} />
+          <AuditNavigation
+            canVerifyZones={user.role === "VERIFIKATOR"}
+            onNavigate={() => undefined}
+            pathname={pathname}
+          />
         </div>
       </aside>
 
@@ -54,7 +58,7 @@ export function AuditShell({
                 aria-label={
                   mobileNavigationOpen ? "Tutup navigasi" : "Buka navigasi"
                 }
-                className="inline-grid size-9 place-items-center rounded-xl border border-[#dedfd4] bg-white text-peat-forest transition-colors hover:bg-[#f2f1e9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green lg:hidden"
+                className="inline-grid size-11 place-items-center rounded-xl border border-[#dedfd4] bg-white text-peat-forest transition-colors hover:bg-[#f2f1e9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green lg:hidden"
                 onClick={() => setMobileNavigationOpen((open) => !open)}
                 type="button"
               >
@@ -71,6 +75,7 @@ export function AuditShell({
         {mobileNavigationOpen ? (
           <div className="audit-hide-on-print border-b border-sidebar-border bg-sidebar px-4 py-4 lg:hidden">
             <AuditNavigation
+              canVerifyZones={user.role === "VERIFIKATOR"}
               onNavigate={() => setMobileNavigationOpen(false)}
               pathname={pathname}
             />

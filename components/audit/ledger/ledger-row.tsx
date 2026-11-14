@@ -1,6 +1,7 @@
 import { MapPin } from "lucide-react";
 
 import type { MrvLedgerRow } from "@/lib/server/mrv/contracts";
+import { handlingStatusLabel } from "@/lib/report-labels";
 
 import {
   formatCarbon,
@@ -12,21 +13,10 @@ import { LedgerPhotoViewer } from "./ledger-photo-viewer";
 import { LedgerReviewControl } from "./ledger-review-control";
 import { LedgerStatusHistory } from "./ledger-status-history";
 
-const handlingStatusLabels: Record<string, string> = {
-  DALAM_PENANGANAN: "Ditangani",
-  MENUNGGU_TINDAKAN: "Menunggu",
-  SELESAI: "Selesai",
-};
-
 function statusClass(status: string): string {
   if (status === "SELESAI") return "bg-safe/10 text-safe";
   if (status === "DALAM_PENANGANAN") return "bg-blue-50 text-blue-800";
   return "bg-warning/10 text-warning";
-}
-
-function statusLabel(status: string | null): string {
-  if (!status) return "Laporan dibuat";
-  return handlingStatusLabels[status] ?? status.replaceAll("_", " ");
 }
 
 export function LedgerRow({ row }: { row: MrvLedgerRow }) {
@@ -40,16 +30,13 @@ export function LedgerRow({ row }: { row: MrvLedgerRow }) {
           {shortId}…
         </code>
         <span className="mt-2 block text-xs font-normal text-muted-foreground">
-          {row.isDemoSample ? "Sampel demo" : "Laporan lapangan"}
+          {row.isDemoSample ? "Sampel demo" : "Operasional"}
         </span>
-        {row.isDemoSample ? (
-          <span className="mt-1 inline-flex rounded-full bg-peat-sun/20 px-2 py-0.5 text-[0.65rem] font-semibold text-peat-forest">
-            Data demo
-          </span>
-        ) : null}
       </th>
       <td className="min-w-36 px-4 py-4 text-xs">
-        <span className="block font-semibold text-peat-forest">Rekam</span>
+        <span className="block font-semibold text-peat-forest">
+          Waktu rekam
+        </span>
         <time
           className="mt-1 block text-muted-foreground"
           dateTime={row.capturedAt}
@@ -98,6 +85,9 @@ export function LedgerRow({ row }: { row: MrvLedgerRow }) {
             : `${formatDecimal(row.coordinates.accuracyMeters)} m`}
         </p>
       </td>
+      <td className="min-w-40 px-4 py-4 text-sm text-peat-forest">
+        {row.zoneName ?? "Tidak ada zona gambut"}
+      </td>
       <td className="min-w-28 px-4 py-4">
         <LedgerPhotoViewer
           capturedAtLabel={formatDateTime(row.capturedAt)}
@@ -116,16 +106,10 @@ export function LedgerRow({ row }: { row: MrvLedgerRow }) {
           }}
         />
         <p className="mt-2 text-xs text-muted-foreground">
-          Bukti:{" "}
-          {row.evidenceStatus === "complete" ? "lengkap" : "belum lengkap"}
+          {row.evidenceStatus === "complete"
+            ? "Koordinat dan foto tersedia"
+            : "Belum lengkap"}
         </p>
-        <LedgerReviewControl
-          auditHistory={row.auditHistory}
-          coordinates={row.coordinates}
-          hasPhoto={row.hasPhoto}
-          photoHref={row.photoHref}
-          reportId={row.reportId}
-        />
       </td>
       <td className="min-w-44 px-4 py-4">
         <LedgerAiTriage row={row} />
@@ -134,9 +118,8 @@ export function LedgerRow({ row }: { row: MrvLedgerRow }) {
         <span
           className={`inline-flex min-h-8 items-center rounded-lg px-3 text-xs font-semibold ${statusClass(row.handlingStatus)}`}
         >
-          {statusLabel(row.handlingStatus)}
+          {handlingStatusLabel(row.handlingStatus)}
         </span>
-        <LedgerStatusHistory row={row} />
       </td>
       <td className="min-w-40 px-4 py-4">
         {zone ? (
@@ -145,10 +128,7 @@ export function LedgerRow({ row }: { row: MrvLedgerRow }) {
               {formatCarbon(zone.estimatedCarbonTons)}
             </p>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Estimasi zona · konteks saja
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {zone.zoneName}
+              Konteks zona; tidak dihitung dari patroli
             </p>
           </>
         ) : (
@@ -156,6 +136,18 @@ export function LedgerRow({ row }: { row: MrvLedgerRow }) {
             Tidak ada zona disetujui
           </span>
         )}
+      </td>
+      <td className="min-w-36 px-2 py-4">
+        <div className="mx-auto grid w-full max-w-36 grid-cols-2 justify-items-center gap-x-2 gap-y-1.5 rounded-xl border border-peat-forest/10 bg-peat-paper/50 p-2">
+          <LedgerStatusHistory row={row} />
+          <LedgerReviewControl
+            auditHistory={row.auditHistory}
+            coordinates={row.coordinates}
+            hasPhoto={row.hasPhoto}
+            photoHref={row.photoHref}
+            reportId={row.reportId}
+          />
+        </div>
       </td>
     </tr>
   );

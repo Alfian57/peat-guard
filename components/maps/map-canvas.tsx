@@ -36,11 +36,7 @@ const FALLBACK_BASEMAP_STYLE = {
   sources: {
     "osm-tiles": {
       type: "raster" as const,
-      tiles: [
-        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      ],
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
       tileSize: 256,
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
@@ -72,6 +68,11 @@ export type MapCanvasProps = {
   maxAutoFitZoom?: number;
   initialCenter?: [longitude: number, latitude: number];
   initialZoom?: number;
+  cameraRequest?: {
+    id: number;
+    center: [longitude: number, latitude: number];
+    zoom: number;
+  };
   onMapClick?: (coordinates: [longitude: number, latitude: number]) => void;
   draftEditing?: boolean;
   onViewportChange?: (viewport: MapViewport) => void;
@@ -89,6 +90,7 @@ export default function MapCanvas({
   maxAutoFitZoom = DEFAULT_MAX_AUTOFIT_ZOOM,
   initialCenter = DEFAULT_CENTER,
   initialZoom = DEFAULT_ZOOM,
+  cameraRequest,
   onMapClick,
   draftEditing = false,
   onViewportChange,
@@ -110,8 +112,11 @@ export default function MapCanvas({
   const initialZoomRef = useRef(initialZoom);
   const loadedRef = useRef(false);
   const hasFitBoundsRef = useRef(false);
+  const handledCameraRequestRef = useRef<number | null>(null);
   const [mapIsReady, setMapIsReady] = useState(false);
   const [mapError, setMapError] = useState(false);
+  const [usingFallbackBasemap, setUsingFallbackBasemap] = useState(false);
+  const [basemapUnavailable, setBasemapUnavailable] = useState(false);
   const mapTilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY?.trim();
 
   useEffect(() => {
@@ -151,20 +156,40 @@ export default function MapCanvas({
 
     let disposed = false;
     hasFitBoundsRef.current = false;
-    const map = new MapLibreMap({
-      container,
-      style:
-        "https://api.maptiler.com/maps/streets-v2/style.json?key=" +
-        encodeURIComponent(mapTilerKey),
-      center: initialCenterRef.current,
-      zoom: initialZoomRef.current,
-      cooperativeGestures: true,
-      interactive,
-      maxZoom: 17,
-      minZoom: 4,
-    });
+    setMapError(false);
+    setUsingFallbackBasemap(false);
+    setBasemapUnavailable(false);
+    let map: MapLibreMap;
+    try {
+      map = new MapLibreMap({
+        container,
+        style:
+          "https://api.maptiler.com/maps/streets-v4/style.json?key=" +
+          encodeURIComponent(mapTilerKey),
+        center: initialCenterRef.current,
+        zoom: initialZoomRef.current,
+        cooperativeGestures: true,
+        interactive,
+        maxZoom: 17,
+        minZoom: 4,
+        attributionControl: { compact: false },
+      });
+    } catch {
+      const errorTimer = window.setTimeout(() => {
+        if (!disposed) setMapError(true);
+      }, 0);
+      return () => {
+        disposed = true;
+        window.clearTimeout(errorTimer);
+      };
+    }
 
     mapRef.current = map;
+    let fallbackActive = false;
+    let layersReadyForStyle = false;
+    let interactionsAdded = false;
+    let primaryTileFailures = 0;
+    let fallbackTileFailures = 0;
     map.addControl(new NavigationControl({ showCompass: false }), "top-right");
 
     const publishViewport = () => {
@@ -178,10 +203,8 @@ export default function MapCanvas({
     };
     map.on("moveend", publishViewport);
 
-    let isRecoveringWithFallback = false;
-
     const initializeMapLayers = () => {
-      if (disposed || loadedRef.current) {
+      if (disposed || layersReadyForStyle) {
         return;
       }
 
@@ -209,39 +232,90 @@ export default function MapCanvas({
 
       publishViewport();
 
-      addMapInteractions(
-        map,
-        {
-          isDraftEditing: () => draftEditingRef.current,
-          onMapClick: (coordinates) => onMapClickRef.current?.(coordinates),
-          onPointSelect: (point) => onPointSelectRef.current?.(point),
-          onZoneSelect: (zone) => onZoneSelectRef.current?.(zone),
-        },
-        clusterPointsRef.current,
-      );
+      if (!interactionsAdded) {
+        addMapInteractions(
+          map,
+          {
+            isDraftEditing: () => draftEditingRef.current,
+            onMapClick: (coordinates) => onMapClickRef.current?.(coordinates),
+            onPointSelect: (point) => onPointSelectRef.current?.(point),
+            onZoneSelect: (zone) => onZoneSelectRef.current?.(zone),
+          },
+          clusterPointsRef.current,
+        );
+        interactionsAdded = true;
+      }
 
+      layersReadyForStyle = true;
       loadedRef.current = true;
       setMapIsReady(true);
     };
 
+    const switchToFallbackBasemap = () => {
+      if (fallbackActive) return;
+      fallbackActive = true;
+      loadedRef.current = false;
+      layersReadyForStyle = false;
+      setMapIsReady(false);
+      setUsingFallbackBasemap(true);
+      map.once("style.load", initializeMapLayers);
+      map.setStyle(FALLBACK_BASEMAP_STYLE, { diff: false });
+    };
+
     map.once("load", initializeMapLayers);
 
-    map.on("error", () => {
+    map.on("error", ({ error }) => {
       if (disposed) {
         return;
       }
 
-      // If the primary basemap fails (e.g. MapTiler 403 origin restrictions or network failure),
-      // gracefully fall back to OpenStreetMap raster tiles so zones and hotspots remain fully interactive.
-      if (!loadedRef.current && !isRecoveringWithFallback) {
-        isRecoveringWithFallback = true;
-        map.setStyle(FALLBACK_BASEMAP_STYLE, { diff: false });
-        map.once("style.load", initializeMapLayers);
+      const errorUrl =
+        "url" in error && typeof error.url === "string" ? error.url : "";
+      const errorStatus =
+        "status" in error && typeof error.status === "number"
+          ? error.status
+          : null;
+      const isMapTilerError = errorUrl.startsWith("https://api.maptiler.com/");
+      const isOsmTileError = errorUrl.startsWith(
+        "https://tile.openstreetmap.org/",
+      );
+      const isWebGlError = /webgl|context lost/i.test(error.message);
+
+      if (isWebGlError) {
+        setMapError(true);
+        map.remove();
+        mapRef.current = null;
         return;
       }
 
-      if (!loadedRef.current) {
-        loadedRef.current = true;
+      if (isMapTilerError) {
+        // One missing tile should not replace the whole basemap. Authentication,
+        // style failures, or repeated tile failures indicate a provider outage.
+        primaryTileFailures += 1;
+        if (
+          !fallbackActive &&
+          (errorStatus === 401 ||
+            errorStatus === 403 ||
+            errorUrl.includes("/style.json") ||
+            primaryTileFailures >= 3)
+        ) {
+          switchToFallbackBasemap();
+        }
+        return;
+      }
+
+      if (!loadedRef.current && !fallbackActive && !errorUrl) {
+        switchToFallbackBasemap();
+        return;
+      }
+
+      if (fallbackActive && isOsmTileError) {
+        fallbackTileFailures += 1;
+        if (fallbackTileFailures >= 3) setBasemapUnavailable(true);
+        return;
+      }
+
+      if (!loadedRef.current && !fallbackActive) {
         setMapError(true);
         map.remove();
         mapRef.current = null;
@@ -252,11 +326,31 @@ export default function MapCanvas({
       disposed = true;
       loadedRef.current = false;
       hasFitBoundsRef.current = false;
-      map.remove();
-      mapRef.current = null;
+      if (mapRef.current === map) {
+        map.remove();
+        mapRef.current = null;
+      }
       setMapIsReady(false);
     };
   }, [clusterPoints, interactive, mapTilerKey]);
+
+  useEffect(() => {
+    if (
+      !cameraRequest ||
+      handledCameraRequestRef.current === cameraRequest.id ||
+      !mapIsReady ||
+      !mapRef.current
+    ) {
+      return;
+    }
+
+    handledCameraRequestRef.current = cameraRequest.id;
+    mapRef.current.flyTo({
+      center: cameraRequest.center,
+      zoom: cameraRequest.zoom,
+      essential: true,
+    });
+  }, [cameraRequest, mapIsReady]);
 
   useEffect(() => {
     if (!mapIsReady || !mapRef.current) {
@@ -301,10 +395,21 @@ export default function MapCanvas({
   return (
     <div
       aria-label="Peta zona gambut dan hotspot satelit"
-      className={className ?? "h-full min-h-72 overflow-hidden rounded-2xl"}
+      className={`${className ?? "h-full min-h-72 overflow-hidden rounded-2xl"} relative`}
       role="region"
     >
       <div className="h-full min-h-72 w-full" ref={containerRef} />
+      {usingFallbackBasemap || basemapUnavailable ? (
+        <p
+          aria-live="polite"
+          className="absolute bottom-3 left-3 max-w-[calc(100%-5rem)] rounded-lg border border-peat-forest/15 bg-white/95 px-3 py-2 text-xs leading-5 text-peat-forest shadow-sm sm:max-w-sm"
+          role="status"
+        >
+          {basemapUnavailable
+            ? "Tile peta dasar tidak dapat dijangkau. Layer zona dan titik tetap tersedia."
+            : "Menggunakan peta dasar OpenStreetMap. Zona dan titik tetap interaktif."}
+        </p>
+      ) : null}
     </div>
   );
 }

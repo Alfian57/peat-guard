@@ -257,6 +257,15 @@ export const MENU_CATALOG: SearchMenuItem[] = [
     ],
   },
   {
+    id: "menu-zone-review",
+    title: "Verifikasi zona",
+    description:
+      "Tinjau batas dan setujui zona gambut yang menunggu verifikasi",
+    href: APP_ROUTES.audit.zones,
+    roles: ["VERIFIKATOR"],
+    keywords: ["zona", "persetujuan", "batas zona"],
+  },
+  {
     id: "menu-audit-ledger",
     title: "Log audit MRV",
     description:

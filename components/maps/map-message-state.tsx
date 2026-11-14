@@ -10,7 +10,8 @@ export function MapMessageState({
   return (
     <div
       aria-live="polite"
-      className="grid h-full min-h-72 place-items-center rounded-2xl border border-peat-forest/10 bg-[linear-gradient(135deg,#e9efdf,#f6f7ef)] px-6 py-8 text-center"
+      data-map-placeholder=""
+      className="grid h-full min-h-72 place-items-center rounded-2xl border border-peat-forest/15 bg-white px-6 py-8 text-center"
       role="status"
     >
       <div className="max-w-sm">

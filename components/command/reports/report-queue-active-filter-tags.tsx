@@ -39,13 +39,13 @@ export function ReportQueueActiveFilterTags({
             className="text-peat-green"
             size={13}
           />
-          <span>Status: {statusLabel(filters.status)}</span>
+          <span>Status penanganan: {statusLabel(filters.status)}</span>
         </span>
       ) : null}
       {selectedZone ? (
         <span className="inline-flex items-center gap-1.5 rounded-lg border border-peat-forest/15 bg-white px-2.5 py-1 text-peat-forest shadow-xs">
           <Layers aria-hidden="true" className="text-peat-green" size={13} />
-          <span>Zona: {selectedZone.name}</span>
+          <span>Zona gambut: {selectedZone.name}</span>
         </span>
       ) : null}
 
@@ -53,8 +53,8 @@ export function ReportQueueActiveFilterTags({
         <span className="inline-flex items-center gap-1.5 rounded-lg border border-peat-forest/15 bg-white px-2.5 py-1 text-peat-forest shadow-xs">
           <Calendar aria-hidden="true" className="text-peat-green" size={13} />
           <span>
-            {filters.from ? `Dari ${filters.from}` : "Awal"} –{" "}
-            {filters.to ? `Sampai ${filters.to}` : "Sekarang"}
+            Waktu kejadian: {filters.from || "awal"} –{" "}
+            {filters.to || "sekarang"} WIB
           </span>
         </span>
       ) : null}
@@ -63,6 +63,7 @@ export function ReportQueueActiveFilterTags({
         <span className="inline-flex items-center gap-1.5 rounded-lg border border-peat-forest/15 bg-white px-2.5 py-1 text-peat-forest shadow-xs">
           <Sparkles aria-hidden="true" className="text-peat-sun" size={13} />
           <span>
+            Jenis data:{" "}
             {filters.isDemoSample === "true" ? "Sampel demo" : "Operasional"}
           </span>
         </span>

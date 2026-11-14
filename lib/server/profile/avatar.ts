@@ -117,6 +117,44 @@ export async function savePrivateProfileAvatar(
   return fileName;
 }
 
+export async function restorePrivateProfileAvatar(
+  fileName: string,
+  bytes: Buffer,
+  directory = getProfileUploadsDirectory(),
+): Promise<boolean> {
+  if (!AVATAR_FILE_NAME.test(fileName)) {
+    throw new Error(
+      "Refusing to restore a path outside profile avatar storage.",
+    );
+  }
+
+  const filePath = join(directory, fileName);
+  await mkdir(/*turbopackIgnore: true*/ directory, {
+    recursive: true,
+    mode: 0o700,
+  });
+  await chmod(/*turbopackIgnore: true*/ directory, 0o700);
+  try {
+    await writeFile(/*turbopackIgnore: true*/ filePath, bytes, {
+      flag: "wx",
+      mode: 0o600,
+    });
+    return true;
+  } catch (error) {
+    if (isNodeError(error) && error.code === "EEXIST") return false;
+    try {
+      await rm(/*turbopackIgnore: true*/ filePath, { force: true });
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        "Private profile avatar restore failed and its partial file could not be removed.",
+      );
+    }
+
+    throw error;
+  }
+}
+
 export async function removePrivateProfileAvatar(
   fileName: string,
   directory = getProfileUploadsDirectory(),

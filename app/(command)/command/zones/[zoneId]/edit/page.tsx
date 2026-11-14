@@ -1,11 +1,18 @@
-import { ZoneEditorScreen } from "@/components/command/zones/zone-editor-screen";
+import { Suspense } from "react";
 
-export default async function EditZonePage({
+import { ZoneEditorScreen } from "@/components/command/zones/zone-editor-screen";
+import { ZoneEditorSkeleton } from "@/components/command/zones/zone-editor-skeleton";
+
+export default function EditZonePage({
   params,
 }: {
   params: Promise<{ zoneId: string }>;
 }) {
-  const { zoneId } = await params;
-
-  return <ZoneEditorScreen zoneId={zoneId} />;
+  return (
+    <Suspense fallback={<ZoneEditorSkeleton />}>
+      {params.then(({ zoneId }) => (
+        <ZoneEditorScreen zoneId={zoneId} />
+      ))}
+    </Suspense>
+  );
 }

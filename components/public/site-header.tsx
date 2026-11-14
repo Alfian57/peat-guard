@@ -6,7 +6,9 @@ import { useEffect, useRef, useState } from "react";
 
 import { APP_ROUTES } from "@/lib/routes";
 import { BrandLogo } from "@/components/brand/brand-logo";
+import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { handleSectionScroll } from "@/components/public/smooth-scroll";
+import { configureFieldServiceWorker } from "@/lib/client/offline/service-worker";
 
 const NAV_ITEMS = [
   {
@@ -36,10 +38,32 @@ const NAV_ITEMS = [
   },
 ];
 
-export function SiteHeader() {
+export function SiteHeader({
+  workspaceHref,
+}: {
+  workspaceHref: string | null;
+}) {
   const [activeSection, setActiveSection] = useState<string>("hero");
   const [isHeroSurface, setIsHeroSurface] = useState(true);
   const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production" || !window.isSecureContext)
+      return;
+
+    function registerWorker() {
+      // The relawan home reports offline preparation and retries registration.
+      void configureFieldServiceWorker(true).catch(() => undefined);
+    }
+
+    if (document.readyState === "complete") {
+      registerWorker();
+      return;
+    }
+
+    window.addEventListener("load", registerWorker, { once: true });
+    return () => window.removeEventListener("load", registerWorker);
+  }, []);
 
   useEffect(() => {
     const hero = document.getElementById("hero");
@@ -118,7 +142,7 @@ export function SiteHeader() {
       }`}
       ref={headerRef}
     >
-      <div className="mx-auto flex min-h-[72px] max-w-[1440px] items-center justify-between gap-5 px-5 sm:px-8 lg:px-14">
+      <div className="mx-auto flex min-h-[72px] max-w-[1440px] items-center justify-between gap-3 px-5 sm:px-8 xl:gap-5 xl:px-14">
         <Link
           aria-label="PEATGUARD beranda"
           className={`flex min-h-11 w-24 shrink-0 items-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 sm:w-auto ${isHeroSurface ? "focus-visible:outline-white" : "focus-visible:outline-peat-green"}`}
@@ -141,7 +165,7 @@ export function SiteHeader() {
 
         <nav
           aria-label="Navigasi utama"
-          className={`hidden items-center gap-7 text-sm font-semibold lg:flex ${isHeroSurface ? "text-white/85" : "text-peat-forest/75"}`}
+          className={`hidden items-center gap-4 text-sm font-semibold lg:flex xl:gap-7 ${isHeroSurface ? "text-white/85" : "text-peat-forest/75"}`}
         >
           {NAV_ITEMS.map((item) => {
             const isActive = activeSection === item.id;
@@ -176,19 +200,26 @@ export function SiteHeader() {
         <div className="flex shrink-0 items-center gap-2">
           <Link
             className={`hidden min-h-11 items-center justify-center rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-3 sm:inline-flex ${isHeroSurface ? "text-white hover:bg-white/10 focus-visible:outline-white" : "text-peat-forest hover:bg-peat-forest/8 focus-visible:outline-peat-green"}`}
-            href={APP_ROUTES.login}
+            href={workspaceHref ? APP_ROUTES.profile : APP_ROUTES.login}
           >
-            Masuk
+            {workspaceHref ? "Profil" : "Masuk"}
           </Link>
+          <PwaInstallButton
+            className={`hidden min-h-11 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-3 disabled:opacity-60 lg:inline-flex ${
+              isHeroSurface
+                ? "border-white/45 bg-black/20 text-white hover:bg-white/15 focus-visible:outline-white"
+                : "border-peat-forest/20 bg-white text-peat-forest hover:bg-peat-paper focus-visible:outline-peat-green"
+            }`}
+          />
           <Link
             className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-peat-sun px-4 text-sm font-semibold text-peat-forest transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-3 sm:px-5 ${
               isHeroSurface
                 ? "focus-visible:outline-white"
                 : "shadow-sm focus-visible:outline-peat-green"
             }`}
-            href={APP_ROUTES.publicMap}
+            href={workspaceHref ?? APP_ROUTES.publicMap}
           >
-            Buka peta
+            {workspaceHref ? "Ruang kerja" : "Buka peta"}
             <ArrowUpRight aria-hidden="true" size={16} />
           </Link>
         </div>

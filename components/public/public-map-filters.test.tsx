@@ -26,7 +26,7 @@ test("filters are labeled and viewport searches require an explicit action", asy
 
   await user.selectOptions(screen.getByLabelText(/Waktu pengamatan/), "24h");
   await user.selectOptions(screen.getByLabelText(/Sumber hotspot/), "demo");
-  await user.selectOptions(screen.getByLabelText(/Keyakinan satelit/), "high");
+  await user.selectOptions(screen.getByLabelText(/Keyakinan deteksi/), "high");
   await user.click(screen.getByRole("button", { name: "Cari di area peta" }));
 
   expect(changedFilters).toEqual([

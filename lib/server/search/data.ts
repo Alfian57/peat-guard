@@ -2,7 +2,11 @@ import "server-only";
 
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { APP_ROUTES } from "@/lib/routes";
-import { ROLE_LABELS, type AppRole } from "@/lib/roles";
+import { waterPointTypeLabel } from "@/lib/water-point-labels";
+import { zoneVerificationStatusLabel } from "@/lib/zone-labels";
+import { mrvAuditEventLabel } from "@/lib/mrv/audit-event-label";
+import { hotspotConfidenceLabel, hotspotSourceLabel } from "@/lib/firms-labels";
+import type { AppRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import {
   buildReportSearchWhere,
@@ -13,6 +17,11 @@ import {
 import { searchMenuCatalog } from "@/lib/server/search/menu-catalog";
 
 const SEARCH_LIMIT = 10;
+const HOTSPOT_DATE_FORMAT = new Intl.DateTimeFormat("id-ID", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "Asia/Jakarta",
+});
 const UUID_QUERY =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -40,7 +49,7 @@ export async function searchWorkspace(
           SELECT id FROM field_reports WHERE id::text ILIKE ${clean + "%"} LIMIT 10
         `,
         prisma.$queryRaw<{ id: string }[]>`
-          SELECT id FROM forest_zones WHERE id::text ILIKE ${clean + "%"} LIMIT 10
+          SELECT id FROM forest_zones WHERE archived_at IS NULL AND id::text ILIKE ${clean + "%"} LIMIT 10
         `,
         prisma.$queryRaw<{ id: string }[]>`
           SELECT id FROM water_points WHERE id::text ILIKE ${clean + "%"} LIMIT 10
@@ -144,7 +153,7 @@ export async function searchWorkspace(
 
     const [zones, waterPoints, hotspots] = await Promise.all([
       prisma.forestZone.findMany({
-        where: { OR: zoneOr },
+        where: { archivedAt: null, OR: zoneOr },
         orderBy: { zoneName: "asc" },
         take: 3,
         select: {
@@ -183,7 +192,10 @@ export async function searchWorkspace(
       ...zones.map((zone) => ({
         id: `zone-${zone.id}`,
         title: zone.zoneName,
-        description: `${zone.villageName ?? "Desa belum ditentukan"} · ${zone.isApproved ? "Terverifikasi" : "Menunggu verifikasi"}`,
+        description: [
+          zone.villageName || "Desa belum ditentukan",
+          zoneVerificationStatusLabel(zone.isApproved),
+        ].join(" · "),
         kind: "Zona" as const,
         group: "data" as const,
         href: APP_ROUTES.command.editZone(zone.id),
@@ -191,15 +203,22 @@ export async function searchWorkspace(
       ...waterPoints.map((point) => ({
         id: `water-${point.id}`,
         title: point.name,
-        description: `${point.type.replaceAll("_", " ")} · ${point.zone?.zoneName ?? "Tanpa zona"}`,
+        description: [
+          waterPointTypeLabel(point.type),
+          point.zone?.zoneName ?? "Belum dikaitkan ke zona",
+        ].join(" · "),
         kind: "Titik air" as const,
         group: "data" as const,
         href: APP_ROUTES.command.editWaterPoint(point.id),
       })),
       ...hotspots.map((hotspot) => ({
         id: `hotspot-${hotspot.id}`,
-        title: `Hotspot ${hotspot.source}`,
-        description: `${hotspot.confidence ?? "Keyakinan tidak tersedia"} · ${hotspot.isDemoData ? "Data ilustratif" : "Data satelit"} · ${hotspot.acquiredAt.toLocaleString("id-ID")}`,
+        title: hotspot.isDemoData ? "Titik panas contoh" : "Hotspot NASA FIRMS",
+        description: [
+          hotspotSourceLabel(hotspot.source),
+          `Keyakinan deteksi ${hotspotConfidenceLabel(hotspot.confidence)}`,
+          `Waktu pengamatan ${HOTSPOT_DATE_FORMAT.format(hotspot.acquiredAt)} WIB`,
+        ].join(" · "),
         kind: "Hotspot" as const,
         group: "data" as const,
         href: APP_ROUTES.command.map,
@@ -208,62 +227,6 @@ export async function searchWorkspace(
   }
 
   // Account / User search
-  const isAccountQuery =
-    lower.includes("akun") ||
-    lower.includes("profil") ||
-    lower.includes("user") ||
-    lower.includes("profile") ||
-    lower.includes("password");
-
-  const userOr: Prisma.UserWhereInput[] = [
-    { name: contains },
-    { email: contains },
-    { villageName: contains },
-  ];
-
-  if (isAccountQuery) {
-    userOr.push({ id: userId });
-  }
-
-  if (
-    normalizedQuery === "RELAWAN" ||
-    normalizedQuery === "POSKO" ||
-    normalizedQuery === "VERIFIKATOR"
-  ) {
-    userOr.push({ role: normalizedQuery });
-  }
-
-  const users = await prisma.user.findMany({
-    where: {
-      OR: userOr,
-      ...(role === "RELAWAN" ? { id: userId } : {}),
-    },
-    take: 2,
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      villageName: true,
-    },
-  });
-
-  results.push(
-    ...users.map((u) => ({
-      id: `user-${u.id}`,
-      title: u.name,
-      description: `${ROLE_LABELS[u.role]} · ${u.email}${u.villageName ? ` · ${u.villageName}` : ""}`,
-      kind: "Akun" as const,
-      group: "data" as const,
-      href:
-        u.id === userId
-          ? APP_ROUTES.profile
-          : role === "POSKO"
-            ? APP_ROUTES.command.reports
-            : APP_ROUTES.profile,
-    })),
-  );
-
   if (canSearchScope(role, "audit-data")) {
     const isAuditGeneric =
       lower.includes("audit") ||
@@ -308,7 +271,7 @@ export async function searchWorkspace(
     results.push(
       ...auditEvents.map((event) => ({
         id: `audit-${event.id}`,
-        title: event.eventType.replaceAll("_", " "),
+        title: mrvAuditEventLabel(event.eventType),
         description: `ID referensi ${event.aggregateId.slice(0, 8)} · ${event.createdAt.toLocaleString("id-ID")}`,
         kind: "Audit MRV" as const,
         group: "data" as const,

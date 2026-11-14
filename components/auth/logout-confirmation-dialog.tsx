@@ -4,6 +4,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import { LoaderCircle, LogOut } from "lucide-react";
 import { useState } from "react";
 
+import { publishFieldAuthEvent } from "@/lib/client/offline/owner-store";
 import { authClient } from "@/lib/auth-client";
 import { APP_ROUTES } from "@/lib/routes";
 
@@ -32,6 +33,7 @@ export function LogoutConfirmationDialog({
         return;
       }
 
+      publishFieldAuthEvent("logout");
       onOpenChange(false);
       window.location.replace(APP_ROUTES.login);
     } catch {

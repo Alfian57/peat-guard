@@ -80,28 +80,38 @@ export function fitBoundsForData(
   zones: MapZone[],
   points: MapPoint[],
 ): LngLatBoundsLike | null {
-  const coordinates: [number, number][] = points.map(
-    (point) => point.coordinates,
-  );
+  let west = Number.POSITIVE_INFINITY;
+  let south = Number.POSITIVE_INFINITY;
+  let east = Number.NEGATIVE_INFINITY;
+  let north = Number.NEGATIVE_INFINITY;
+  let hasCoordinates = false;
 
+  const includeCoordinate = (longitude: number, latitude: number) => {
+    west = Math.min(west, longitude);
+    south = Math.min(south, latitude);
+    east = Math.max(east, longitude);
+    north = Math.max(north, latitude);
+    hasCoordinates = true;
+  };
+
+  for (const point of points) {
+    includeCoordinate(point.coordinates[0], point.coordinates[1]);
+  }
   for (const zone of zones) {
     for (const ring of zone.geometry.coordinates) {
       for (const coordinate of ring) {
-        coordinates.push([coordinate[0], coordinate[1]]);
+        includeCoordinate(coordinate[0], coordinate[1]);
       }
     }
   }
 
-  if (coordinates.length === 0) {
+  if (!hasCoordinates) {
     return null;
   }
 
-  const longitudes = coordinates.map(([longitude]) => longitude);
-  const latitudes = coordinates.map(([, latitude]) => latitude);
-
   return [
-    [Math.min(...longitudes), Math.min(...latitudes)],
-    [Math.max(...longitudes), Math.max(...latitudes)],
+    [west, south],
+    [east, north],
   ];
 }
 

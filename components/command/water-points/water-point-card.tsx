@@ -1,6 +1,7 @@
 import { Droplets, MapPinned, Pencil, Trash2 } from "lucide-react";
 
 import type { CommandWaterPoint } from "@/lib/server/water/data";
+import { waterPointTypeLabel } from "@/lib/water-point-labels";
 
 export function WaterPointCard({
   onDelete,
@@ -13,7 +14,7 @@ export function WaterPointCard({
 }) {
   return (
     <li className="rounded-2xl border border-peat-forest/10 bg-white p-4 shadow-sm">
-      <div className="flex items-start gap-3">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-sky-50 text-sky-800">
           <Droplets aria-hidden="true" size={19} />
         </span>
@@ -24,15 +25,19 @@ export function WaterPointCard({
               {waterPointTypeLabel(point.type)}
             </span>
           </div>
-          <p className="mt-1 text-xs text-peat-forest/65">
+        </div>
+        <div className="col-span-2 mt-3 min-w-0">
+          <p className="text-xs text-muted-foreground">
             {point.zoneName ?? "Belum dikaitkan ke zona"}
           </p>
-          <p className="mt-2 inline-flex items-center gap-1.5 font-mono text-xs text-peat-forest/70">
+          <p className="mt-2 inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
             <MapPinned aria-hidden="true" size={13} />
             {point.latitude.toFixed(5)}, {point.longitude.toFixed(5)}
           </p>
           {point.isDemoData ? (
-            <p className="mt-1 text-xs text-peat-forest/55">Data ilustrasi</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Data ilustratif
+            </p>
           ) : null}
         </div>
       </div>
@@ -56,15 +61,4 @@ export function WaterPointCard({
       </div>
     </li>
   );
-}
-
-function waterPointTypeLabel(type: CommandWaterPoint["type"]): string {
-  switch (type) {
-    case "SEKAT_KANAL":
-      return "Sekat kanal";
-    case "EMBUNG":
-      return "Embung";
-    case "SUMBER_AIR":
-      return "Sumber air";
-  }
 }

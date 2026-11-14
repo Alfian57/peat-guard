@@ -322,6 +322,7 @@ export type MrvLedgerRow = {
   statusHistory: LedgerStatusEvent[];
   syncedAt: string;
   villageName: string | null;
+  zoneName: string | null;
   zoneImpactContext:
     | (ZoneImpact & {
         attribution: "current_zone_context_not_patrol_contribution";

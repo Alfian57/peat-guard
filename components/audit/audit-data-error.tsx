@@ -8,7 +8,7 @@ export function AuditDataError({ title }: { title: string }) {
     >
       <section
         aria-labelledby="audit-data-error-title"
-        className="rounded-2xl border border-critical/20 bg-white p-6 shadow-sm"
+        className="rounded-2xl border border-critical/20 bg-white p-6 shadow-xs"
       >
         <AlertCircle aria-hidden="true" className="text-critical" size={22} />
         <h1

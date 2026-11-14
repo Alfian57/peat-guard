@@ -120,18 +120,18 @@ export function ReportQueueFilterDialog({
             className="font-heading text-2xl font-bold text-peat-forest"
             id="report-queue-filter-title"
           >
-            Filter antrean insiden
+            Filter antrean laporan
           </h2>
           <p
             className="mt-1 text-sm text-muted-foreground"
             id="report-queue-filter-desc"
           >
             Saring laporan berdasarkan status penanganan, zona gambut, rentang
-            tanggal kejadian, atau jenis data demonstrasi.
+            waktu kejadian, atau jenis data.
           </p>
         </div>
         <button
-          aria-label="Tutup dialog filter insiden"
+          aria-label="Tutup dialog filter laporan"
           className="grid size-9 shrink-0 place-items-center rounded-xl text-muted-foreground transition hover:bg-peat-paper hover:text-peat-forest"
           onClick={onClose}
           type="button"
@@ -141,7 +141,7 @@ export function ReportQueueFilterDialog({
       </div>
 
       <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
-        <ReportQueueFilterField label="Status laporan" optional>
+        <ReportQueueFilterField label="Status penanganan" optional>
           <select
             className={controlClassName}
             data-autofocus
@@ -154,7 +154,7 @@ export function ReportQueueFilterDialog({
             }
             value={draftFilters.status ?? ""}
           >
-            <option value="">Semua status</option>
+            <option value="">Semua status penanganan</option>
             {REPORT_STATUSES.map((status) => (
               <option key={status} value={status}>
                 {statusLabel(status)}
@@ -174,7 +174,7 @@ export function ReportQueueFilterDialog({
             }
             value={draftFilters.zoneId}
           >
-            <option value="">Semua zona</option>
+            <option value="">Semua zona gambut</option>
             {zones.map((zone) => (
               <option key={zone.id} value={zone.id}>
                 {zone.name}
@@ -185,8 +185,8 @@ export function ReportQueueFilterDialog({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <ReportQueueFilterField
-            hint="Tanggal WIB, termasuk hari itu"
-            label="Dari tanggal"
+            hint="Mengikuti waktu kejadian laporan di WIB."
+            label="Waktu kejadian dari (WIB)"
             optional
           >
             <input
@@ -205,8 +205,8 @@ export function ReportQueueFilterDialog({
           </ReportQueueFilterField>
 
           <ReportQueueFilterField
-            hint="Tanggal WIB, termasuk hari itu"
-            label="Sampai tanggal"
+            hint="Mengikuti waktu kejadian laporan di WIB."
+            label="Waktu kejadian sampai (WIB)"
             optional
           >
             <input
@@ -225,7 +225,7 @@ export function ReportQueueFilterDialog({
           </ReportQueueFilterField>
         </div>
 
-        <ReportQueueFilterField label="Data demonstrasi" optional>
+        <ReportQueueFilterField label="Jenis data" optional>
           <select
             className={controlClassName}
             onChange={(event) =>
@@ -237,7 +237,7 @@ export function ReportQueueFilterDialog({
             }
             value={draftFilters.isDemoSample}
           >
-            <option value="all">Semua data</option>
+            <option value="all">Semua jenis data</option>
             <option value="false">Operasional</option>
             <option value="true">Sampel demo</option>
           </select>

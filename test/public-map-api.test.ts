@@ -117,6 +117,8 @@ describe("public map API handler", () => {
         configured: true,
         checkedAt: "2026-11-15T05:00:00.000Z",
         lastSuccessfulAt: null,
+        lastDataSyncAt: null,
+        failedSources: [],
         expectedIntervalMinutes: 30,
       },
     }));

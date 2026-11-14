@@ -5,6 +5,7 @@ export function MapLoadingState({ className }: { className?: string }) {
     <div
       aria-busy="true"
       aria-label="Memuat peta pantauan"
+      data-map-placeholder=""
       className={
         className ??
         "relative flex h-full min-h-72 w-full flex-col justify-between overflow-hidden rounded-2xl border border-peat-forest/10 bg-[#e7ebe3]/60 p-4 shadow-xs"

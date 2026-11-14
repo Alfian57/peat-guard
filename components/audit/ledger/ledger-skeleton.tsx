@@ -5,28 +5,28 @@ export function LedgerSkeleton() {
     <div
       aria-busy="true"
       aria-label="Memuat log audit MRV"
-      className="space-y-6"
+      className="min-w-0 space-y-5"
       role="status"
     >
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-5">
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Skeleton className="h-4 w-40 rounded-md bg-peat-forest/10" />
-          <Skeleton className="h-9 w-72 rounded-xl bg-peat-forest/20" />
-          <Skeleton className="h-4 w-96 rounded-md bg-peat-forest/10" />
+          <Skeleton className="h-9 w-72 max-w-full rounded-xl bg-peat-forest/20" />
+          <Skeleton className="h-4 w-96 max-w-full rounded-md bg-peat-forest/10" />
         </div>
         <Skeleton className="h-11 w-36 rounded-xl bg-peat-forest/10" />
       </div>
 
       {/* Filter Form Skeleton */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-white p-3 shadow-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-peat-forest/10 bg-white p-3 shadow-xs">
         <Skeleton className="h-11 w-44 rounded-xl bg-peat-forest/10" />
         <Skeleton className="h-4 w-64 rounded-md bg-peat-forest/10" />
       </div>
 
       {/* Table Card Skeleton */}
-      <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-xs">
-        <div className="flex items-center justify-between border-b border-border bg-[#eef3e8] px-5 py-4">
+      <div className="overflow-hidden rounded-2xl border border-peat-forest/10 bg-white shadow-xs">
+        <div className="flex items-center justify-between border-b border-peat-forest/10 bg-[#eef3e8] px-5 py-4">
           <Skeleton className="h-5 w-36 rounded-md bg-peat-forest/15" />
           <Skeleton className="h-4 w-28 rounded-md bg-peat-forest/10" />
         </div>

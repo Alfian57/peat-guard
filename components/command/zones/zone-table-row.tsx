@@ -8,6 +8,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { CommandZone } from "@/lib/server/zones/data";
+import { zoneVerificationStatusLabel } from "@/lib/zone-labels";
 
 export function ZoneTableRow({
   onDelete,
@@ -25,12 +26,12 @@ export function ZoneTableRow({
           <span className="font-semibold text-peat-forest">{zone.name}</span>
           {zone.isDemoData ? (
             <span className="rounded-full bg-peat-sun/25 px-2 py-0.5 text-[10px] font-semibold text-peat-forest">
-              Data ilustrasi
+              Data ilustratif
             </span>
           ) : null}
         </div>
         <p className="mt-0.5 text-xs text-peat-forest/65">
-          {zone.villageName || "Nama desa belum diisi"}
+          {zone.villageName || "Desa belum ditentukan"}
         </p>
       </td>
 
@@ -43,7 +44,7 @@ export function ZoneTableRow({
               : "bg-peat-sun/30 text-peat-forest")
           }
         >
-          {zone.isApproved ? "Disetujui" : "Menunggu verifikasi"}
+          {zoneVerificationStatusLabel(zone.isApproved)}
         </span>
       </td>
 
@@ -84,7 +85,7 @@ export function ZoneTableRow({
             <TooltipTrigger
               render={
                 <button
-                  aria-label={"Hapus zona " + zone.name}
+                  aria-label={"Arsipkan zona " + zone.name}
                   className="inline-grid size-9 h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-full border border-border bg-white text-red-600 shadow-xs transition-colors hover:border-peat-forest/25 hover:bg-red-50 hover:text-red-700"
                   onClick={() => onDelete(zone)}
                   type="button"
@@ -93,7 +94,7 @@ export function ZoneTableRow({
                 </button>
               }
             />
-            <TooltipContent>Hapus zona</TooltipContent>
+            <TooltipContent>Arsipkan zona</TooltipContent>
           </Tooltip>
         </div>
       </td>

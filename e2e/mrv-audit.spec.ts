@@ -19,9 +19,7 @@ test.describe("MRV Verifier & Carbon Audit Journey", () => {
 
     // 3. Navigate to report generator
     await page.goto(APP_ROUTES.audit.generator);
-    await expect(page.locator("h1")).toContainText(
-      /Laporan situasi & audit MRV/i,
-    );
+    await expect(page.locator("h1")).toContainText(/Generator laporan MRV/i);
 
     // 4. Submit form to generate situation report preview (without third-party AI call)
     const generateBtn = page.getByRole("button", { name: /Susun laporan/i });

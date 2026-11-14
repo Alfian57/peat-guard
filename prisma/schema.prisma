@@ -151,6 +151,8 @@ model ForestZone {
   boundary             Unsupported("geometry(Polygon,4326)")
   carbonParameterSetId String                                @map("carbon_parameter_set_id") @db.Uuid
   isApproved           Boolean                               @default(false) @map("is_approved")
+  archivedAt           DateTime?                             @map("archived_at") @db.Timestamptz(6)
+  reviewRevision       Int                                   @default(0) @map("review_revision")
   isDemoData           Boolean                               @default(false) @map("is_demo_data")
   createdAt            DateTime                              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime                              @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -248,6 +250,9 @@ model FieldReport {
   aiFalsePositiveCheck    String?                             @map("ai_false_positive_check") @db.Text
   aiActionRecommendations Json?                               @map("ai_action_recommendations")
   aiAnalyzedAt            DateTime?                           @map("ai_analyzed_at") @db.Timestamptz(6)
+  aiAttempts              Int                                 @default(0) @map("ai_attempts")
+  aiLeaseToken            String?                             @map("ai_lease_token") @db.Uuid
+  aiLeaseUntil            DateTime?                           @map("ai_lease_until") @db.Timestamptz(6)
   handlingStatus          HandlingStatus                      @default(MENUNGGU_TINDAKAN) @map("handling_status")
   nearestWaterDistanceM   Decimal?                            @map("nearest_water_distance_m") @db.Decimal(12, 2)
   isDemoSample            Boolean                             @default(false) @map("is_demo_sample")
@@ -262,6 +267,7 @@ model FieldReport {
   @@unique([reporterId, clientReportId])
   @@index([handlingStatus, createdAt])
   @@index([aiUrgency, createdAt])
+  @@index([aiState, aiLeaseUntil, createdAt])
   @@index([zoneId, createdAt])
   @@map("field_reports")
 }

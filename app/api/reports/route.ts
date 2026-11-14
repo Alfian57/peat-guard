@@ -4,6 +4,7 @@ import {
   reportErrorResponse,
 } from "@/lib/server/reports/http";
 import {
+  assertExpectedReportOwner,
   readReportFormData,
   ReportInputError,
 } from "@/lib/server/reports/input";
@@ -42,6 +43,8 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const formData = await readReportFormData(request);
+
+    assertExpectedReportOwner(formData, actor.id);
 
     const result = await createFieldReport(actor, formData);
     const payload = { id: result.id, report: { id: result.id } };

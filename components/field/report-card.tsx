@@ -49,13 +49,13 @@ export function ReportCard({
   const imageUrl = useBlobUrl(report.photo);
 
   return (
-    <article className="rounded-2xl border border-border bg-white p-3">
-      <div className="flex min-h-[88px] items-center gap-3">
+    <article className="flex min-w-0 flex-col rounded-xl border border-peat-forest/10 bg-white p-2.5 transition-colors hover:border-peat-green/50">
+      <div className="flex flex-1 items-center gap-1.5">
         <a
           href={`${APP_ROUTES.field.report}?reportId=${encodeURIComponent(report.clientReportId)}`}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl transition hover:border-peat-green/50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
+          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
         >
-          <span className="relative size-[72px] shrink-0 overflow-hidden rounded-xl bg-secondary">
+          <span className="relative size-14 shrink-0 overflow-hidden rounded-lg bg-secondary">
             {imageUrl ? (
               <Image
                 src={imageUrl}
@@ -64,8 +64,8 @@ export function ReportCard({
                     ? "Foto sampel demo laporan"
                     : "Foto laporan patroli"
                 }
-                width={72}
-                height={72}
+                width={56}
+                height={56}
                 unoptimized
                 className="size-full object-cover"
               />
@@ -73,7 +73,7 @@ export function ReportCard({
           </span>
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-2">
-              <span className="truncate font-semibold text-peat-forest">
+              <span className="line-clamp-2 text-sm font-semibold wrap-anywhere text-peat-forest">
                 {report.tags[0] ?? "Temuan patroli"}
               </span>
               {report.isDemoSample ? (

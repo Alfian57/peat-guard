@@ -5,10 +5,11 @@ import {
 } from "@/lib/generated/prisma/enums";
 import type { ReportMapPoint } from "@/components/command/reports/report-contracts";
 import { statusLabel } from "@/components/command/reports/report-status-badge";
+import { reportCategoryLabel } from "@/lib/report-labels";
 import type { MapPoint } from "@/lib/maps/types";
 
 export function toCommandReportMapPoint(point: ReportMapPoint): MapPoint {
-  const category = categoryLabel(point.aiCategory);
+  const category = reportCategoryLabel(point.aiCategory);
   return {
     id: point.id,
     coordinates: [point.longitude, point.latitude],
@@ -34,22 +35,6 @@ export function getReportPinState(
   if (point.aiUrgency === ReportUrgency.KRITIS) return "critical";
   if (point.aiUrgency === ReportUrgency.WASPADA) return "warning";
   return "neutral";
-}
-
-function categoryLabel(category: ReportMapPoint["aiCategory"]): string {
-  if (!category) return "Kategori belum dinilai";
-  switch (category) {
-    case ReportCategory.API_AKTIF:
-      return "Api aktif";
-    case ReportCategory.ASAP_GAMBUT:
-      return "Asap gambut";
-    case ReportCategory.SEKAT_KANAL_KERING:
-      return "Sekat kanal kering";
-    case ReportCategory.AMAN_TERKENDALI:
-      return "Aman / terkendali";
-    default:
-      return "Kategori belum dinilai";
-  }
 }
 
 function formatMapDate(value: string): string {

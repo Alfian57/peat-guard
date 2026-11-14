@@ -65,7 +65,6 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       target: base
-    profiles: [worker]
     env_file:
       - path: ../.env
         required: false
@@ -80,7 +79,8 @@ services:
     depends_on:
       web:
         condition: service_healthy
-    command: ["bun", "run", "worker"]
+    command: ["bun", "--conditions=react-server", "scripts/worker.ts"]
+    stop_grace_period: 30s
     restart: unless-stopped
 
 volumes:

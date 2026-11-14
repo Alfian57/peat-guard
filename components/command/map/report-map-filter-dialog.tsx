@@ -12,9 +12,7 @@ import {
   urgencyLabel,
 } from "@/components/command/reports/report-status-badge";
 import type { ReportMapFilters } from "@/components/command/reports/report-map-query";
-import type { ReportUrgency } from "@/lib/generated/prisma/enums";
-
-const REPORT_URGENCIES: ReportUrgency[] = ["KRITIS", "WASPADA", "RENDAH"];
+import { REPORT_URGENCIES } from "@/lib/report-labels";
 
 const controlClassName =
   "min-h-11 w-full rounded-xl border border-peat-forest/15 bg-white px-3 text-sm text-peat-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
@@ -95,7 +93,6 @@ export function ReportMapFilterDialog({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     onApply(event);
-    onClose();
   }
 
   if (!isOpen) return null;
@@ -132,8 +129,8 @@ export function ReportMapFilterDialog({
             className="mt-1 text-sm text-muted-foreground"
             id="report-map-filter-desc"
           >
-            Saring pin laporan pada peta berdasarkan rentang tanggal rekam,
-            status penanganan, atau tingkat urgensi AI.
+            Saring pin laporan pada peta berdasarkan waktu rekam, status
+            penanganan, atau tingkat urgensi AI.
           </p>
         </div>
         <button
@@ -149,8 +146,8 @@ export function ReportMapFilterDialog({
       <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
         <div className="grid gap-3 sm:grid-cols-2">
           <ReportMapControlField
-            hint="Tanggal rekam WIB, termasuk hari itu"
-            label="Dari tanggal"
+            hint="Waktu rekam di WIB, termasuk tanggal tersebut."
+            label="Waktu rekam dari (WIB)"
             optional
           >
             <input
@@ -170,8 +167,8 @@ export function ReportMapFilterDialog({
           </ReportMapControlField>
 
           <ReportMapControlField
-            hint="Tanggal rekam WIB, termasuk hari itu"
-            label="Sampai tanggal"
+            hint="Waktu rekam di WIB, termasuk tanggal tersebut."
+            label="Waktu rekam sampai (WIB)"
             optional
           >
             <input
@@ -201,7 +198,7 @@ export function ReportMapFilterDialog({
             }
             value={draftFilters.status}
           >
-            <option value="all">Semua status</option>
+            <option value="all">Semua status penanganan</option>
             {REPORT_STATUSES.map((status) => (
               <option key={status} value={status}>
                 {statusLabel(status)}
@@ -222,7 +219,7 @@ export function ReportMapFilterDialog({
             }
             value={draftFilters.urgency}
           >
-            <option value="all">Semua urgensi</option>
+            <option value="all">Semua urgensi AI</option>
             {REPORT_URGENCIES.map((urgency) => (
               <option key={urgency} value={urgency}>
                 {urgencyLabel(urgency)}

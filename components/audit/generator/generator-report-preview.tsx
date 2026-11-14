@@ -1,4 +1,7 @@
-import type { MrvGeneratedReport } from "@/lib/server/mrv/contracts";
+import type {
+  CarbonSnapshotReason,
+  MrvGeneratedReport,
+} from "@/lib/server/mrv/contracts";
 import { BrandLogo } from "@/components/brand/brand-logo";
 
 import {
@@ -12,6 +15,14 @@ import {
 } from "../audit-formatters";
 import { NarrativeSection } from "./narrative-section";
 
+const CARBON_SNAPSHOT_REASON_LABELS: Record<CarbonSnapshotReason, string> = {
+  INITIAL_BASELINE: "Data dasar awal",
+  PARAMETER_SET_CREATED: "Parameter dibuat",
+  PARAMETER_SET_UPDATED: "Parameter diperbarui",
+  ZONE_CREATED: "Zona dibuat",
+  ZONE_UPDATED: "Batas zona diperbarui",
+};
+
 export function GeneratorReportPreview({
   report,
 }: {
@@ -20,8 +31,8 @@ export function GeneratorReportPreview({
   const isCarbonAudit = report.documentType === "CARBON_AUDIT";
 
   return (
-    <article className="audit-print-document rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-7 lg:p-9">
-      <header className="border-b border-border pb-5">
+    <article className="audit-print-document min-w-0 flex-1">
+      <header className="border-b border-peat-forest/10 pb-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <BrandLogo height={36} />
@@ -50,7 +61,7 @@ export function GeneratorReportPreview({
         {report.containsIllustrativeData ? (
           <p className="mt-5 rounded-xl border border-warning/20 bg-warning/5 px-4 py-3 text-sm font-semibold text-foreground">
             Data demo atau parameter ilustratif termasuk dalam laporan ini.
-            Estimasi karbon bukan kredit tersertifikasi.
+            Estimasi emisi dicegah bukan kredit karbon tersertifikasi.
           </p>
         ) : null}
       </header>
@@ -66,9 +77,10 @@ export function GeneratorReportPreview({
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px] border-collapse text-left">
               <caption className="sr-only">
-                Ringkasan metrik temuan patroli, respons, dan estimasi karbon
+                Ringkasan metrik temuan patroli, respons, dan estimasi emisi
+                dicegah
               </caption>
-              <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-peat-forest/70">
+              <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3" scope="col">
                     Indikator & Metrik
@@ -187,13 +199,13 @@ export function GeneratorReportPreview({
 
       <section
         aria-labelledby="generator-zones-title"
-        className="border-t border-border py-5"
+        className="border-t border-peat-forest/10 py-5"
       >
         <h3
           className="font-heading text-2xl font-bold text-peat-forest"
           id="generator-zones-title"
         >
-          Estimasi karbon per zona
+          Estimasi emisi dicegah per zona
         </h3>
         {report.metrics.carbon.status === "unavailable" ? (
           <p className="mt-3 rounded-xl border border-warning/20 bg-warning/5 px-4 py-3 text-sm text-foreground">
@@ -206,21 +218,22 @@ export function GeneratorReportPreview({
             <div className="overflow-x-auto">
               <table className="w-full min-w-[570px] border-collapse text-left">
                 <caption className="sr-only">
-                  Estimasi area, emisi, dan insentif setiap zona yang disetujui
+                  Estimasi luas, emisi dicegah, dan insentif setiap zona yang
+                  disetujui
                 </caption>
-                <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-peat-forest/70">
+                <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3" scope="col">
-                      Zona
+                      Zona gambut
                     </th>
                     <th className="px-4 py-3" scope="col">
-                      Area
+                      Luas zona
                     </th>
                     <th className="px-4 py-3" scope="col">
-                      Emisi
+                      Estimasi emisi dicegah
                     </th>
                     <th className="px-4 py-3" scope="col">
-                      Insentif
+                      Estimasi insentif
                     </th>
                   </tr>
                 </thead>
@@ -237,9 +250,7 @@ export function GeneratorReportPreview({
                         {zone.zoneName}
                         <span className="mt-1 block text-xs font-normal text-muted-foreground">
                           Snapshot {formatDateTime(zone.snapshotAt)} ·{" "}
-                          {zone.snapshotReason
-                            .replaceAll("_", " ")
-                            .toLowerCase()}
+                          {CARBON_SNAPSHOT_REASON_LABELS[zone.snapshotReason]}
                         </span>
                         {zone.isIllustrative ? (
                           <span className="mt-1 block text-xs font-normal text-warning">
@@ -275,7 +286,7 @@ export function GeneratorReportPreview({
 
       <section
         aria-labelledby="generator-narrative-title"
-        className="border-t border-border py-5"
+        className="border-t border-peat-forest/10 py-5"
       >
         <h3
           className="font-heading text-2xl font-bold text-peat-forest"
@@ -288,7 +299,7 @@ export function GeneratorReportPreview({
         </div>
       </section>
 
-      <footer className="border-t border-border pt-4 text-xs leading-5 text-muted-foreground">
+      <footer className="border-t border-peat-forest/10 pt-4 text-xs leading-5 text-muted-foreground">
         Draf dibuat dari data PEATGUARD pada{" "}
         {formatDate(report.generatedAt.slice(0, 10))}. Tinjau catatan dan bukti
         sebelum laporan diterbitkan.

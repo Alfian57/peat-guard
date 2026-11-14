@@ -1,7 +1,9 @@
 import type { Polygon } from "geojson";
 
-import type { FirmsSource } from "@/lib/firms-sources";
+import { FIRMS_SOURCES } from "@/lib/firms-sources";
+import type { FirmsIngestSource, FirmsSource } from "@/lib/firms-sources";
 import type { MapViewport } from "@/lib/maps/types";
+import type { FirmsFreshnessStatus } from "@/lib/server/firms/status";
 
 export type PublicMetrics = {
   approvedZoneCount: number;
@@ -30,17 +32,19 @@ export type PublicZone = {
 
 export type PublicMapFreshness = {
   provider: "NASA FIRMS";
-  status: "fresh" | "stale" | "unavailable" | "not_configured";
+  status: FirmsFreshnessStatus;
   configured: boolean;
   checkedAt: string;
   lastSuccessfulAt: string | null;
-  expectedIntervalMinutes: number;
+  lastDataSyncAt: string | null;
+  failedSources: FirmsIngestSource[];
+  expectedIntervalMinutes: number | null;
 };
 
 export type PublicMapData = {
   generatedAt: string;
   viewport: MapViewport;
-  period: "24h" | "7d" | "30d" | "all";
+  period: PublicMapPeriod;
   source: PublicMapSourceFilter;
   confidence: PublicMapConfidenceFilter;
   zones: PublicZone[];
@@ -52,6 +56,18 @@ export type PublicMapData = {
   freshness: PublicMapFreshness;
 };
 
-export type PublicMapSourceFilter = "all" | "demo" | FirmsSource;
+export const PUBLIC_MAP_PERIODS = ["24h", "7d", "30d", "all"] as const;
+export const PUBLIC_MAP_SOURCES = ["all", "demo", ...FIRMS_SOURCES] as const;
+export const PUBLIC_MAP_CONFIDENCE_FILTERS = [
+  "all",
+  "low",
+  "nominal",
+  "high",
+  "numeric",
+  "unknown",
+] as const;
+
+export type PublicMapPeriod = (typeof PUBLIC_MAP_PERIODS)[number];
+export type PublicMapSourceFilter = (typeof PUBLIC_MAP_SOURCES)[number];
 export type PublicMapConfidenceFilter =
-  "all" | "low" | "nominal" | "high" | "numeric" | "unknown";
+  (typeof PUBLIC_MAP_CONFIDENCE_FILTERS)[number];

@@ -1,3 +1,4 @@
+import { WorkspacePageHeading } from "@/components/workspace/workspace-page-heading";
 import { Info } from "lucide-react";
 
 import type {
@@ -35,22 +36,18 @@ export function LedgerView({
 
   return (
     <div className="flex flex-col gap-5" id="audit-content">
-      <header className="flex flex-wrap items-end justify-between gap-5">
-        <div>
-          <h1 className="font-heading text-4xl leading-tight font-bold text-peat-forest sm:text-5xl">
-            Buku besar audit MRV
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-            Telusuri waktu, lokasi, bukti, triase, dan riwayat penanganan
-            laporan.
-          </p>
-        </div>
-        <LedgerExportDialog
-          filters={filters}
-          total={ledger.total}
-          zoneName={selectedZoneName}
-        />
-      </header>
+      <WorkspacePageHeading
+        className="mb-0"
+        title="Buku besar audit MRV"
+        description="Telusuri bukti lapangan, triase AI, dan riwayat penanganan laporan."
+        action={
+          <LedgerExportDialog
+            filters={filters}
+            total={ledger.total}
+            zoneName={selectedZoneName}
+          />
+        }
+      />
 
       {filterError ? <AuditFilterError message={filterError} /> : null}
       <LedgerFilterForm
@@ -66,9 +63,9 @@ export function LedgerView({
 
       <section
         aria-label="Riwayat bukti audit MRV"
-        className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
+        className="overflow-hidden rounded-2xl border border-peat-forest/10 bg-white shadow-xs"
       >
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-[#eef3e8] px-4 py-4 sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-peat-forest/10 bg-peat-paper px-4 py-3.5 sm:px-5">
           <div className="flex items-center gap-2 text-sm font-semibold text-peat-forest">
             {formatCount(ledger.total)} catatan audit
           </div>
@@ -78,33 +75,39 @@ export function LedgerView({
         </div>
         {ledger.rows.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1200px] border-collapse text-left">
+            <table className="w-full min-w-[1480px] border-collapse text-left">
               <caption className="sr-only">
-                Log laporan lapangan, bukti GPS/foto, triase AI, dan konteks
-                zona karbon
+                Laporan lapangan, lokasi, zona gambut, kelengkapan bukti, triase
+                AI, status penanganan, dan estimasi emisi dicegah per zona.
               </caption>
-              <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-peat-forest/70">
+              <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 text-left" scope="col">
-                    Audit ID
+                    ID laporan
                   </th>
                   <th className="px-4 py-3 text-left" scope="col">
-                    Waktu lapangan
+                    Waktu rekam
                   </th>
                   <th className="px-4 py-3 text-left" scope="col">
                     Lokasi & GPS
                   </th>
                   <th className="px-4 py-3 text-left" scope="col">
-                    Bukti
+                    Zona gambut
                   </th>
                   <th className="px-4 py-3 text-left" scope="col">
-                    Klasifikasi AI
+                    Kelengkapan bukti
                   </th>
                   <th className="px-4 py-3 text-left" scope="col">
-                    Penanganan
+                    Triase AI
                   </th>
                   <th className="px-4 py-3 text-left" scope="col">
-                    Emisi zona
+                    Status penanganan
+                  </th>
+                  <th className="px-4 py-3 text-left" scope="col">
+                    Estimasi emisi dicegah
+                  </th>
+                  <th className="px-4 py-3 text-center" scope="col">
+                    Aksi
                   </th>
                 </tr>
               </thead>
@@ -121,7 +124,8 @@ export function LedgerView({
               Tidak ada catatan yang cocok
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Ubah filter wilayah, tanggal, atau kelengkapan bukti.
+              Ubah filter zona gambut, waktu rekam, kelengkapan bukti, atau
+              triase AI.
             </p>
           </div>
         )}
@@ -139,8 +143,8 @@ export function LedgerView({
           className="mt-0.5 shrink-0 text-peat-green"
           size={15}
         />
-        Estimasi emisi zona ditampilkan sebagai konteks; laporan patroli tidak
-        dijumlahkan menjadi tambahan emisi yang dicegah. Koordinat tercatat
+        Estimasi emisi dicegah per zona ditampilkan sebagai konteks; laporan
+        patroli tidak dijumlahkan kembali ke nilai tersebut. Koordinat tercatat
         belum diverifikasi secara independen.
       </p>
     </div>

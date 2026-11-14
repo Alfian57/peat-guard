@@ -43,6 +43,7 @@ export function createQueuedReport(
 export function buildReportFormData(report: QueuedFieldReport): FormData {
   const body = new FormData();
   body.set("clientReportId", report.clientReportId);
+  body.set("expectedOwnerId", report.ownerId);
   body.set("capturedAt", report.capturedAt);
   body.set("latitude", String(report.latitude));
   body.set("longitude", String(report.longitude));
@@ -58,20 +59,25 @@ export function buildReportFormData(report: QueuedFieldReport): FormData {
   return body;
 }
 
+const SERVER_REPORT_UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export function readServerReportId(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") {
     return null;
   }
 
   const topLevelId = Reflect.get(payload, "id");
-  if (typeof topLevelId === "string") {
+  if (typeof topLevelId === "string" && SERVER_REPORT_UUID.test(topLevelId)) {
     return topLevelId;
   }
 
   const report = Reflect.get(payload, "report");
   if (report && typeof report === "object") {
     const reportId = Reflect.get(report, "id");
-    return typeof reportId === "string" ? reportId : null;
+    return typeof reportId === "string" && SERVER_REPORT_UUID.test(reportId)
+      ? reportId
+      : null;
   }
 
   return null;
