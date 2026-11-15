@@ -6,6 +6,7 @@ const LOCAL_DEMO_DATABASE_HOSTS = new Set([
 ]);
 
 const POSTGRES_PROTOCOLS = new Set(["postgresql:", "postgres:"]);
+const RESET_DEMO_DATABASE_HOST = "postgres-db";
 
 export function isAllowedDemoSeedTarget(
   connectionString: string,
@@ -26,7 +27,8 @@ export function isAllowedDemoSeedTarget(
     nodeEnvironment !== "production" &&
     LOCAL_DEMO_DATABASE_HOSTS.has(databaseUrl.hostname);
   const isExplicitResetSeed =
-    allowRemoteDemoSeed === "1" && databaseUrl.hostname === "postgres";
+    allowRemoteDemoSeed === "1" &&
+    databaseUrl.hostname === RESET_DEMO_DATABASE_HOST;
 
   return isLocalDemoDatabase || isExplicitResetSeed;
 }
