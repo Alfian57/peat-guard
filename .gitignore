@@ -51,3 +51,16 @@ next-env.d.ts
 .playwright-mcp/
 playwright-report/
 test-results/
+# Local assistant setup and project guides
+/.agents/skills/
+/.claude/skills/
+/.github/skills/
+/.windsurf/skills/
+/.cursor/rules/my-skill-gweh.mdc
+/.windsurf/rules/my-skill-gweh.md
+/.github/copilot-instructions.md
+/.my-skill-gweh/
+/AGENTS.md
+/CLAUDE.md
+/GEMINI.md
+/docs/

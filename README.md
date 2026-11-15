@@ -167,7 +167,6 @@ flowchart LR
 
 4. **Buka Aplikasi di Browser:**
    Akses `http://localhost:3000` dan masuk menggunakan akun demo yang tertera di atas.
-   Ikuti [panduan demo untuk juri](docs/engineering/database.md#jury-walkthrough) untuk memperagakan alur Relawan, Posko, dan Verifikator.
 
 5. **Menjalankan Pengujian Otomatis (Testing Suite):**
    ```sh

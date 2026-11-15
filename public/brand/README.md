@@ -17,7 +17,7 @@ Komponen bersama: `components/brand/brand-logo.tsx`. Gunakan `tone="dark"` di at
 
 Ukuran tampilan dibuat ringkas: navbar desktop dan sidebar 40 px, header peran mobile 32 px, navbar mobile sekitar 30 px (lebar 96 px), footer 48 px, login 52 px, dokumen audit 36 px, emblem peta 32 px, dan emblem offline 52 px. Rasio gambar tetap asli dan tautan logo mempertahankan tinggi area klik minimal 44 px.
 
-Header sidebar hanya menampilkan logo tanpa label peran. Warna dan susunannya mengikuti [panduan sidebar](../../docs/design-system.md#role-sidebars).
+Header sidebar hanya menampilkan logo tanpa label peran. Warna menggunakan palet forest/paper/sun.
 
 Ikon browser ada di `app/favicon.ico` (16/32/48 px), `app/icon.png` (128 px), dan `app/apple-icon.png` (180 px). Next.js menambahkan metadata ikon dari konvensi berkas tersebut. Warna UI tetap memakai token forest/paper/sun yang sudah ada.
 

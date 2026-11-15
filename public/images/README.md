@@ -67,8 +67,7 @@ the larger transparent wetland foreground rises from the viewport bottom in
 front of it. The explanatory copy stays stationary; the three expanded editorial
 rows follow outside the animation track, before the next chapter.
 The subsequent full-viewport chapters use restrained entrance
-motion and a scroll-driven workflow line. See [public landing chapters](../../docs/application/public-landing-motion.md)
-for layout, motion, and reduced-motion behavior.
+motion and a scroll-driven workflow line. The landing chapters respect the browser's reduced-motion preference.
 
 The offline reporting chapter follows the gambut editorial rows and precedes
 “03 / Membaca bentang”. Its full-screen patrol photo remains pinned while text
