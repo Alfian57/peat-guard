@@ -19,21 +19,23 @@ import {
 } from "../lib/server/profile/avatar";
 import { removePrivateReportPhoto } from "../lib/server/uploads/private-photo";
 import { demoHotspots, demoWaterPoints, demoZones } from "./demo-data";
+import { isAllowedDemoSeedTarget } from "./seed-safety";
 import { seedDemoReports } from "./seed-reports";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
-  throw new Error("DATABASE_URL is required to seed the local database.");
+  throw new Error("DATABASE_URL is required to seed demo data.");
 }
-const databaseUrl = new URL(connectionString);
 if (
-  process.env.NODE_ENV === "production" ||
-  !["postgresql:", "postgres:"].includes(databaseUrl.protocol) ||
-  !["localhost", "127.0.0.1", "[::1]", "postgres"].includes(
-    databaseUrl.hostname,
+  !isAllowedDemoSeedTarget(
+    connectionString,
+    process.env.NODE_ENV,
+    process.env.PEATGUARD_ALLOW_REMOTE_DEMO_SEED,
   )
 ) {
-  throw new Error("db:seed is for the local development or demo database.");
+  throw new Error(
+    "db:seed is for local demo databases; remote seeding requires the explicit reset opt-in.",
+  );
 }
 
 const prisma = new PrismaClient({
