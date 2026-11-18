@@ -16,7 +16,9 @@ export function DashboardVillages({ dashboard }: { dashboard: MrvDashboard }) {
           Aktivitas dan estimasi per desa
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Laporan adalah konteks aktivitas; insentif mengikuti estimasi zona.
+          {dashboard.readiness.status === "available"
+            ? `Kesiapsiagaan ilustratif ${dashboard.readiness.from} – ${dashboard.readiness.to}. Bobot setara untuk cakupan patroli dan respons dalam 24 jam.`
+            : "Laporan adalah konteks aktivitas; insentif mengikuti estimasi zona."}
         </p>
       </div>
       {dashboard.villages.length > 0 ? (
@@ -42,6 +44,11 @@ export function DashboardVillages({ dashboard }: { dashboard: MrvDashboard }) {
                 <th className="px-4 py-3 text-left" scope="col">
                   Estimasi insentif
                 </th>
+                {dashboard.readiness.status === "available" ? (
+                  <th className="px-4 py-3 text-left" scope="col">
+                    Kesiapsiagaan
+                  </th>
+                ) : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-peat-forest/10 text-sm">

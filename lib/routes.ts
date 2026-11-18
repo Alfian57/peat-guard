@@ -51,6 +51,8 @@ export const APP_ROUTES = {
     ledgerReport: (reportId: string) =>
       `/audit/ledger?reportId=${encodeURIComponent(reportId)}`,
     generator: "/audit/generator",
+    documents: "/audit/documents",
+    document: (id: string) => `/audit/documents/${encodeURIComponent(id)}`,
     zones: "/audit/zones",
   },
 } as const;
@@ -72,11 +74,19 @@ export const API_ROUTES = {
     root: "/api/reports",
     detail: (reportId: string) =>
       `/api/reports/${encodeURIComponent(reportId)}`,
+    receipt: (clientReportId: string) =>
+      `/api/reports/receipt/${encodeURIComponent(clientReportId)}`,
+    followUp: (reportId: string) =>
+      `/api/reports/${encodeURIComponent(reportId)}/follow-up`,
+    supplementPhoto: (reportId: string, eventId: string) =>
+      `/api/reports/${encodeURIComponent(reportId)}/follow-up/${encodeURIComponent(eventId)}/photo`,
     photo: (reportId: string) =>
       `/api/reports/${encodeURIComponent(reportId)}/photo`,
   },
   command: {
     map: "/api/command/map",
+    retryReportAi: (id: string) =>
+      `/api/command/reports/${encodeURIComponent(id)}/ai/retry`,
     reportMapPoints: "/api/command/reports/map-points",
     zones: "/api/command/zones",
     zoneDetail: (zoneId: string) =>
@@ -88,7 +98,12 @@ export const API_ROUTES = {
       `/api/command/water-points/${encodeURIComponent(waterPointId)}`,
     firms: "/api/command/firms",
     firmsSync: "/api/command/firms/sync",
+    mrvParameters: "/api/command/mrv/parameters",
     mrvSummary: "/api/command/mrv/summary",
+    mrvPublish: (id: string) =>
+      `/api/command/mrv/documents/${encodeURIComponent(id)}/publish`,
+    mrvPdf: (id: string) =>
+      `/api/command/mrv/documents/${encodeURIComponent(id)}/pdf`,
     mrvGenerate: "/api/command/mrv/generate",
     mrvLedger: "/api/command/mrv/ledger",
     mrvLedgerExport: "/api/command/mrv/ledger/export",

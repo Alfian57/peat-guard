@@ -42,6 +42,18 @@ async function syncReports(
 
     const claim = await claimQueuedReport(report.clientReportId, ownerId);
     if (!claim) {
+      if (
+        report.syncState === "syncing" &&
+        report.syncLease &&
+        !signal?.aborted
+      ) {
+        const recovered = await recoverReceipt(report, signal);
+        if (recovered) {
+          summary.synced += 1;
+          onReportUpdated?.(recovered);
+          continue;
+        }
+      }
       summary.retryable = true;
       continue;
     }
@@ -112,6 +124,31 @@ async function syncReports(
     }
   }
   return summary;
+}
+
+async function recoverReceipt(report: QueuedFieldReport, signal?: AbortSignal) {
+  const timeout = AbortSignal.timeout(5_000);
+  try {
+    const response = await fetch(
+      API_ROUTES.reports.receipt(report.clientReportId),
+      {
+        cache: "no-store",
+        signal: signal ? AbortSignal.any([timeout, signal]) : timeout,
+      },
+    );
+    if (!response.ok || signal?.aborted) return null;
+    const serverReportId = readServerReportId(await response.json());
+    if (!serverReportId || signal?.aborted) return null;
+    return finishQueuedReport(report, {
+      syncState: "synced",
+      syncError: null,
+      uploadUncertain: false,
+      serverReportId,
+      aiState: report.aiConsent ? "pending" : "skipped",
+    });
+  } catch {
+    return null;
+  }
 }
 
 export function syncQueuedReports(

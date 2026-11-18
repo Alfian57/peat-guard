@@ -1,4 +1,4 @@
-import { CommandApiError, isRecord } from "@/lib/server/command/http";
+import { CommandApiError, isRecord, isUuid } from "@/lib/server/command/http";
 
 export type ZonePolygon = {
   type: "Polygon";
@@ -10,15 +10,19 @@ export type CreateZoneInput = {
   villageName: string | null;
   peatDepthMeters: number;
   geometry: ZonePolygon;
+  carbonParameterSetId?: string;
 };
 
-export type UpdateZoneInput = Partial<CreateZoneInput>;
+export type UpdateZoneInput = Partial<CreateZoneInput> & {
+  expectedRevision?: number;
+};
 
 const ZONE_CREATE_FIELDS = new Set([
   "zoneName",
   "villageName",
   "peatDepthMeters",
   "geometry",
+  "carbonParameterSetId",
 ]);
 
 export function parseCreateZoneInput(value: unknown): CreateZoneInput {
@@ -33,7 +37,14 @@ export function parseCreateZoneInput(value: unknown): CreateZoneInput {
   const peatDepthMeters = readPeatDepth(value.peatDepthMeters ?? 1.5);
   const geometry = parsePolygon(value.geometry);
 
-  return { zoneName, villageName, peatDepthMeters, geometry };
+  const carbonParameterSetId = readParameterSetId(value.carbonParameterSetId);
+  return {
+    zoneName,
+    villageName,
+    peatDepthMeters,
+    geometry,
+    ...(carbonParameterSetId ? { carbonParameterSetId } : {}),
+  };
 }
 
 export function parseUpdateZoneInput(value: unknown): UpdateZoneInput {
@@ -41,7 +52,7 @@ export function parseUpdateZoneInput(value: unknown): UpdateZoneInput {
     throw invalidZoneInput();
   }
 
-  assertOnlyFields(value, ZONE_CREATE_FIELDS);
+  assertOnlyFields(value, new Set([...ZONE_CREATE_FIELDS, "expectedRevision"]));
 
   const result: UpdateZoneInput = {};
 
@@ -61,11 +72,34 @@ export function parseUpdateZoneInput(value: unknown): UpdateZoneInput {
     result.geometry = parsePolygon(value.geometry);
   }
 
-  if (Object.keys(result).length === 0) {
-    throw invalidZoneInput();
+  if ("carbonParameterSetId" in value) {
+    result.carbonParameterSetId = readParameterSetId(
+      value.carbonParameterSetId,
+    );
   }
-
+  if ("expectedRevision" in value) {
+    const revision = value.expectedRevision;
+    if (
+      typeof revision !== "number" ||
+      !Number.isSafeInteger(revision) ||
+      revision < 0
+    ) {
+      throw invalidZoneInput();
+    }
+    result.expectedRevision = revision;
+  }
+  if (
+    Object.keys(result).length ===
+    (result.expectedRevision === undefined ? 0 : 1)
+  )
+    throw invalidZoneInput();
   return result;
+}
+
+function readParameterSetId(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !isUuid(value)) throw invalidZoneInput();
+  return value;
 }
 
 export function zoneSlug(zoneName: string): string {

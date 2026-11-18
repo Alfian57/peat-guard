@@ -1,3 +1,5 @@
+import type { CanalCondition } from "@/lib/canal-observation";
+
 export type ReportSyncState =
   "pending" | "syncing" | "synced" | "failed" | "requires-auth";
 
@@ -13,6 +15,8 @@ export type QueuedFieldReport = {
   longitude: number;
   accuracyMeters: number | null;
   fieldNotes: string;
+  canalCondition?: CanalCondition;
+  canalObservation?: string;
   tags: string[];
   aiConsent: boolean;
   isDemoSample: boolean;

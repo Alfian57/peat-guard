@@ -52,6 +52,9 @@ export function buildReportFormData(report: QueuedFieldReport): FormData {
     report.accuracyMeters === null ? "" : String(report.accuracyMeters),
   );
   body.set("fieldNotes", report.fieldNotes);
+  if (report.canalCondition) body.set("canalCondition", report.canalCondition);
+  if (report.canalCondition && report.canalObservation)
+    body.set("canalObservation", report.canalObservation);
   body.set("tags", JSON.stringify(report.tags));
   body.set("aiConsent", String(report.aiConsent));
   body.set("isDemoSample", String(report.isDemoSample));

@@ -233,11 +233,7 @@ test.describe("Public landing introduction", () => {
   }) => {
     await page.clock.install();
     await openLanding(page);
-    await page.evaluate(() => {
-      window.scrollTo({ top: innerHeight, behavior: "instant" });
-      window.dispatchEvent(new Event("scroll"));
-    });
-    await page.clock.runFor(3000);
+    await revealIntroduction(page);
 
     const sampling = page.evaluate(async () => {
       const panel = document.querySelector(".public-hero__panel");

@@ -155,7 +155,10 @@ jobs:
           BETTER_AUTH_URL: http://localhost:3000
           UPLOADS_DIR: .data/uploads
           PORT: 3000
-        run: bunx playwright test --shard=${{ matrix.shard }}/${{ matrix.totalShards }}
+          E2E_PRODUCTION: 1
+        run: |
+          bun run build
+          bunx playwright test --shard=${{ matrix.shard }}/${{ matrix.totalShards }}
 
       - name: Upload Playwright report artifact
         uses: actions/upload-artifact@v4

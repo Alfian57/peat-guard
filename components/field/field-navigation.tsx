@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { FilePlus2, Home, ListChecks } from "lucide-react";
 
 import { APP_ROUTES } from "@/lib/routes";
@@ -35,7 +34,7 @@ export function FieldNavigation({
         const isActive = href === activeHref;
 
         return (
-          <Link
+          <a
             aria-current={isActive ? "page" : undefined}
             className={`group relative flex min-h-[3.25rem] items-center gap-3 rounded-xl border border-transparent px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring ${
               isActive
@@ -61,7 +60,7 @@ export function FieldNavigation({
                 {queueCount}
               </span>
             ) : null}
-          </Link>
+          </a>
         );
       })}
     </nav>

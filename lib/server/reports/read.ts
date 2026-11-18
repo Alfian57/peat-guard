@@ -1,3 +1,5 @@
+import { getLatestEvidenceVersion } from "@/lib/server/mrv/follow-up";
+import { isRecord } from "@/lib/server/command/http";
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
@@ -21,6 +23,8 @@ const reportDetailSelect = {
   longitude: true,
   accuracyMeters: true,
   fieldNotes: true,
+  canalCondition: true,
+  canalObservation: true,
   tags: true,
   capturedAt: true,
   syncedAt: true,
@@ -132,6 +136,17 @@ export async function getPrivateReportDetail(
   if (!report) throw new ReportNotFoundError();
 
   const photo = reportPhotoMetadata(report.id, report.imagePath);
+  const latestEvidence = await getLatestEvidenceVersion(prisma, report.id);
+  const evidencePayload =
+    latestEvidence && isRecord(latestEvidence.payload)
+      ? latestEvidence.payload
+      : null;
+  const followUp =
+    latestEvidence?.eventType === "MRV_EVIDENCE_REVIEWED" &&
+    evidencePayload?.decision === "NEEDS_FOLLOW_UP" &&
+    typeof evidencePayload.note === "string"
+      ? { reviewId: latestEvidence.id, note: evidencePayload.note }
+      : null;
   return {
     id: report.id,
     clientReportId: report.clientReportId,
@@ -140,6 +155,9 @@ export async function getPrivateReportDetail(
     longitude: report.longitude,
     accuracyMeters: report.accuracyMeters,
     fieldNotes: report.fieldNotes,
+    canalCondition: report.canalCondition,
+    canalObservation: report.canalObservation,
+    followUp,
     tags: report.tags,
     capturedAt: report.capturedAt,
     syncedAt: report.syncedAt,

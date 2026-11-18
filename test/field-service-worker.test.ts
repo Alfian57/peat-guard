@@ -5,7 +5,7 @@ const workerSource = await Bun.file(
   new URL("../public/sw.js", import.meta.url),
 ).text();
 const origin = "https://peatguard.test";
-const cacheName = "peatguard-field-v6";
+const cacheName = "peatguard-field-v7";
 const shellPaths = [
   "/field/home",
   "/field/reports/create",
@@ -356,4 +356,32 @@ test("offline preparation retries missing shells when the connection becomes ava
     type: "FIELD_OFFLINE_STATUS",
     ready: true,
   });
+});
+
+test("an incomplete update preserves prepared shells from the preceding version", async () => {
+  const harness = workerHarness();
+  const previous = await harness.open("peatguard-field-v6");
+  for (const path of shellPaths) {
+    await previous.put(
+      path,
+      networkResponse(path, "Previous shell", { "content-type": "text/html" }),
+    );
+  }
+  const normalFetch = harness.setFetch(() => {
+    throw new TypeError("Offline");
+  });
+  harness.setFetch((request) =>
+    new URL(request).pathname.startsWith("/field/")
+      ? networkResponse(request, "Preparing", {}, 503)
+      : normalFetch(request),
+  );
+  await harness.dispatch("install");
+  await harness.dispatch("activate");
+  harness.setFetch(() => {
+    throw new TypeError("Offline");
+  });
+  expect(await (await harness.navigate("/field/reports/create"))?.text()).toBe(
+    "Previous shell",
+  );
+  expect(harness.cacheData.has("peatguard-field-v6")).toBe(true);
 });

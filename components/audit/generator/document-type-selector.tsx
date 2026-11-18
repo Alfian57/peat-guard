@@ -1,4 +1,12 @@
-export function DocumentTypeSelector() {
+import type { MrvDocumentType } from "@/lib/server/mrv/contracts";
+
+export function DocumentTypeSelector({
+  value,
+  onChange,
+}: {
+  value: MrvDocumentType;
+  onChange: (value: MrvDocumentType) => void;
+}) {
   return (
     <fieldset className="space-y-2">
       <legend className="text-sm font-semibold text-peat-forest">
@@ -11,7 +19,8 @@ export function DocumentTypeSelector() {
         <label className="flex min-h-16 cursor-pointer items-start gap-3 rounded-xl border border-peat-forest/10 bg-white p-3 transition hover:border-peat-green has-[:checked]:border-peat-green has-[:checked]:bg-peat-green/5 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-peat-green/25">
           <input
             className="mt-1 size-4 accent-peat-green focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            defaultChecked
+            checked={value === "SITUATION"}
+            onChange={() => onChange("SITUATION")}
             name="documentType"
             type="radio"
             value="SITUATION"
@@ -31,6 +40,8 @@ export function DocumentTypeSelector() {
             name="documentType"
             type="radio"
             value="CARBON_AUDIT"
+            checked={value === "CARBON_AUDIT"}
+            onChange={() => onChange("CARBON_AUDIT")}
           />
           <span>
             <span className="block text-sm font-semibold text-peat-forest">

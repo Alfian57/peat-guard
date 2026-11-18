@@ -46,6 +46,13 @@ enum AIAnalysisState {
   SKIPPED
 }
 
+enum CanalCondition {
+  BERFUNGSI
+  KERING
+  RUSAK
+  TIDAK_DAPAT_DINILAI
+}
+
 enum CarbonSnapshotReason {
   INITIAL_BASELINE
   PARAMETER_SET_CREATED
@@ -69,6 +76,7 @@ model User {
   statusEvents ReportStatusEvent[]
   auditEvents  AuditEvent[]
   sessions     Session[]
+  mrvDocuments MrvDocument[]
   accounts     Account[]
 
   @@map("users")
@@ -127,6 +135,7 @@ model Verification {
 model CarbonParameterSet {
   id                  String   @id @default(uuid()) @db.Uuid
   name                String   @unique @db.VarChar(120)
+  source              String?  @db.VarChar(300)
   biomassFactor       Decimal  @map("biomass_factor") @db.Decimal(8, 2)
   emissionFactor      Decimal  @map("emission_factor") @db.Decimal(8, 4)
   co2ConversionFactor Decimal  @default(3.67) @map("co2_conversion_factor") @db.Decimal(6, 3)
@@ -152,6 +161,7 @@ model ForestZone {
   carbonParameterSetId String                                @map("carbon_parameter_set_id") @db.Uuid
   isApproved           Boolean                               @default(false) @map("is_approved")
   archivedAt           DateTime?                             @map("archived_at") @db.Timestamptz(6)
+  reviewNote           String?                               @map("review_note") @db.VarChar(500)
   reviewRevision       Int                                   @default(0) @map("review_revision")
   isDemoData           Boolean                               @default(false) @map("is_demo_data")
   createdAt            DateTime                              @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -167,22 +177,23 @@ model ForestZone {
 }
 
 model ForestZoneCarbonSnapshot {
-  id                   BigInt               @id @default(autoincrement()) @db.BigInt
-  zoneId               String               @map("zone_id") @db.Uuid
-  zoneName             String               @map("zone_name") @db.VarChar(150)
-  villageName          String?              @map("village_name") @db.VarChar(100)
-  areaHectares         Decimal              @map("area_hectares") @db.Decimal(12, 2)
-  carbonParameterSetId String               @map("carbon_parameter_set_id") @db.Uuid
-  parameterSetName     String               @map("parameter_set_name") @db.VarChar(120)
-  biomassFactor        Decimal              @map("biomass_factor") @db.Decimal(8, 2)
-  emissionFactor       Decimal              @map("emission_factor") @db.Decimal(8, 4)
-  co2ConversionFactor  Decimal              @map("co2_conversion_factor") @db.Decimal(6, 3)
-  incentivePerTonIdr   Decimal              @map("incentive_per_ton_idr") @db.Decimal(14, 2)
-  isZoneApproved       Boolean              @map("is_zone_approved")
-  isZoneDemoData       Boolean              @map("is_zone_demo_data")
-  isParameterDemoData  Boolean              @map("is_parameter_demo_data")
+  id                   BigInt                                 @id @default(autoincrement()) @db.BigInt
+  zoneId               String                                 @map("zone_id") @db.Uuid
+  zoneName             String                                 @map("zone_name") @db.VarChar(150)
+  villageName          String?                                @map("village_name") @db.VarChar(100)
+  areaHectares         Decimal                                @map("area_hectares") @db.Decimal(12, 2)
+  carbonParameterSetId String                                 @map("carbon_parameter_set_id") @db.Uuid
+  parameterSetName     String                                 @map("parameter_set_name") @db.VarChar(120)
+  biomassFactor        Decimal                                @map("biomass_factor") @db.Decimal(8, 2)
+  emissionFactor       Decimal                                @map("emission_factor") @db.Decimal(8, 4)
+  co2ConversionFactor  Decimal                                @map("co2_conversion_factor") @db.Decimal(6, 3)
+  incentivePerTonIdr   Decimal                                @map("incentive_per_ton_idr") @db.Decimal(14, 2)
+  isZoneApproved       Boolean                                @map("is_zone_approved")
+  isZoneDemoData       Boolean                                @map("is_zone_demo_data")
+  isParameterDemoData  Boolean                                @map("is_parameter_demo_data")
   reason               CarbonSnapshotReason
-  capturedAt           DateTime             @default(now()) @map("captured_at") @db.Timestamptz(6)
+  boundary             Unsupported("geometry(Polygon,4326)")?
+  capturedAt           DateTime                               @default(now()) @map("captured_at") @db.Timestamptz(6)
 
   zone ForestZone @relation(fields: [zoneId], references: [id], onDelete: Restrict)
 
@@ -252,6 +263,10 @@ model FieldReport {
   aiAnalyzedAt            DateTime?                           @map("ai_analyzed_at") @db.Timestamptz(6)
   aiAttempts              Int                                 @default(0) @map("ai_attempts")
   aiLeaseToken            String?                             @map("ai_lease_token") @db.Uuid
+  canalCondition          CanalCondition?                     @map("canal_condition")
+  canalObservation        String?                             @map("canal_observation") @db.VarChar(500)
+  aiRetryAt               DateTime?                           @map("ai_retry_at") @db.Timestamptz(6)
+  aiFailureReason         String?                             @map("ai_failure_reason") @db.VarChar(80)
   aiLeaseUntil            DateTime?                           @map("ai_lease_until") @db.Timestamptz(6)
   handlingStatus          HandlingStatus                      @default(MENUNGGU_TINDAKAN) @map("handling_status")
   nearestWaterDistanceM   Decimal?                            @map("nearest_water_distance_m") @db.Decimal(12, 2)
@@ -304,4 +319,18 @@ model AuditEvent {
   @@index([aggregateType, aggregateId, createdAt])
   @@index([reportId, createdAt])
   @@map("audit_events")
+}
+
+model MrvDocument {
+  id          String    @id @default(uuid()) @db.Uuid
+  authorId    String    @map("author_id") @db.Uuid
+  payload     Json
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(6)
+  publishedAt DateTime? @map("published_at") @db.Timestamptz(6)
+  pdf         Bytes?
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([publishedAt])
+  @@map("mrv_documents")
 }

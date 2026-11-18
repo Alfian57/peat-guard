@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Droplets, FileText, Leaf, Map } from "lucide-react";
+import { Archive, Droplets, FileText, Leaf, Map } from "lucide-react";
 
+import { APP_ROUTES } from "@/lib/routes";
 import { COMMAND_ROUTES } from "@/components/command/routes";
 
 const navigation = [
@@ -12,6 +13,8 @@ const navigation = [
     label: "Titik sumber air",
     icon: Droplets,
   },
+  { href: APP_ROUTES.audit.generator, label: "Generator MRV", icon: FileText },
+  { href: APP_ROUTES.audit.documents, label: "Arsip MRV", icon: Archive },
 ] as const;
 
 export function CommandNavigation({

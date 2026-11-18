@@ -95,7 +95,7 @@ export function PublicMonitor() {
               variants={sectionReveal}
             >
               <p className="public-section__kicker">
-                Data riil · rujukan resmi gambut & karhutla
+                Metrik PEATGUARD dan NASA FIRMS
               </p>
               <h2
                 className="public-section__title public-metrics__title"
@@ -107,8 +107,8 @@ export function PublicMonitor() {
                 <span>terlihat lebih jelas.</span>
               </h2>
               <p className="public-section__description">
-                Ringkasan faktual bentang Kesatuan Hidrologis Gambut (KHG),
-                kawasan lindung, dan pantauan karhutla di wilayah Kalimantan.
+                Ringkasan zona dalam PEATGUARD dan pantauan titik panas satelit
+                di wilayah Kalimantan.
               </p>
               <Link
                 className="public-section__text-link"
@@ -129,7 +129,7 @@ export function PublicMonitor() {
             variants={sectionReveal}
           >
             <span>Memahami skala. Menentukan perhatian.</span>
-            <span>Rujukan: BRGM · KLHK · SiPongi</span>
+            <span>Sumber data PEATGUARD dan NASA FIRMS</span>
           </motion.div>
         </div>
       </PublicSection>

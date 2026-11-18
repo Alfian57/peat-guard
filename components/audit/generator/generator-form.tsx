@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition, type FormEvent } from "react";
 import { LoaderCircle, Printer, Sparkles, TriangleAlert } from "lucide-react";
 
@@ -12,7 +13,7 @@ import type {
 import { GeneratorReportPreview } from "./generator-report-preview";
 import { DocumentTypeSelector } from "./document-type-selector";
 import { toast } from "@/components/ui/toast";
-import { API_ROUTES } from "@/lib/routes";
+import { API_ROUTES, APP_ROUTES } from "@/lib/routes";
 
 function errorMessage(payload: unknown, fallback: string): string {
   if (
@@ -28,6 +29,10 @@ function errorMessage(payload: unknown, fallback: string): string {
 }
 
 export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
+  const [documentType, setDocumentType] =
+    useState<MrvDocumentType>("SITUATION");
+  const [documentId, setDocumentId] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
   const [report, setReport] = useState<MrvGeneratedReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -37,29 +42,17 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
 
     const form = event.currentTarget;
     const formData = new window.FormData(form);
-    const from = String(formData.get("from") ?? "").trim();
-    const to = String(formData.get("to") ?? "").trim();
-
-    if (Boolean(from) !== Boolean(to)) {
-      setError("Isi kedua tanggal rentang atau kosongkan keduanya.");
-      return;
-    }
-
-    const documentType = String(formData.get("documentType") ?? "SITUATION");
+    const period = String(formData.get("period") ?? "").trim();
+    const from =
+      period && documentType === "CARBON_AUDIT" ? period + "-01" : period;
     const zoneId = String(formData.get("zoneId") ?? "");
     const includeNarrative = formData.get("aiConsent") === "on";
-
-    if (documentType !== "SITUATION" && documentType !== "CARBON_AUDIT") {
-      setError("Pilih jenis laporan yang tersedia.");
-      return;
-    }
 
     const requestBody: {
       aiConsent: boolean;
       documentType: MrvDocumentType;
       from?: string;
       includeNarrative: boolean;
-      to?: string;
       zoneId?: string;
     } = {
       aiConsent: includeNarrative,
@@ -67,10 +60,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
       includeNarrative,
     };
 
-    if (from && to) {
-      requestBody.from = from;
-      requestBody.to = to;
-    }
+    if (from) requestBody.from = from;
 
     if (zoneId) {
       requestBody.zoneId = zoneId;
@@ -78,6 +68,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
 
     setError(null);
     setReport(null);
+    setDocumentId(null);
 
     startTransition(async () => {
       try {
@@ -109,6 +100,34 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
     });
   }
 
+  async function publish() {
+    if (!report?.draftId) return;
+    setPublishing(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        API_ROUTES.command.mrvPublish(report.draftId),
+        { method: "POST" },
+      );
+      const payload = await response.json();
+      if (!response.ok)
+        throw new Error(
+          payload.message ??
+            errorMessage(payload, "Laporan belum dapat diterbitkan."),
+        );
+      setDocumentId(payload.id);
+      toast.success("Laporan diterbitkan", "Dokumen tersedia di arsip MRV.");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Laporan belum dapat diterbitkan.",
+      );
+    } finally {
+      setPublishing(false);
+    }
+  }
+
   function printReport() {
     window.print();
   }
@@ -120,7 +139,10 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
           Pilih data yang dirangkum
         </h2>
         <form className="mt-5 space-y-5" onSubmit={submitReport}>
-          <DocumentTypeSelector />
+          <DocumentTypeSelector
+            value={documentType}
+            onChange={setDocumentType}
+          />
 
           <div className="space-y-2">
             <label
@@ -148,49 +170,22 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
             </select>
           </div>
 
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-semibold text-peat-forest">
-              Periode laporan{" "}
-              <span className="font-normal text-muted-foreground">
-                (opsional)
-              </span>
-            </legend>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-              <div className="space-y-1.5">
-                <label
-                  className="block text-xs font-medium text-muted-foreground"
-                  htmlFor="generator-from"
-                >
-                  Tanggal mulai periode (WIB)
-                </label>
-                <input
-                  className="h-11 w-full rounded-xl border border-input bg-white px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  id="generator-from"
-                  name="from"
-                  placeholder="YYYY-MM-DD"
-                  type="date"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label
-                  className="block text-xs font-medium text-muted-foreground"
-                  htmlFor="generator-to"
-                >
-                  Tanggal akhir periode (WIB)
-                </label>
-                <input
-                  className="h-11 w-full rounded-xl border border-input bg-white px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  id="generator-to"
-                  name="to"
-                  placeholder="YYYY-MM-DD"
-                  type="date"
-                />
-              </div>
-            </div>
-            <p className="text-xs leading-5 text-muted-foreground">
-              Kedua tanggal harus diisi bersama. Hari kalender mengikuti WIB.
-            </p>
-          </fieldset>
+          <label className="block space-y-2 text-sm font-semibold text-peat-forest">
+            <span>
+              {documentType === "SITUATION"
+                ? "Tanggal laporan (WIB)"
+                : "Bulan laporan (WIB)"}
+            </span>
+            <input
+              className="block h-11 w-full rounded-xl border border-input bg-white px-3"
+              name="period"
+              key={documentType}
+              type={documentType === "SITUATION" ? "date" : "month"}
+            />
+            <span className="block text-xs font-normal text-muted-foreground">
+              Kosongkan untuk memilih periode berjalan.
+            </span>
+          </label>
 
           <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-peat-forest/15 bg-white p-4 focus-within:ring-3 focus-within:ring-peat-green/20">
             <input
@@ -219,7 +214,7 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
 
           <button
             className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-peat-green px-4 text-sm font-semibold text-white transition hover:bg-peat-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-wait disabled:opacity-65"
-            disabled={isPending}
+            disabled={isPending || publishing}
             type="submit"
           >
             {isPending ? (
@@ -267,6 +262,35 @@ export function GeneratorForm({ zones }: { zones: ApprovedZoneValues[] }) {
             </button>
           ) : null}
         </div>
+        {report?.draftId ? (
+          <div className="audit-hide-on-print flex flex-wrap items-center gap-3">
+            {documentId ? (
+              <>
+                <Link
+                  className="rounded-lg border px-3 py-2 text-sm"
+                  href={APP_ROUTES.audit.document(documentId)}
+                >
+                  Buka arsip
+                </Link>
+                <a
+                  className="rounded-lg bg-peat-green px-3 py-2 text-sm text-white"
+                  href={API_ROUTES.command.mrvPdf(documentId)}
+                >
+                  Unduh PDF
+                </a>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="rounded-lg bg-peat-green px-3 py-2 text-sm text-white disabled:opacity-60"
+                onClick={() => void publish()}
+                disabled={publishing}
+              >
+                {publishing ? "Menerbitkan…" : "Terbitkan laporan"}
+              </button>
+            )}
+          </div>
+        ) : null}
         {isPending && !report ? (
           <div className="flex min-h-64 flex-1 flex-col items-center justify-center px-4 py-10 text-center">
             <LoaderCircle

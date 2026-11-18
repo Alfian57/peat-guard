@@ -104,20 +104,7 @@ describe("DeepSeek report photo analysis", () => {
       reasoning: { effort: "none" },
       safety_check: { level: "high" },
       max_output_tokens: 900,
-      text: {
-        format: {
-          type: "json_schema",
-          name: "peat_guard_report_assessment",
-          schema: {
-            properties: {
-              confidence_score: { type: "number" },
-              visual_indicators: { type: "array" },
-              false_positive_check: { type: "string" },
-              action_recommendations: { type: "array" },
-            },
-          },
-        },
-      },
+      text: { format: { type: "text" } },
       input: [
         {
           role: "user",
@@ -140,9 +127,20 @@ describe("DeepSeek report photo analysis", () => {
     expect(requestBody).not.toContain('"maxItems"');
     expect(requestBody).not.toContain('"maxLength"');
     expect(requestBody).not.toContain('"minLength"');
-    expect(requestBody).toContain(
-      '"required":["category","urgency","confidence_score","visual_indicators","false_positive_check","action_recommendations"]',
-    );
+    expect(requestPayload).toMatchObject({
+      input: [
+        {
+          content: [
+            {
+              text: expect.stringContaining(
+                '"required":["category","urgency","confidence_score","visual_indicators","false_positive_check","action_recommendations"]',
+              ),
+            },
+            expect.anything(),
+          ],
+        },
+      ],
+    });
     expect(requestBody).toContain("awan rendah");
     expect(requestBody).toContain("sumber asap non-kebakaran");
     expect(requestBody).toContain("maksimal 3 rekomendasi");

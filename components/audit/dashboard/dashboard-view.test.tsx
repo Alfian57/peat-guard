@@ -68,7 +68,7 @@ test("dashboard labels the estimate and unavailable history without a readiness 
   expect(calculation.closest("details")).toBeNull();
   expect(screen.getByText("E_saved = A × B × EF × conversion")).toBeTruthy();
   expect(screen.queryByText("Skor kesiapsiagaan")).toBeNull();
-  expect(screen.getByText(/bukan kredit tersertifikasi/)).toBeTruthy();
+  expect(screen.getByText(/estimasi simulasi/)).toBeTruthy();
 });
 
 test("dashboard displays filter validation feedback near the form", () => {

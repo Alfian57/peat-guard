@@ -6,12 +6,21 @@ import {
   FIRMS_INGEST_SOURCES,
   FIRMS_SOURCES,
 } from "@/lib/firms-sources";
+import {
+  calculateZoneImpact,
+  summarizeZoneImpacts,
+} from "@/lib/server/mrv/calculations";
+import { getApprovedZoneValues } from "@/lib/server/mrv/data";
 import { prisma } from "@/lib/prisma";
 import type { Polygon } from "geojson";
 import type { PublicMapData, PublicMetrics } from "@/lib/public/contracts";
 import type { PublicMapQuery } from "@/lib/public/query";
-import { MAX_PUBLIC_ZONE_LIMIT } from "@/lib/public/query";
+import {
+  PUBLIC_DEFAULT_VIEWPORT,
+  MAX_PUBLIC_ZONE_LIMIT,
+} from "@/lib/public/query";
 import { getFirmsSyncIntervalMinutes } from "@/lib/server/firms/config";
+import { getFirmsConfiguration } from "@/lib/server/firms/client";
 import { getFirmsFreshnessStatus } from "@/lib/server/firms/status";
 import { isRecord } from "@/lib/server/command/http";
 
@@ -32,14 +41,6 @@ type HotspotRow = {
   isDemoData: boolean;
 };
 
-type MetricsRow = {
-  approvedZoneCount: number;
-  protectedAreaHectares: number;
-  estimatedCarbonTons: number;
-  estimatedIncentiveIdr: number;
-  containsIllustrativeData: boolean;
-};
-
 export function buildPublicZoneQuery(query: PublicMapQuery): Prisma.Sql {
   const { west, south, east, north } = query.viewport;
   const zoneLimit = Math.min(query.limit, MAX_PUBLIC_ZONE_LIMIT);
@@ -48,10 +49,11 @@ export function buildPublicZoneQuery(query: PublicMapQuery): Prisma.Sql {
     SELECT
       zone.zone_name AS name,
       zone.area_hectares::double precision AS "areaHectares",
-      zone.is_demo_data AS "isDemoData",
+      (zone.is_demo_data OR parameters.is_demo_data) AS "isDemoData",
       ST_AsGeoJSON(zone.boundary) AS "geometryJson"
     FROM forest_zones AS zone
-    WHERE zone.is_approved = TRUE
+    JOIN carbon_parameter_sets parameters ON parameters.id = zone.carbon_parameter_set_id
+    WHERE zone.is_approved = TRUE AND zone.archived_at IS NULL
       AND ST_Intersects(
         zone.boundary,
         ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)
@@ -190,38 +192,13 @@ export async function getPublicMapData(
         orderBy: { createdAt: "desc" },
         select: { createdAt: true },
       }),
-      prisma.auditEvent.findFirst({
-        where: {
-          aggregateType: "NASA_FIRMS_SYNC",
-          eventType: { in: ["FIRMS_SYNC_SUCCEEDED", "FIRMS_SYNC_PARTIAL"] },
-        },
-        orderBy: { createdAt: "desc" },
-        select: { createdAt: true, eventType: true, payload: true },
-      }),
+      getLatestFirmsDataSync(),
     ]);
-  let expectedIntervalMinutes: number | null = null;
-  let configurationValid = true;
-  try {
-    expectedIntervalMinutes = getFirmsSyncIntervalMinutes();
-  } catch {
-    configurationValid = false;
-  }
-  const configured = Boolean(process.env.NASA_FIRMS_MAP_KEY?.trim());
-  const freshness = getPublicFreshness({
-    configured,
-    configurationValid,
+  const freshness = getPublicFreshness(
     checkedAt,
-    expectedIntervalMinutes,
-    lastSuccessfulAt: lastSuccessfulSync?.createdAt ?? null,
-    lastDataSyncAt: latestDataSync?.createdAt ?? null,
-    lastDataOutcome:
-      latestDataSync?.eventType === "FIRMS_SYNC_PARTIAL"
-        ? "partial"
-        : latestDataSync?.eventType === "FIRMS_SYNC_SUCCEEDED"
-          ? "success"
-          : null,
-    failedSources: readFailedSources(latestDataSync?.payload),
-  });
+    latestDataSync,
+    lastSuccessfulSync?.createdAt ?? null,
+  );
 
   return {
     generatedAt: checkedAt.toISOString(),
@@ -253,26 +230,37 @@ export async function getPublicMapData(
   };
 }
 
-function getPublicFreshness(args: {
-  configured: boolean;
-  configurationValid: boolean;
-  checkedAt: Date;
-  expectedIntervalMinutes: number | null;
-  lastSuccessfulAt: Date | null;
-  lastDataSyncAt: Date | null;
-  lastDataOutcome: "success" | "partial" | null;
-  failedSources: PublicMapData["freshness"]["failedSources"];
-}): PublicMapData["freshness"] {
-  const {
-    configured,
-    configurationValid,
-    checkedAt,
-    expectedIntervalMinutes,
-    lastSuccessfulAt,
-    lastDataSyncAt,
-    lastDataOutcome,
-    failedSources,
-  } = args;
+function getLatestFirmsDataSync() {
+  return prisma.auditEvent.findFirst({
+    where: {
+      aggregateType: "NASA_FIRMS_SYNC",
+      eventType: { in: ["FIRMS_SYNC_SUCCEEDED", "FIRMS_SYNC_PARTIAL"] },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true, eventType: true, payload: true },
+  });
+}
+
+function getPublicFreshness(
+  checkedAt: Date,
+  latestDataSync: Awaited<ReturnType<typeof getLatestFirmsDataSync>>,
+  lastSuccessfulAt: Date | null = null,
+): PublicMapData["freshness"] {
+  let expectedIntervalMinutes: number | null = null;
+  let configurationValid = true;
+  try {
+    expectedIntervalMinutes = getFirmsSyncIntervalMinutes();
+    getFirmsConfiguration();
+  } catch {
+    configurationValid = false;
+  }
+  const configured = Boolean(process.env.NASA_FIRMS_MAP_KEY?.trim());
+  const lastDataSyncAt = latestDataSync?.createdAt ?? null;
+  const lastDataOutcome = latestDataSync
+    ? latestDataSync.eventType === "FIRMS_SYNC_PARTIAL"
+      ? "partial"
+      : "success"
+    : null;
 
   return {
     provider: "NASA FIRMS",
@@ -280,7 +268,7 @@ function getPublicFreshness(args: {
     checkedAt: checkedAt.toISOString(),
     lastSuccessfulAt: lastSuccessfulAt?.toISOString() ?? null,
     lastDataSyncAt: lastDataSyncAt?.toISOString() ?? null,
-    failedSources,
+    failedSources: readFailedSources(latestDataSync?.payload),
     expectedIntervalMinutes,
     status: getFirmsFreshnessStatus({
       configured,
@@ -312,53 +300,47 @@ function readFailedSources(
 }
 
 async function getApprovedZoneMetrics(): Promise<PublicMetrics> {
-  const [rows, hotspotCount, illustrativeHotspotCount] = await Promise.all([
-    prisma.$queryRaw<MetricsRow[]>`
-      SELECT
-        COUNT(zone.id)::integer AS "approvedZoneCount",
-        COALESCE(SUM(zone.area_hectares), 0)::double precision AS "protectedAreaHectares",
-        COALESCE(
-          SUM(
-            zone.area_hectares
-            * parameters.biomass_factor
-            * parameters.emission_factor
-            * parameters.co2_conversion_factor
-          ),
-          0
-        )::double precision AS "estimatedCarbonTons",
-        COALESCE(
-          SUM(
-            zone.area_hectares
-            * parameters.biomass_factor
-            * parameters.emission_factor
-            * parameters.co2_conversion_factor
-            * parameters.incentive_per_ton_idr
-          ),
-          0
-        )::double precision AS "estimatedIncentiveIdr",
-        COALESCE(BOOL_OR(zone.is_demo_data OR parameters.is_demo_data), FALSE)
-          AS "containsIllustrativeData"
-      FROM forest_zones AS zone
-      INNER JOIN carbon_parameter_sets AS parameters
-        ON parameters.id = zone.carbon_parameter_set_id
-      WHERE zone.is_approved = TRUE
-    `,
+  const periodDays = 7;
+  const { west, south, east, north } = PUBLIC_DEFAULT_VIEWPORT;
+  const now = new Date();
+  const since = new Date(now.getTime() - periodDays * 86400_000);
+  const [
+    zones,
+    hotspotCount,
+    illustrativeHotspotCount,
+    [firms],
+    latestDataSync,
+  ] = await Promise.all([
+    getApprovedZoneValues(),
     prisma.satelliteHotspot.count({ where: publicHotspotWhere }),
     prisma.satelliteHotspot.count({
       where: { ...publicHotspotWhere, isDemoData: true },
     }),
+    prisma.$queryRaw<Array<{ count: number }>>`
+      SELECT COUNT(*)::int AS count FROM satellite_hotspots
+      WHERE NOT is_demo_data AND source IN (${Prisma.join([...FIRMS_SOURCES])})
+        AND acquired_at >= ${since} AND acquired_at <= ${now}
+        AND ST_Intersects(location, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326))
+    `,
+    getLatestFirmsDataSync(),
   ]);
-
-  const row = rows[0];
-
+  const included = zones
+    .filter((zone) => !zone.overlapsApprovedZone)
+    .map(calculateZoneImpact);
+  const illustrativeZoneCount = zones.filter(
+    (zone) => zone.isDemoData || zone.parameterIsDemoData,
+  ).length;
   return {
-    approvedZoneCount: row?.approvedZoneCount ?? 0,
-    protectedAreaHectares: row?.protectedAreaHectares ?? 0,
-    estimatedCarbonTons: row?.estimatedCarbonTons ?? 0,
-    estimatedIncentiveIdr: row?.estimatedIncentiveIdr ?? 0,
+    approvedZoneCount: zones.length,
+    ...summarizeZoneImpacts(included),
     hotspotCount,
     containsIllustrativeData:
-      (row?.containsIllustrativeData ?? false) || illustrativeHotspotCount > 0,
+      illustrativeZoneCount > 0 || illustrativeHotspotCount > 0,
+    illustrativeZoneCount,
+    excludedZoneCount: zones.length - included.length,
+    firmsHotspotCount: firms.count,
+    firmsFreshness: getPublicFreshness(now, latestDataSync).status,
+    hotspotPeriodDays: periodDays,
   };
 }
 

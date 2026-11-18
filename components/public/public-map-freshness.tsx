@@ -29,7 +29,7 @@ export function PublicMapFreshness({
     not_configured:
       "Sinkronisasi NASA FIRMS belum dikonfigurasi di lingkungan ini.",
     configuration_error:
-      "Jadwal sinkronisasi NASA FIRMS tidak valid. Data peta tetap ditampilkan.",
+      "Konfigurasi sinkronisasi NASA FIRMS perlu diperiksa. Data peta tetap ditampilkan.",
   } as const;
 
   return (

@@ -2,6 +2,8 @@
 
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { useState } from "react";
+import { EvidenceFollowUp } from "./evidence-follow-up";
+import { CANAL_CONDITION_LABELS } from "@/lib/canal-observation";
 import type { ServerReportDetail as ServerReportDetailDto } from "@/lib/client/offline/server-report-client";
 import { handlingStatusLabel, reportCategoryLabel } from "@/lib/report-labels";
 import { ServerReportAiAnalysis } from "./server-report-ai-analysis";
@@ -70,6 +72,27 @@ export function ServerReportDetail({
           onPhotoError={() => setPhotoFailed(true)}
         />
         <div className="flex min-w-0 flex-col gap-3 sm:gap-4">
+          {report.followUp ? (
+            <EvidenceFollowUp
+              key={report.followUp.reviewId}
+              reportId={report.id}
+              request={report.followUp}
+              onSent={onRefresh}
+            />
+          ) : null}
+          {report.canalCondition ? (
+            <section className="rounded-xl border border-border bg-white p-4">
+              <h2 className="font-heading text-xl font-bold">
+                Observasi sekat kanal
+              </h2>
+              <p>{CANAL_CONDITION_LABELS[report.canalCondition]}</p>
+              {report.canalObservation ? (
+                <p className="text-sm whitespace-pre-wrap">
+                  {report.canalObservation}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
           <section
             className="rounded-2xl border border-peat-forest/10 bg-white p-4 shadow-xs"
             aria-labelledby="server-status-title"

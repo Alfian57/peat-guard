@@ -1,5 +1,7 @@
 import "server-only";
 
+import { getCarbonHistory } from "@/lib/server/mrv/carbon-history";
+import { parseDashboardFilters } from "@/lib/server/mrv/validation";
 import { prisma } from "@/lib/prisma";
 import { API_ROUTES } from "@/lib/routes";
 import {
@@ -14,6 +16,7 @@ import type {
   MrvDashboard,
   MrvLedger,
   MrvLedgerRow,
+  ReadinessComponents,
   VillageActivity,
   ZoneImpact,
 } from "@/lib/server/mrv/contracts";
@@ -38,11 +41,16 @@ export async function getApprovedZoneValues(
       parameters.emission_factor::double precision AS "emissionFactor",
       parameters.co2_conversion_factor::double precision AS "co2ConversionFactor",
       parameters.incentive_per_ton_idr::double precision AS "incentivePerTonIdr",
-      parameters.is_demo_data AS "parameterIsDemoData"
+      parameters.is_demo_data AS "parameterIsDemoData",
+      EXISTS (
+        SELECT 1 FROM forest_zones other
+        WHERE other.id <> zone.id AND other.is_approved AND other.archived_at IS NULL
+          AND other.boundary && zone.boundary AND ST_Relate(other.boundary, zone.boundary, '2********')
+      ) AS "overlapsApprovedZone"
     FROM forest_zones AS zone
     INNER JOIN carbon_parameter_sets AS parameters
       ON parameters.id = zone.carbon_parameter_set_id
-    WHERE zone.is_approved = TRUE
+    WHERE zone.is_approved = TRUE AND zone.archived_at IS NULL
       AND (${zoneId}::uuid IS NULL OR zone.id = ${zoneId}::uuid)
     ORDER BY zone.zone_name ASC, zone.id ASC
   `;
@@ -50,14 +58,15 @@ export async function getApprovedZoneValues(
 
 async function getVillageActivity(
   filters: DashboardFilters,
+  end: Date,
+  historical: boolean,
 ): Promise<VillageActivityRow[]> {
   const from = filters.range?.from ?? null;
-  const toExclusive = filters.range?.toExclusive ?? null;
 
   return prisma.$queryRaw<VillageActivityRow[]>`
     SELECT
       COALESCE(
-        NULLIF(zone.village_name, ''),
+        NULLIF(CASE WHEN ${historical} THEN zone_at_cutoff.village_name ELSE zone.village_name END, ''),
         NULLIF(reporter.village_name, ''),
         'Tidak diketahui'
       ) AS "villageName",
@@ -67,18 +76,23 @@ async function getVillageActivity(
         AS "demoFieldReportCount",
       COUNT(report.id) FILTER (
         WHERE report.is_demo_sample = FALSE AND report.ai_state = 'COMPLETED'
+          AND (NOT ${historical} OR report.ai_analyzed_at < ${end})
       )::integer AS "aiTriagedFieldReportCount",
       COUNT(report.id) FILTER (
         WHERE report.is_demo_sample = TRUE AND report.ai_state = 'COMPLETED'
+          AND (NOT ${historical} OR report.ai_analyzed_at < ${end})
       )::integer AS "demoAiTriagedFieldReportCount"
     FROM field_reports AS report
     INNER JOIN users AS reporter ON reporter.id = report.reporter_id
     LEFT JOIN forest_zones AS zone ON zone.id = report.zone_id
+    LEFT JOIN LATERAL (
+      SELECT snapshot.village_name
+      FROM forest_zone_carbon_snapshots AS snapshot
+      WHERE ${historical} AND snapshot.zone_id = report.zone_id AND snapshot.captured_at < ${end}
+      ORDER BY snapshot.captured_at DESC, snapshot.id DESC LIMIT 1
+    ) AS zone_at_cutoff ON TRUE
     WHERE (${from}::timestamptz IS NULL OR report.captured_at >= ${from})
-      AND (
-        ${toExclusive}::timestamptz IS NULL OR
-        report.captured_at < ${toExclusive}
-      )
+      AND report.captured_at < ${end} AND report.created_at < ${end}
     GROUP BY 1
     ORDER BY 1 ASC
   `;
@@ -87,12 +101,115 @@ async function getVillageActivity(
 export async function getMrvDashboard(
   filters: DashboardFilters,
 ): Promise<MrvDashboard> {
-  const [zones, activity] = await Promise.all([
+  const now = new Date();
+  const historicalEnd = filters.range?.toExclusive;
+  const historical = Boolean(historicalEnd && historicalEnd <= now);
+  const end = historical && historicalEnd ? historicalEnd : now;
+  const day = (date: Date) =>
+    new Date(date.getTime() + 7 * 3600_000).toISOString().slice(0, 10);
+  const to = filters.range?.toDate ?? day(now);
+  const from =
+    filters.range?.fromDate ?? day(new Date(end.getTime() - 29 * 86400_000));
+  const defaultRange = parseDashboardFilters(new URLSearchParams({ from, to }));
+  const readinessFrom =
+    filters.range?.from ??
+    (defaultRange.ok ? (defaultRange.value.range?.from ?? now) : now);
+  const lastMonth = day(
+    end.getTime() === now.getTime() ? end : new Date(end.getTime() - 1),
+  ).slice(0, 7);
+  const [year, month] = lastMonth.split("-").map(Number);
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const start = new Date(Date.UTC(year, month - 12 + i, 1));
+    const monthEnd = new Date(
+      Date.UTC(year, month - 11 + i, 1) - 7 * 3600_000 - 1,
+    );
+    return {
+      month: start.toISOString().slice(0, 7),
+      asOf: monthEnd < end ? monthEnd : new Date(end.getTime() - 1),
+      partial: monthEnd >= end,
+    };
+  }).filter((item) => !filters.range?.from || item.asOf >= filters.range.from);
+  const dates = [
+    ...months.map((item) => item.asOf),
+    new Date(end.getTime() - 1),
+  ];
+  const [zones, activity, history, readinessRows] = await Promise.all([
     getApprovedZoneValues(null),
-    getVillageActivity(filters),
+    getVillageActivity(filters, end, historical),
+    getCarbonHistory(dates),
+    getReadinessRows(readinessFrom, end),
   ]);
+  const dashboard = buildMrvDashboard(zones, activity, filters, now);
+  const cutoff = history[months.length];
+  const readinessZones = cutoff.hasSnapshot ? cutoff.zones : [];
+  for (const village of dashboard.villages) {
+    const eligibleZones = new Set(
+      readinessZones
+        .filter(
+          (zone) =>
+            (zone.villageName?.trim() || "Tidak diketahui") ===
+            village.villageName,
+        )
+        .map((zone) => zone.zoneId),
+    );
+    const visited = new Set<string>();
+    let eligibleReports = 0;
+    let timelyReports = 0;
+    for (const row of readinessRows) {
+      if (!row.zoneId || !eligibleZones.has(row.zoneId)) continue;
+      visited.add(row.zoneId);
+      if (row.eligible) {
+        eligibleReports++;
+        if (row.timely) timelyReports++;
+      }
+    }
+    const components: ReadinessComponents = {
+      patrolledZones: visited.size,
+      zoneCount: eligibleZones.size,
+      timelyReports,
+      eligibleReports,
+    };
+    village.readinessComponents = components;
+    if (components.zoneCount && components.eligibleReports) {
+      village.readinessScore = Math.round(
+        (50 * components.patrolledZones) / components.zoneCount +
+          (50 * components.timelyReports) / components.eligibleReports,
+      );
+    }
+  }
 
-  return buildMrvDashboard(zones, activity, filters, new Date());
+  return {
+    ...dashboard,
+    readiness: { status: "available", from, to },
+    carbonTrend: {
+      status: "available",
+      months: months.map(({ month, partial }, index) => ({
+        month,
+        partial,
+        carbonTons: history[index].hasSnapshot
+          ? history[index].totals.estimatedCarbonTons
+          : null,
+      })),
+    },
+  };
+}
+
+function getReadinessRows(from: Date, end: Date) {
+  return prisma.$queryRaw<
+    Array<{ zoneId: string | null; eligible: boolean; timely: boolean }>
+  >`
+    SELECT report.zone_id::text AS "zoneId",
+      (report.created_at + interval '24 hours' <= ${end}) AS eligible,
+      EXISTS (
+        SELECT 1 FROM report_status_events event
+        WHERE event.report_id = report.id AND event.next_status = 'DALAM_PENANGANAN'
+          AND event.created_at >= report.created_at
+          AND event.created_at <= report.created_at + interval '24 hours'
+          AND event.created_at < ${end}
+      ) AS timely
+    FROM field_reports report
+    WHERE report.captured_at >= ${from} AND report.captured_at < ${end} AND report.created_at < ${end}
+  `;
 }
 
 function getCurrentZoneContext(report: {
@@ -316,6 +433,9 @@ export async function getMrvLedger(filters: LedgerFilters): Promise<MrvLedger> {
                 "REPORT_AI_ANALYSIS_COMPLETED",
                 "REPORT_AI_ANALYSIS_FAILED",
                 "REPORT_EVIDENCE_RECORDED",
+                "MRV_EVIDENCE_SUPPLEMENTED",
+                "REPORT_AI_REQUEUED",
+                "REPORT_AI_RETRY_SCHEDULED",
               ],
             },
           },
@@ -347,4 +467,18 @@ export async function getMrvLedger(filters: LedgerFilters): Promise<MrvLedger> {
     rows: reports.map(toLedgerRow),
     total,
   };
+}
+
+export async function listSubmittedEvidence(before?: Date) {
+  return prisma.$queryRaw<Array<{ reportId: string; submittedAt: Date }>>`
+    WITH latest AS (
+      SELECT DISTINCT ON (report_id) report_id, event_type, created_at
+      FROM audit_events WHERE event_type IN ('MRV_EVIDENCE_REVIEWED', 'MRV_EVIDENCE_SUPPLEMENTED')
+      ORDER BY report_id, created_at DESC, id DESC
+    )
+    SELECT report_id::text AS "reportId", created_at AS "submittedAt"
+    FROM latest WHERE event_type = 'MRV_EVIDENCE_SUPPLEMENTED'
+      AND (${before ?? null}::timestamptz IS NULL OR created_at < ${before ?? null})
+    ORDER BY created_at DESC, report_id LIMIT 21
+  `;
 }

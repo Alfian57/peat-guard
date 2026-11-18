@@ -54,7 +54,7 @@ const UNSUPPORTED_CLAIM_PATTERN = new RegExp(
 );
 
 export type ExecutiveNarrativeMetrics = {
-  satelliteHotspotCount: number;
+  satelliteHotspotCount: number | null;
   fieldReportCount: number;
   aiTriagedReportCount: number;
   activeReportCount: number;
@@ -162,7 +162,8 @@ function parseExecutiveNarrativeMetrics(
   const estimatedIncentiveIdr = value.estimatedIncentiveIdr;
 
   if (
-    !isBoundedNumber(satelliteHotspotCount, MAX_COUNT, true) ||
+    (satelliteHotspotCount !== null &&
+      !isBoundedNumber(satelliteHotspotCount, MAX_COUNT, true)) ||
     !isBoundedNumber(fieldReportCount, MAX_COUNT, true) ||
     !isBoundedNumber(aiTriagedReportCount, MAX_COUNT, true) ||
     !isBoundedNumber(activeReportCount, MAX_COUNT, true) ||
@@ -320,7 +321,7 @@ export async function generateExecutiveNarrative(
           {
             role: "system",
             content:
-              "Kamu menyusun draf narasi eksekutif berbahasa Indonesia untuk laporan situasi dan kepatuhan MRV gambut. Gunakan hanya fakta agregat yang diberikan dan jangan menyimpulkan sebab, lokasi, atau kondisi yang tidak tersedia. Nilai null berarti metrik tersebut belum tersedia; jangan menafsirkannya sebagai nol. Tulis singkat dan kualitatif. Jangan menulis angka, digit, tanggal, mata uang, jumlah, perbandingan, tren, persentase, atau klaim kuantitatif dalam field teks; angka resmi akan ditampilkan langsung dari database secara terpisah. Berikan satu headline maksimal 120 karakter, satu narasi maksimal 800 karakter, dan 1 sampai 3 rekomendasi maksimal 200 karakter masing-masing. Keluarkan tepat satu objek JSON dengan key headline, narrative, recommendations; tanpa markdown dan tanpa field lain.",
+              "Kamu menyusun draf narasi eksekutif berbahasa Indonesia untuk laporan situasi dan kepatuhan MRV gambut. Gunakan hanya fakta agregat yang diberikan dan jangan menyimpulkan sebab, lokasi, atau kondisi yang tidak tersedia. Nilai null berarti metrik tersebut belum tersedia; jangan menafsirkannya sebagai nol. Tulis singkat dan kualitatif. Jangan menulis angka, digit, tanggal, mata uang, jumlah, perbandingan, tren, persentase, atau klaim kuantitatif dalam field teks; angka resmi akan ditampilkan langsung dari database secara terpisah. Berikan satu headline maksimal 120 karakter, satu narasi maksimal 800 karakter, dan 1 sampai 3 rekomendasi maksimal 200 karakter masing-masing. Berikan narasi langsung tanpa membahas cara laporan dibuat, perintah ini, data yang tidak tersedia, atau kata seperti nol, satu, persentase, jumlah, meningkat, dan menurun. Contoh gaya yang valid: “Pantauan lapangan membutuhkan koordinasi berkelanjutan. Tinjau laporan aktif dan catat perkembangan respons.” Keluarkan tepat satu objek JSON dengan key headline, narrative, recommendations; tanpa markdown dan tanpa field lain.",
           },
           {
             role: "user",
@@ -328,7 +329,7 @@ export async function generateExecutiveNarrative(
           },
         ],
         thinking: { type: "disabled" },
-        response_format: { type: "json_object" },
+        response_format: { type: "text" },
         safety_check: { level: "high" },
         temperature: 0.2,
         max_tokens: 600,
@@ -353,7 +354,9 @@ export async function generateExecutiveNarrative(
   const content = readAssistantContent(payload);
   let parsed: unknown;
   try {
-    parsed = JSON.parse(content);
+    parsed = JSON.parse(
+      content.replace(/^```(?:json)?\s*([\s\S]+?)\s*```$/i, "$1"),
+    );
   } catch {
     throw new DeepSeekNarrativeError(
       "The narrative provider returned invalid JSON.",

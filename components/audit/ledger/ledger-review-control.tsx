@@ -46,6 +46,7 @@ function readReview(value: unknown): MrvLedgerAuditEntry | null {
     id: review.eventId,
     payload: {
       actorRole: review.actorRole,
+      note: review.note,
       decision: review.decision,
       evidenceSnapshot: review.evidenceSnapshot,
       source: review.source,
@@ -85,7 +86,16 @@ export function LedgerReviewControl({
   const [history, setHistory] = useState(auditHistory);
   const [pendingDecision, setPendingDecision] =
     useState<EvidenceReviewDecision | null>(null);
+  const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const latestVersion = [...history]
+    .reverse()
+    .find(
+      (item) =>
+        item.eventType === "MRV_EVIDENCE_REVIEWED" ||
+        item.eventType === "MRV_EVIDENCE_SUPPLEMENTED",
+    );
+  const hasSupplementPhoto = history.some((item) => item.hasSupplementPhoto);
   const latestReview = [...history]
     .reverse()
     .find((event) => event.eventType === "MRV_EVIDENCE_REVIEWED");
@@ -96,11 +106,11 @@ export function LedgerReviewControl({
     Number.isFinite(coordinates.longitude) &&
     coordinates.longitude >= -180 &&
     coordinates.longitude <= 180 &&
-    hasPhoto &&
-    photoHref !== null;
+    ((hasPhoto && photoHref !== null) || hasSupplementPhoto);
 
   async function submitDecision(decision: EvidenceReviewDecision) {
-    if (pendingDecision) return;
+    if (pendingDecision || (decision === "NEEDS_FOLLOW_UP" && !note.trim()))
+      return;
 
     setPendingDecision(decision);
     setError(null);
@@ -113,7 +123,11 @@ export function LedgerReviewControl({
           credentials: "same-origin",
           cache: "no-store",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ decision }),
+          body: JSON.stringify({
+            decision,
+            expectedVersion: latestVersion?.eventId ?? null,
+            ...(note.trim() ? { note: note.trim() } : {}),
+          }),
         },
       );
       const payload: unknown = await response.json();
@@ -130,6 +144,7 @@ export function LedgerReviewControl({
       }
 
       setHistory((current) => [...current, review]);
+      setNote("");
       toast.success(
         "Keputusan peninjauan tersimpan",
         `${decisionLabels[decision]} · Laporan ${shortId}`,
@@ -208,7 +223,17 @@ export function LedgerReviewControl({
           Keputusan ini menilai bukti yang tersimpan. Koordinat dan akurasi
           berasal dari perangkat dan tidak diverifikasi secara independen.
         </p>
-        <LedgerAuditTimeline history={history} />
+        <LedgerAuditTimeline history={history} reportId={reportId} />
+        <label className="mt-4 block text-sm font-medium">
+          Catatan peninjauan (wajib untuk tindak lanjut)
+          <textarea
+            className="mt-1 block w-full rounded-xl border p-2"
+            value={note}
+            rows={2}
+            maxLength={500}
+            onChange={(event) => setNote(event.currentTarget.value)}
+          />
+        </label>
         <p className="mt-5 rounded-xl border border-peat-forest/15 bg-white p-4 text-sm leading-6 text-foreground">
           Untuk menerima bukti diperlukan koordinat dalam batas dan foto yang
           tersimpan. Triase AI dapat berstatus tidak dianalisis.
@@ -252,7 +277,7 @@ export function LedgerReviewControl({
           </button>
           <button
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-peat-forest/10 px-4 font-semibold text-peat-forest hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
-            disabled={pendingDecision !== null}
+            disabled={pendingDecision !== null || !note.trim()}
             onClick={() => void submitDecision("NEEDS_FOLLOW_UP")}
             type="button"
           >

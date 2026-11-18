@@ -47,7 +47,11 @@ export type DeepSeekAssessment = {
 };
 
 export class DeepSeekAnalysisError extends Error {
-  constructor(message = "The report photo analysis is unavailable.") {
+  constructor(
+    message = "The report photo analysis is unavailable.",
+    readonly reason = "invalid_provider_output",
+    readonly retryDelayMs: number | null = null,
+  ) {
     super(message);
     this.name = "DeepSeekAnalysisError";
   }
@@ -229,6 +233,7 @@ export async function analyzeNormalizedReportPhoto(
   if (!apiKey?.trim()) {
     throw new DeepSeekAnalysisError(
       "The report photo analysis is not configured.",
+      "not_configured",
     );
   }
 
@@ -253,7 +258,7 @@ export async function analyzeNormalizedReportPhoto(
             content: [
               {
                 type: "input_text",
-                text: "Tinjau indikasi visual pada foto ini dan berikan penilaian triase dalam JSON sesuai skema yang diminta.",
+                text: `Tinjau foto. Kembalikan tepat satu objek JSON, tanpa markdown, sesuai skema berikut: ${JSON.stringify(REPORT_ASSESSMENT_SCHEMA)}`,
               },
               {
                 type: "input_image",
@@ -264,13 +269,7 @@ export async function analyzeNormalizedReportPhoto(
           },
         ],
         reasoning: { effort: "none" },
-        text: {
-          format: {
-            type: "json_schema",
-            name: "peat_guard_report_assessment",
-            schema: REPORT_ASSESSMENT_SCHEMA,
-          },
-        },
+        text: { format: { type: "text" } },
         safety_check: { level: "high" },
         temperature: 0.1,
         max_output_tokens: 900,
@@ -278,10 +277,24 @@ export async function analyzeNormalizedReportPhoto(
       signal: AbortSignal.timeout(20_000),
     });
   } catch {
-    throw new DeepSeekAnalysisError();
+    throw new DeepSeekAnalysisError(undefined, "transport_error", 0);
   }
 
-  if (!response.ok) throw new DeepSeekAnalysisError();
+  if (!response.ok) {
+    const retryable = response.status === 429 || response.status >= 500;
+    const header = response.headers.get("Retry-After")?.trim();
+    const delay =
+      header && /^\d+$/.test(header)
+        ? Number(header) * 1000
+        : header
+          ? Date.parse(header) - Date.now()
+          : 0;
+    throw new DeepSeekAnalysisError(
+      undefined,
+      `provider_http_${response.status}`,
+      retryable ? Math.min(24 * 3600_000, Math.max(0, delay || 0)) : null,
+    );
+  }
 
   let payload: unknown;
   try {
@@ -302,7 +315,9 @@ export async function analyzeNormalizedReportPhoto(
 
   let assessment: unknown;
   try {
-    const parsedJson: unknown = JSON.parse(content);
+    const parsedJson: unknown = JSON.parse(
+      content.replace(/^```(?:json)?\s*([\s\S]+?)\s*```$/i, "$1"),
+    );
     assessment = parsedJson;
   } catch {
     throw new DeepSeekAnalysisError(

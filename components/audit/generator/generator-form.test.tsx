@@ -96,7 +96,7 @@ test("generator submits explicit consent and shows the server-derived preview", 
   expect(
     screen.getByText("Koordinasi lapangan mendukung respons yang terarah."),
   ).toBeTruthy();
-  expect(screen.getByText("Belum tersedia")).toBeTruthy();
+  expect(screen.getByText("Ringkasan bukti MRV")).toBeTruthy();
   expect(
     screen.getByText(
       "Ilustrasi CO₂e × tarif tersimpan; bukan formula insentif patroli final.",
@@ -125,18 +125,8 @@ test("generator reports server errors and keeps the selected date after failure"
   globalThis.fetch = fetchMock as unknown as typeof fetch;
 
   render(<GeneratorForm zones={[]} />);
-  fireEvent.change(screen.getByLabelText("Tanggal mulai periode (WIB)"), {
+  fireEvent.change(screen.getByLabelText(/Tanggal laporan/), {
     target: { value: "2026-11-01" },
-  });
-  await user.click(screen.getByRole("button", { name: "Susun laporan" }));
-
-  expect((await screen.findByRole("alert")).textContent).toContain(
-    "Isi kedua tanggal rentang atau kosongkan keduanya.",
-  );
-  expect(fetchMock).not.toHaveBeenCalled();
-
-  fireEvent.change(screen.getByLabelText("Tanggal akhir periode (WIB)"), {
-    target: { value: "2026-11-15" },
   });
   await user.click(screen.getByRole("button", { name: "Susun laporan" }));
 
@@ -144,7 +134,6 @@ test("generator reports server errors and keeps the selected date after failure"
     "Zona tidak ditemukan atau belum disetujui.",
   );
   expect(
-    (screen.getByLabelText("Tanggal mulai periode (WIB)") as HTMLInputElement)
-      .value,
+    (screen.getByLabelText(/Tanggal laporan/) as HTMLInputElement).value,
   ).toBe("2026-11-01");
 });

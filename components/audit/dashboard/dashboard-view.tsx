@@ -1,5 +1,5 @@
 import { WorkspacePageHeading } from "@/components/workspace/workspace-page-heading";
-import { CalendarDays, ChartNoAxesCombined } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 
 import type { MrvDashboard } from "@/lib/server/mrv/contracts";
 
@@ -7,6 +7,7 @@ import { AuditFilterError } from "../audit-states";
 import { formatDate } from "../audit-formatters";
 import { DashboardCarbonDetails } from "./dashboard-carbon-details";
 import { DashboardDateFilter } from "./dashboard-date-filter";
+import { DashboardCarbonTrend } from "./dashboard-carbon-trend";
 import { DashboardKpis } from "./dashboard-kpis";
 import { DashboardVillages } from "./dashboard-villages";
 
@@ -61,27 +62,13 @@ export function DashboardView({
 
       <DashboardVillages dashboard={dashboard} />
       <DashboardCarbonDetails dashboard={dashboard} />
-      <section
-        aria-labelledby="dashboard-trend-title"
-        className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-peat-forest/10 bg-white p-6 text-center shadow-xs"
-      >
-        <span className="grid size-12 place-items-center rounded-2xl bg-peat-paper text-peat-green">
-          <ChartNoAxesCombined aria-hidden="true" size={23} />
-        </span>
-        <h2
-          id="dashboard-trend-title"
-          className="mt-4 font-heading text-xl font-bold text-peat-forest"
-        >
-          Tren estimasi emisi dicegah
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Perubahan bulanan belum dapat dihitung.
+      <DashboardCarbonTrend trend={dashboard.carbonTrend} />
+      {!!dashboard.totals.excludedZoneCount && (
+        <p role="status" className="rounded-lg bg-peat-paper p-3 text-sm">
+          {dashboard.totals.excludedZoneCount} zona disetujui dikeluarkan dari
+          total dampak karena batasnya tumpang tindih.
         </p>
-        <p className="max-w-xl text-sm leading-6 text-muted-foreground">
-          Riwayat versi zona belum tersedia; angka di atas merupakan snapshot
-          saat ini.
-        </p>
-      </section>
+      )}
 
       <p className="px-1 text-xs leading-5 text-muted-foreground">
         Aktivitas patroli tidak dijumlahkan berulang sebagai emisi yang dicegah.

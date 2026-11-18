@@ -19,12 +19,16 @@ const EVIDENCE_REVIEW_DECISIONS = [
   "REJECTED",
 ] as const satisfies readonly EvidenceReviewDecision[];
 
-export function parseEvidenceReviewRequest(
-  value: unknown,
-): ValidationResult<{ decision: EvidenceReviewDecision }> {
+export function parseEvidenceReviewRequest(value: unknown): ValidationResult<{
+  decision: EvidenceReviewDecision;
+  note?: string;
+  expectedVersion?: string | null;
+}> {
   if (
     !isRecord(value) ||
-    Object.keys(value).length !== 1 ||
+    Object.keys(value).some(
+      (key) => !["decision", "note", "expectedVersion"].includes(key),
+    ) ||
     !Object.hasOwn(value, "decision") ||
     typeof value.decision !== "string" ||
     !EVIDENCE_REVIEW_DECISIONS.includes(
@@ -37,9 +41,31 @@ export function parseEvidenceReviewRequest(
     };
   }
 
+  const { note, expectedVersion } = value;
+  if (
+    (note !== undefined && (typeof note !== "string" || note.length > 500)) ||
+    (value.decision === "NEEDS_FOLLOW_UP" &&
+      (typeof note !== "string" || !note.trim())) ||
+    (expectedVersion !== undefined &&
+      expectedVersion !== null &&
+      (typeof expectedVersion !== "string" ||
+        !UUID_PATTERN.test(expectedVersion)))
+  ) {
+    return {
+      ok: false,
+      error: "Catatan tindak lanjut atau versi bukti tidak valid.",
+    };
+  }
+
   return {
     ok: true,
-    value: { decision: value.decision as EvidenceReviewDecision },
+    value: {
+      decision: value.decision as EvidenceReviewDecision,
+      ...(typeof note === "string" && note.trim() ? { note: note.trim() } : {}),
+      ...(expectedVersion !== undefined
+        ? { expectedVersion: expectedVersion as string | null }
+        : {}),
+    },
   };
 }
 
@@ -329,6 +355,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function parseMrvReportRequest(
   value: unknown,
+  now = new Date(),
 ): ValidationResult<MrvReportRequest> {
   if (!isRecord(value)) {
     return { error: "Request body must be a JSON object.", ok: false };
@@ -399,16 +426,35 @@ export function parseMrvReportRequest(
     return { error: "Request field zoneId must be a UUID.", ok: false };
   }
 
-  const searchParams = new URLSearchParams();
-
-  if (typeof value.from === "string") {
-    searchParams.set("from", value.from);
+  const today = new Date(now.getTime() + 7 * 3600_000)
+    .toISOString()
+    .slice(0, 10);
+  const from =
+    value.from ??
+    (documentType === "SITUATION" ? today : today.slice(0, 7) + "-01");
+  if (typeof from !== "string" || !parseCalendarDate(from) || from > today) {
+    return {
+      ok: false,
+      error: "Pilih periode WIB yang valid dan sudah dimulai.",
+    };
   }
-
-  if (typeof value.to === "string") {
-    searchParams.set("to", value.to);
+  const monthEnd = new Date(
+    Date.UTC(Number(from.slice(0, 4)), Number(from.slice(5, 7)), 0),
+  )
+    .toISOString()
+    .slice(0, 10);
+  const to = documentType === "SITUATION" ? from : monthEnd;
+  if (
+    (documentType === "CARBON_AUDIT" && !from.endsWith("-01")) ||
+    (value.to !== undefined && value.to !== to)
+  ) {
+    return {
+      ok: false,
+      error:
+        "Laporan harian memakai satu hari dan audit karbon memakai satu bulan kalender WIB.",
+    };
   }
-
+  const searchParams = new URLSearchParams({ from, to });
   const dateFilters = parseDashboardFilters(searchParams);
 
   if (!dateFilters.ok) {

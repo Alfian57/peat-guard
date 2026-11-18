@@ -291,7 +291,7 @@ export const MENU_CATALOG: SearchMenuItem[] = [
     title: "Generator laporan",
     description: "Cetak dan terbitkan laporan situasi serta audit karbon resmi",
     href: APP_ROUTES.audit.generator,
-    roles: ["VERIFIKATOR"],
+    roles: ["POSKO", "VERIFIKATOR"],
     keywords: [
       "generator",
       "laporan",
@@ -303,6 +303,14 @@ export const MENU_CATALOG: SearchMenuItem[] = [
       "dokumen",
       "audit karbon",
     ],
+  },
+  {
+    id: "menu-mrv-archive",
+    title: "Arsip laporan MRV",
+    description: "Buka dan unduh laporan terbit",
+    href: APP_ROUTES.audit.documents,
+    roles: ["POSKO", "VERIFIKATOR"],
+    keywords: ["arsip", "dokumen", "laporan", "pdf"],
   },
 ];
 

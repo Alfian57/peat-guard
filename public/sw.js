@@ -1,4 +1,4 @@
-const CACHE_NAME = "peatguard-field-v6";
+const CACHE_NAME = "peatguard-field-v7";
 const CACHE_PREFIX = "peatguard-field-";
 const STATIC_ASSETS = [
   "/offline.html",
@@ -110,14 +110,42 @@ async function cacheShell(cache, pathname, response, pending = new Map()) {
   await cache.put(new URL(pathname, self.location.origin).href, response);
 }
 
-async function offlineReady() {
-  const cache = await caches.open(CACHE_NAME);
+async function generationReady(cache) {
   const shells = await Promise.all(
     [...FIELD_SHELL_PATHS].map((path) =>
       cache.match(new URL(path, self.location.origin).href),
     ),
   );
   return shells.every(Boolean);
+}
+
+async function previousGenerations() {
+  const names = await caches.keys();
+  return names
+    .filter(
+      (name) =>
+        name !== CACHE_NAME &&
+        /^peatguard-field-v(?:[5-9]|[1-9]\d+)$/.test(name),
+    )
+    .reverse();
+}
+
+async function cachedFieldResponse(key, primary) {
+  const response = await primary.match(key);
+  if (response) return response;
+  for (const name of await previousGenerations()) {
+    const previous = await (await caches.open(name)).match(key);
+    if (previous) return previous;
+  }
+  return undefined;
+}
+
+async function offlineReady() {
+  if (await generationReady(await caches.open(CACHE_NAME))) return true;
+  for (const name of await previousGenerations()) {
+    if (await generationReady(await caches.open(name))) return true;
+  }
+  return false;
 }
 
 let preparation;
@@ -179,11 +207,17 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
       const names = await caches.keys();
+      const previous = await previousGenerations();
+      const keep = new Set([CACHE_NAME, previous[0]]);
+      for (const name of previous) {
+        if (await generationReady(await caches.open(name))) {
+          keep.add(name);
+          break;
+        }
+      }
       await Promise.all(
         names
-          .filter(
-            (name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME,
-          )
+          .filter((name) => name.startsWith(CACHE_PREFIX) && !keep.has(name))
           .map((name) => caches.delete(name)),
       );
       await self.clients.claim();
@@ -202,7 +236,7 @@ self.addEventListener("message", (event) => {
       (async () => {
         if (
           event.data.type === "PREPARE_FIELD_OFFLINE" &&
-          !(await offlineReady())
+          !(await generationReady(await caches.open(CACHE_NAME)))
         )
           await prepareFieldShells();
         event.source?.postMessage({
@@ -235,9 +269,9 @@ self.addEventListener("fetch", (event) => {
         const cache = await caches.open(CACHE_NAME);
         const shellKey = new URL(url.pathname, self.location.origin).href;
         try {
-          const response = await fetch(
-            new Request(request, { signal: AbortSignal.timeout(6_000) }),
-          );
+          const response = await fetch(request, {
+            signal: AbortSignal.timeout(6_000),
+          });
           if (response.status >= 500) throw new Error("Server unavailable");
           event.waitUntil(
             cacheShell(cache, url.pathname, response.clone()).catch(
@@ -247,8 +281,8 @@ self.addEventListener("fetch", (event) => {
           return response;
         } catch {
           return (
-            (await cache.match(shellKey)) ??
-            (await cache.match("/offline.html")) ??
+            (await cachedFieldResponse(shellKey, cache)) ??
+            (await cachedFieldResponse("/offline.html", cache)) ??
             Response.error()
           );
         }
@@ -262,7 +296,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     (async () => {
       const cache = await caches.open(CACHE_NAME);
-      const cached = await cache.match(request);
+      const cached = await cachedFieldResponse(request, cache);
       if (cached && (!isNextAsset || isImmutableAsset(cached))) return cached;
       const response = await fetch(request);
       if (isNextAsset ? isImmutableAsset(response) : canCacheResponse(response))

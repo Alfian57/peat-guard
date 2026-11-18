@@ -1,3 +1,4 @@
+import type { CanalCondition } from "@/lib/canal-observation";
 import {
   AIAnalysisState,
   HandlingStatus,
@@ -75,6 +76,8 @@ export type ReportDetail = {
   longitude: number;
   accuracyMeters: number | null;
   fieldNotes: string | null;
+  canalCondition?: CanalCondition | null;
+  canalObservation?: string | null;
   tags: string[];
   capturedAt: string;
   syncedAt: string;

@@ -10,9 +10,10 @@ const queryRaw = mock(
     const sql = strings.join("?");
     queries.push({ sql, values });
 
-    if (sql.includes("forest_zone_carbon_snapshots")) return snapshotRows;
-    if (sql.includes("FROM field_reports")) return [emptyReportAggregate];
     if (sql.includes("FROM satellite_hotspots")) return [emptyHotspotAggregate];
+    if (sql.includes("GROUP BY canal_condition")) return [];
+    if (sql.includes("AS MATERIALIZED")) return snapshotRows;
+    if (sql.includes("FROM field_reports")) return [emptyReportAggregate];
 
     throw new Error("Unexpected MRV report query.");
   },
@@ -76,7 +77,7 @@ test("does not substitute current carbon when the requested period predates snap
   );
 
   const carbonQuery = queries.find(({ sql }) =>
-    sql.includes("forest_zone_carbon_snapshots"),
+    sql.includes("AS MATERIALIZED"),
   );
 
   expect(reportSource).toMatchObject({
@@ -84,8 +85,10 @@ test("does not substitute current carbon when the requested period predates snap
     hasCarbonSnapshot: false,
     zones: [],
   });
-  expect(carbonQuery?.sql).toContain("snapshot.captured_at < ?");
-  expect(carbonQuery?.values).toContain(toExclusive);
+  expect(carbonQuery?.sql).toContain("snapshot.captured_at <= period.cutoff");
+  expect(carbonQuery?.values[0]).toContainEqual(
+    new Date(toExclusive.getTime() - 1),
+  );
 });
 
 test("keeps an unapproved zone's recorded history and returns zero approved zones", async () => {
@@ -98,7 +101,10 @@ test("keeps an unapproved zone's recorded history and returns zero approved zone
       emissionFactor: 0.2,
       incentivePerTonIdr: 15_000,
       isDemoData: false,
-      isParameterDemoData: false,
+      parameterIsDemoData: false,
+      asOf: new Date("2026-11-15T23:59:59.999Z"),
+      hasBoundary: true,
+      overlaps: false,
       isZoneApproved: false,
       name: "Operator configured",
       parameterSetId: "62000000-0000-4000-8000-000000000001",
@@ -120,7 +126,7 @@ test("keeps an unapproved zone's recorded history and returns zero approved zone
 
   expect(findUnique).toHaveBeenCalledWith({
     where: { id: selectedZoneId },
-    select: { id: true },
+    select: { zoneName: true },
   });
   expect(reportSource).toMatchObject({
     hasCarbonSnapshot: true,
@@ -130,9 +136,11 @@ test("keeps an unapproved zone's recorded history and returns zero approved zone
     sql.includes("FROM satellite_hotspots"),
   );
   expect(hotspotQuery?.sql).toContain(
-    "ST_Intersects(zone.boundary, hotspot.location)",
+    "ST_Intersects(history.boundary, hotspot.location)",
   );
-  expect(hotspotQuery?.sql).not.toContain("zone.is_approved");
+  expect(hotspotQuery?.sql).toContain(
+    "snapshot.captured_at <= hotspot.acquired_at",
+  );
 });
 
 test("returns unavailable history when the requested zone has not existed yet", async () => {

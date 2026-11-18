@@ -1,8 +1,9 @@
 import "server-only";
 
+import { getCarbonHistory } from "./carbon-history";
+import type { CanalCondition } from "@/lib/canal-observation";
 import { prisma } from "@/lib/prisma";
 import type {
-  CarbonSnapshotReason,
   CarbonSnapshotZoneValues,
   MrvReportFilters,
 } from "@/lib/server/mrv/contracts";
@@ -26,101 +27,79 @@ export type ReportAggregateRow = {
   respondedCount: number;
   responseMinutes: number | null;
   totalCount: number;
+  acceptedEvidenceCount?: number;
+  followUpEvidenceCount?: number;
+  rejectedEvidenceCount?: number;
 };
 
 export type HotspotAggregateRow = {
   demoCount: number;
   nonDemoCount: number;
   totalCount: number;
+  historicalBoundaryUnavailable?: boolean;
 };
 
 export type MrvReportSource = {
   carbonSnapshotAsOf: string;
   hasCarbonSnapshot: boolean;
+  excludedZoneCount?: number;
+  partial?: boolean;
+  priorCarbonTons?: number | null;
+  canalObservations?: Array<{
+    condition: CanalCondition;
+    demoCount: number;
+    nonDemoCount: number;
+  }>;
+  zoneName?: string | null;
   hotspots: HotspotAggregateRow;
   reports: ReportAggregateRow;
   zones: CarbonSnapshotZoneValues[];
 };
 
-type CarbonSnapshotRow = {
-  areaHectares: number;
-  biomassFactor: number;
-  co2ConversionFactor: number;
-  emissionFactor: number;
-  incentivePerTonIdr: number;
-  isDemoData: boolean;
-  isParameterDemoData: boolean;
-  isZoneApproved: boolean;
-  name: string;
-  parameterSetId: string;
-  snapshotAt: Date;
-  snapshotReason: CarbonSnapshotReason;
-  villageName: string | null;
-  zoneId: string;
-  zoneName: string;
-};
-
-function reportRangeBounds(filters: MrvReportFilters) {
+function reportRangeBounds(filters: MrvReportFilters, now: Date) {
   return {
     from: filters.range?.from ?? null,
-    toExclusive: filters.range?.toExclusive ?? null,
+    toExclusive:
+      filters.range?.toExclusive && filters.range.toExclusive <= now
+        ? filters.range.toExclusive
+        : now,
+    historical: filters.range?.toExclusive
+      ? filters.range.toExclusive <= now
+      : false,
   };
-}
-
-function snapshotAsOf(filters: MrvReportFilters, now: Date): Date {
-  const toExclusive = filters.range?.toExclusive;
-  return toExclusive ? new Date(toExclusive.getTime() - 1) : now;
-}
-
-async function getCarbonSnapshots(
-  filters: MrvReportFilters,
-  currentTime: Date,
-): Promise<CarbonSnapshotRow[]> {
-  const toExclusive = filters.range?.toExclusive ?? null;
-  const zoneId = filters.zoneId;
-
-  return prisma.$queryRaw<CarbonSnapshotRow[]>`
-    SELECT DISTINCT ON (snapshot.zone_id)
-      snapshot.zone_id::text AS "zoneId",
-      snapshot.zone_name AS "zoneName",
-      snapshot.village_name AS "villageName",
-      snapshot.area_hectares::double precision AS "areaHectares",
-      snapshot.carbon_parameter_set_id::text AS "parameterSetId",
-      snapshot.parameter_set_name AS name,
-      snapshot.biomass_factor::double precision AS "biomassFactor",
-      snapshot.emission_factor::double precision AS "emissionFactor",
-      snapshot.co2_conversion_factor::double precision AS "co2ConversionFactor",
-      snapshot.incentive_per_ton_idr::double precision AS "incentivePerTonIdr",
-      snapshot.is_zone_demo_data AS "isDemoData",
-      snapshot.is_parameter_demo_data AS "isParameterDemoData",
-      snapshot.is_zone_approved AS "isZoneApproved",
-      snapshot.reason::text AS "snapshotReason",
-      snapshot.captured_at AS "snapshotAt"
-    FROM forest_zone_carbon_snapshots AS snapshot
-    WHERE (
-      (${toExclusive}::timestamptz IS NULL AND snapshot.captured_at <= ${currentTime}) OR
-      (${toExclusive}::timestamptz IS NOT NULL AND snapshot.captured_at < ${toExclusive})
-    )
-      AND (${zoneId}::uuid IS NULL OR snapshot.zone_id = ${zoneId}::uuid)
-    ORDER BY snapshot.zone_id, snapshot.captured_at DESC, snapshot.id DESC
-  `;
 }
 
 async function getReportAggregate(
   filters: MrvReportFilters,
+  now: Date,
 ): Promise<ReportAggregateRow> {
-  const { from, toExclusive } = reportRangeBounds(filters);
+  const { from, toExclusive, historical } = reportRangeBounds(filters, now);
   const zoneId = filters.zoneId;
   const rows = await prisma.$queryRaw<ReportAggregateRow[]>`
     WITH filtered_reports AS (
       SELECT
         report.id,
         report.created_at,
-        report.handling_status::text AS handling_status,
-        report.ai_state::text AS ai_state,
+        CASE WHEN ${historical} THEN COALESCE(last_status.next_status::text, 'MENUNGGU_TINDAKAN')
+          ELSE report.handling_status::text END AS handling_status,
+        CASE WHEN NOT ${historical} OR report.ai_analyzed_at < ${toExclusive}
+          THEN report.ai_state::text END AS ai_state,
+        evidence.decision AS evidence_decision,
         report.is_demo_sample
       FROM field_reports AS report
-      WHERE (${from}::timestamptz IS NULL OR report.captured_at >= ${from})
+      LEFT JOIN LATERAL (
+        SELECT event.next_status FROM report_status_events event
+        WHERE ${historical} AND event.report_id = report.id AND event.created_at < ${toExclusive}
+        ORDER BY event.created_at DESC, event.id DESC LIMIT 1
+      ) last_status ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT event.payload->>'decision' AS decision FROM audit_events event
+        WHERE event.report_id = report.id AND event.event_type = 'MRV_EVIDENCE_REVIEWED'
+          AND event.created_at < ${toExclusive}
+        ORDER BY event.created_at DESC, event.id DESC LIMIT 1
+      ) evidence ON TRUE
+      WHERE report.created_at < ${toExclusive}
+        AND (${from}::timestamptz IS NULL OR report.captured_at >= ${from})
         AND (
           ${toExclusive}::timestamptz IS NULL OR
           report.captured_at < ${toExclusive}
@@ -133,11 +112,14 @@ async function getReportAggregate(
         MIN(event.created_at) AS first_response_at
       FROM report_status_events AS event
       INNER JOIN filtered_reports AS report ON report.id = event.report_id
-      WHERE event.next_status = 'DALAM_PENANGANAN'
+      WHERE event.next_status = 'DALAM_PENANGANAN' AND event.created_at < ${toExclusive}
       GROUP BY event.report_id
     )
     SELECT
       COUNT(report.id)::integer AS "totalCount",
+      COUNT(*) FILTER (WHERE report.evidence_decision = 'ACCEPTED')::int AS "acceptedEvidenceCount",
+      COUNT(*) FILTER (WHERE report.evidence_decision = 'NEEDS_FOLLOW_UP')::int AS "followUpEvidenceCount",
+      COUNT(*) FILTER (WHERE report.evidence_decision = 'REJECTED')::int AS "rejectedEvidenceCount",
       COUNT(report.id) FILTER (WHERE report.is_demo_sample = TRUE)::integer
         AS "demoCount",
       COUNT(report.id) FILTER (WHERE report.is_demo_sample = FALSE)::integer
@@ -219,80 +201,96 @@ async function getReportAggregate(
 
 async function getHotspotAggregate(
   filters: MrvReportFilters,
+  now: Date,
 ): Promise<HotspotAggregateRow> {
-  const { from, toExclusive } = reportRangeBounds(filters);
+  const { from, toExclusive } = reportRangeBounds(filters, now);
   const zoneId = filters.zoneId;
-  const rows = await prisma.$queryRaw<HotspotAggregateRow[]>`
-    SELECT
-      COUNT(hotspot.id)::integer AS "totalCount",
-      COUNT(hotspot.id) FILTER (WHERE hotspot.is_demo_data = TRUE)::integer
-        AS "demoCount",
-      COUNT(hotspot.id) FILTER (WHERE hotspot.is_demo_data = FALSE)::integer
-        AS "nonDemoCount"
-    FROM satellite_hotspots AS hotspot
-    WHERE (${from}::timestamptz IS NULL OR hotspot.acquired_at >= ${from})
-      AND (
-        ${toExclusive}::timestamptz IS NULL OR
-        hotspot.acquired_at < ${toExclusive}
-      )
-      AND (
-        ${zoneId}::uuid IS NULL OR EXISTS (
-          SELECT 1
-          FROM forest_zones AS zone
-          WHERE zone.id = ${zoneId}::uuid
-            AND ST_Intersects(zone.boundary, hotspot.location)
+  const [row] = await prisma.$queryRaw<HotspotAggregateRow[]>`
+    WITH observations AS (
+      SELECT hotspot.is_demo_data,
+        CASE WHEN ${zoneId}::uuid IS NULL THEN TRUE
+          WHEN history.boundary IS NULL THEN NULL
+          ELSE history.is_zone_approved AND ST_Intersects(history.boundary, hotspot.location)
+        END AS included
+      FROM satellite_hotspots hotspot
+      LEFT JOIN LATERAL (
+        SELECT snapshot.boundary, snapshot.is_zone_approved FROM forest_zone_carbon_snapshots snapshot
+        WHERE snapshot.zone_id = ${zoneId}::uuid AND snapshot.captured_at <= hotspot.acquired_at
+        ORDER BY snapshot.captured_at DESC, snapshot.id DESC LIMIT 1
+      ) history ON TRUE
+      WHERE (${from}::timestamptz IS NULL OR hotspot.acquired_at >= ${from})
+        AND hotspot.acquired_at < ${toExclusive} AND hotspot.fetched_at < ${toExclusive}
+    )
+    SELECT COUNT(*) FILTER (WHERE included)::integer AS "totalCount",
+      COUNT(*) FILTER (WHERE included AND is_demo_data)::integer AS "demoCount",
+      COUNT(*) FILTER (WHERE included AND NOT is_demo_data)::integer AS "nonDemoCount",
+      COALESCE(BOOL_OR(included IS NULL), FALSE) OR (
+        ${zoneId}::uuid IS NOT NULL AND ${from}::timestamptz IS NOT NULL AND NOT EXISTS (
+          SELECT 1 FROM forest_zone_carbon_snapshots
+          WHERE zone_id = ${zoneId}::uuid AND boundary IS NOT NULL AND captured_at <= ${from}
         )
-      )
+      ) AS "historicalBoundaryUnavailable"
+    FROM observations
   `;
+  return row;
+}
 
-  return rows[0] ?? { demoCount: 0, nonDemoCount: 0, totalCount: 0 };
+function getCanalObservations(filters: MrvReportFilters, now: Date) {
+  const { from, toExclusive } = reportRangeBounds(filters, now);
+  const zoneId = filters.zoneId;
+  return prisma.$queryRaw<NonNullable<MrvReportSource["canalObservations"]>>`
+    SELECT canal_condition::text AS condition,
+      COUNT(*) FILTER (WHERE is_demo_sample)::int AS "demoCount",
+      COUNT(*) FILTER (WHERE NOT is_demo_sample)::int AS "nonDemoCount"
+    FROM field_reports
+    WHERE canal_condition IS NOT NULL AND created_at < ${toExclusive} AND captured_at < ${toExclusive}
+      AND (${from}::timestamptz IS NULL OR captured_at >= ${from})
+      AND (${zoneId}::uuid IS NULL OR zone_id = ${zoneId}::uuid)
+    GROUP BY canal_condition ORDER BY canal_condition
+  `;
 }
 
 export async function getMrvReportSource(
   filters: MrvReportFilters,
   currentTime = new Date(),
 ): Promise<MrvReportSource | null> {
-  const selectedZone = filters.zoneId
-    ? await prisma.forestZone.findUnique({
-        where: { id: filters.zoneId },
-        select: { id: true },
-      })
-    : null;
-
-  if (filters.zoneId && !selectedZone) {
-    return null;
-  }
-
-  const [reports, hotspots, carbonSnapshots] = await Promise.all([
-    getReportAggregate(filters),
-    getHotspotAggregate(filters),
-    getCarbonSnapshots(filters, currentTime),
-  ]);
-
-  const approvedSnapshotZones = carbonSnapshots.filter(
-    (snapshot) => snapshot.isZoneApproved,
-  );
+  const zoneId = filters.zoneId;
+  const { from, toExclusive } = reportRangeBounds(filters, currentTime);
+  const asOf = new Date(toExclusive.getTime() - 1);
+  const dates = [asOf];
+  if (from) dates.push(new Date(from.getTime() - 1));
+  const [reports, hotspots, history, canalObservations, selectedZone] =
+    await Promise.all([
+      getReportAggregate(filters, currentTime),
+      getHotspotAggregate(filters, currentTime),
+      getCarbonHistory(dates, zoneId),
+      getCanalObservations(filters, currentTime),
+      zoneId
+        ? prisma.forestZone.findUnique({
+            where: { id: zoneId },
+            select: { zoneName: true },
+          })
+        : null,
+    ]);
+  if (zoneId && !selectedZone) return null;
+  const [carbon, previous] = history;
 
   return {
-    carbonSnapshotAsOf: snapshotAsOf(filters, currentTime).toISOString(),
-    hasCarbonSnapshot: carbonSnapshots.length > 0,
+    carbonSnapshotAsOf: asOf.toISOString(),
+    hasCarbonSnapshot: carbon.hasSnapshot,
+    excludedZoneCount: carbon.excludedCount,
+    priorCarbonTons: previous?.hasSnapshot
+      ? previous.totals.estimatedCarbonTons
+      : null,
+    partial: Boolean(
+      filters.range?.toExclusive && filters.range.toExclusive > currentTime,
+    ),
+    zoneName:
+      carbon.zones[0]?.zoneName ??
+      (zoneId && !filters.range ? selectedZone?.zoneName : null),
     hotspots,
     reports,
-    zones: approvedSnapshotZones.map((snapshot): CarbonSnapshotZoneValues => ({
-      areaHectares: snapshot.areaHectares,
-      biomassFactor: snapshot.biomassFactor,
-      co2ConversionFactor: snapshot.co2ConversionFactor,
-      emissionFactor: snapshot.emissionFactor,
-      incentivePerTonIdr: snapshot.incentivePerTonIdr,
-      isDemoData: snapshot.isDemoData,
-      name: snapshot.name,
-      parameterIsDemoData: snapshot.isParameterDemoData,
-      parameterSetId: snapshot.parameterSetId,
-      snapshotAt: snapshot.snapshotAt.toISOString(),
-      snapshotReason: snapshot.snapshotReason,
-      villageName: snapshot.villageName,
-      zoneId: snapshot.zoneId,
-      zoneName: snapshot.zoneName,
-    })),
+    zones: carbon.zones,
+    canalObservations,
   };
 }

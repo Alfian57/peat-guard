@@ -121,3 +121,27 @@ test("a stale completion cannot overwrite another sync claim", async () => {
     }),
   ).toBeNull();
 });
+
+test("recovers a committed upload immediately after reload without reuploading its photo", async () => {
+  const report = createQueuedReport(content, ownerId);
+  await saveQueuedReport(report, ownerId);
+  expect(
+    await claimQueuedReport(report.clientReportId, ownerId),
+  ).not.toBeNull();
+  const fetchReceipt = mock(
+    async (request: RequestInfo | URL, options?: RequestInit) => {
+      expect(request).toBe(`/api/reports/receipt/${report.clientReportId}`);
+      expect(options?.body).toBeUndefined();
+      return Response.json({ id: serverId });
+    },
+  );
+  globalThis.fetch = fetchReceipt as typeof fetch;
+
+  expect((await syncQueuedReports(ownerId)).synced).toBe(1);
+  expect(fetchReceipt).toHaveBeenCalledTimes(1);
+  expect(await getQueuedReport(report.clientReportId, ownerId)).toMatchObject({
+    syncState: "synced",
+    syncLease: null,
+    serverReportId: serverId,
+  });
+});

@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import { APP_ROUTES } from "./lib/routes";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["pdfkit"],
   async headers() {
     return [
       {

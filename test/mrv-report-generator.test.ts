@@ -119,7 +119,7 @@ describe("MRV situation report generation", () => {
     expect(report.containsIllustrativeData).toBe(true);
   });
 
-  test("leaves period carbon unavailable when no snapshot exists", async () => {
+  test("leaves carbon and scoped hotspot metrics unavailable when historical coverage is incomplete", async () => {
     const receivedInputs: unknown[] = [];
     const provider: NarrativeProvider = async (input) => {
       receivedInputs.push(input);
@@ -135,6 +135,7 @@ describe("MRV situation report generation", () => {
         ...source,
         carbonSnapshotAsOf: "2020-01-01T16:59:59.999Z",
         hasCarbonSnapshot: false,
+        hotspots: { ...source.hotspots, historicalBoundaryUnavailable: true },
         zones: [],
       },
       provider,
@@ -154,6 +155,7 @@ describe("MRV situation report generation", () => {
       metrics: {
         estimatedCarbonTons: null,
         estimatedIncentiveIdr: null,
+        satelliteHotspotCount: null,
       },
     });
   });

@@ -1,3 +1,4 @@
+import { Prisma } from "@/lib/generated/prisma/client";
 import type {
   ApprovedZoneValues,
   DashboardFilters,
@@ -12,19 +13,21 @@ export function roundToTwoDecimals(value: number): number {
 }
 
 export function calculateZoneImpact(zone: ApprovedZoneValues): ZoneImpact {
-  const rawCarbonTons =
-    zone.areaHectares *
-    zone.biomassFactor *
-    zone.emissionFactor *
-    zone.co2ConversionFactor;
+  const rawCarbonTons = new Prisma.Decimal(zone.areaHectares)
+    .times(zone.biomassFactor)
+    .times(zone.emissionFactor)
+    .times(zone.co2ConversionFactor);
 
   return {
     areaHectares: zone.areaHectares,
     calculationVersion: "peatguard-mrv-v1",
-    estimatedCarbonTons: roundToTwoDecimals(rawCarbonTons),
-    estimatedIncentiveIdr: roundToTwoDecimals(
-      rawCarbonTons * zone.incentivePerTonIdr,
-    ),
+    estimatedCarbonTons: rawCarbonTons
+      .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP)
+      .toNumber(),
+    estimatedIncentiveIdr: rawCarbonTons
+      .times(zone.incentivePerTonIdr)
+      .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP)
+      .toNumber(),
     isDemoData: zone.isDemoData,
     isIllustrative: zone.isDemoData || zone.parameterIsDemoData,
     parameters: {
@@ -83,13 +86,36 @@ function ensureVillage(
   return created;
 }
 
+export function summarizeZoneImpacts(zones: ZoneImpact[]) {
+  return zones.reduce(
+    (totals, zone) => ({
+      estimatedCarbonTons: roundToTwoDecimals(
+        totals.estimatedCarbonTons + zone.estimatedCarbonTons,
+      ),
+      estimatedIncentiveIdr: roundToTwoDecimals(
+        totals.estimatedIncentiveIdr + zone.estimatedIncentiveIdr,
+      ),
+      protectedAreaHectares: roundToTwoDecimals(
+        totals.protectedAreaHectares + zone.areaHectares,
+      ),
+    }),
+    {
+      estimatedCarbonTons: 0,
+      estimatedIncentiveIdr: 0,
+      protectedAreaHectares: 0,
+    },
+  );
+}
+
 export function buildMrvDashboard(
   zoneRows: ApprovedZoneValues[],
   activities: VillageActivity[],
   filters: DashboardFilters,
   asOf: Date,
 ): MrvDashboard {
-  const zones = zoneRows.map(calculateZoneImpact);
+  const zones = zoneRows
+    .filter((row) => !row.overlapsApprovedZone)
+    .map(calculateZoneImpact);
   const villages = new Map<string, VillageBuilder>();
 
   for (const zone of zones) {
@@ -116,24 +142,7 @@ export function buildMrvDashboard(
       activity.demoAiTriagedFieldReportCount > 0;
   }
 
-  const zoneTotals = zones.reduce(
-    (totals, zone) => ({
-      estimatedCarbonTons: roundToTwoDecimals(
-        totals.estimatedCarbonTons + zone.estimatedCarbonTons,
-      ),
-      estimatedIncentiveIdr: roundToTwoDecimals(
-        totals.estimatedIncentiveIdr + zone.estimatedIncentiveIdr,
-      ),
-      protectedAreaHectares: roundToTwoDecimals(
-        totals.protectedAreaHectares + zone.areaHectares,
-      ),
-    }),
-    {
-      estimatedCarbonTons: 0,
-      estimatedIncentiveIdr: 0,
-      protectedAreaHectares: 0,
-    },
-  );
+  const zoneTotals = summarizeZoneImpacts(zones);
 
   return {
     activityPeriod: {
@@ -154,7 +163,10 @@ export function buildMrvDashboard(
       status: "unavailable",
     },
     totals: {
-      approvedZoneCount: zones.length,
+      approvedZoneCount: zoneRows.length,
+      ...(zoneRows.length > zones.length
+        ? { excludedZoneCount: zoneRows.length - zones.length }
+        : {}),
       containsIllustrativeData:
         zones.some((zone) => zone.isIllustrative) ||
         activities.some(

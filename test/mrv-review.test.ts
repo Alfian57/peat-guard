@@ -40,7 +40,9 @@ const create = mock(async ({ data }: { data: Record<string, unknown> }) => ({
   data,
 }));
 const transactionClient = {
-  auditEvent: { create },
+  auditEvent: { create, findFirst: mock(async () => null) },
+  $executeRaw: mock(async () => 0),
+  $queryRaw: mock(async () => []),
   fieldReport: { findUnique },
 };
 const transaction = mock(
@@ -130,6 +132,7 @@ describe("append-only MRV evidence review", () => {
       actor,
       reportId,
       "NEEDS_FOLLOW_UP",
+      { note: "Periksa ulang lokasi." },
     );
 
     expect(result).toMatchObject({

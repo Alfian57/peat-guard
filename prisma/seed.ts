@@ -148,6 +148,7 @@ async function seedZones(transaction: Prisma.TransactionClient, now: Date) {
     create: {
       id: "60000000-0000-4000-8000-000000000001",
       name: "FigCraft demo values (illustrative)",
+      source: "Parameter sintetis untuk simulasi PEATGUARD",
       biomassFactor: 50,
       emissionFactor: 0.2,
       co2ConversionFactor: 3.67,
@@ -192,13 +193,13 @@ async function seedZones(transaction: Prisma.TransactionClient, now: Date) {
       "zone_id", "zone_name", "village_name", "area_hectares",
       "carbon_parameter_set_id", "parameter_set_name", "biomass_factor", "emission_factor",
       "co2_conversion_factor", "incentive_per_ton_idr", "is_zone_approved",
-      "is_zone_demo_data", "is_parameter_demo_data", "reason", "captured_at"
+      "is_zone_demo_data", "is_parameter_demo_data", "reason", "captured_at", "boundary"
     )
     SELECT DISTINCT ON (snapshot."zone_id")
       snapshot."zone_id", snapshot."zone_name", snapshot."village_name", snapshot."area_hectares",
       snapshot."carbon_parameter_set_id", snapshot."parameter_set_name", snapshot."biomass_factor",
       snapshot."emission_factor", snapshot."co2_conversion_factor", snapshot."incentive_per_ton_idr",
-      true, true, true, 'INITIAL_BASELINE'::"CarbonSnapshotReason", ${baselineAt}
+      true, true, true, 'INITIAL_BASELINE'::"CarbonSnapshotReason", ${baselineAt}, snapshot.boundary
     FROM "forest_zone_carbon_snapshots" AS snapshot
     WHERE snapshot."zone_id" IN (${zoneIds})
       AND snapshot."is_zone_approved"

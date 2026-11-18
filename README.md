@@ -14,23 +14,22 @@ Karya ini dikembangkan untuk kompetisi **IT RUSH 2026 - Web Development**, disel
 
 - **Subtema:** Mitigasi Bencana dan Perubahan Iklim _(relevan juga dengan Lingkungan dan Konservasi)_
 - **URL Live Deployment Publik:** [https://peat-guard.alfian-gading.my.id](https://peat-guard.alfian-gading.my.id)
-- **URL Video Demonstrasi:** [Tonton di YouTube](https://youtu.be/placeholder-demo-video) _(Durasi 3–5 Menit, Unlisted)_
 - **Akses Repositori:** Publik ([GitHub Alfian57/peat-guard](https://github.com/Alfian57/peat-guard))
 
 ---
 
 ## 👥 Akun Uji Coba (Demo Credentials)
 
-Untuk mempermudah dewan juri dalam menguji seluruh peran dan batasan hak akses (_Role-Based Access Control / RBAC_), sistem telah dilengkapi dengan tiga akun terverifikasi. Penguji dapat memasukkan email dan password di bawah ini pada halaman `/login` atau menggunakan fasilitas **Instant 1-Click Demo Login** yang tersedia:
+Untuk mempermudah dewan juri dalam menguji seluruh peran dan batasan hak akses (_Role-Based Access Control / RBAC_), sistem telah dilengkapi dengan tiga akun terverifikasi. Penguji dapat memasukkan email dan password di bawah ini secara manual pada halaman `/login`.
 
 | Peran (_Role_)                              | Email Akun Demo         | Password   | Ruang Kerja (_Workspace_) | Deskripsi Hak Akses                                                                                                                                  |
 | :------------------------------------------ | :---------------------- | :--------- | :------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Relawan Lapangan (MPA)**                  | `relawan@gmail.com`     | `password` | `/field`                  | Pelaporan lapangan _offline-first_, kompresi foto lokal, pengambilan GPS, dan status antrean sinkronisasi.                                           |
-| **Koordinator Posko (BPBD/Manggala Agni)**  | `posko@gmail.com`       | `password` | `/command`                | _Full-screen WebGIS Command Center_, agregasi titik panas NASA FIRMS, analisis jarak sumber air, dan triase AI.                                      |
-| **Verifikator Karbon (Auditor/CSR/Publik)** | `verifikator@gmail.com` | `password` | `/audit`                  | Dasbor MRV (_Monitoring, Reporting, Verification_), kalkulator deterministik $\text{CO}_2\text{e}$, generator laporan situasi, dan persetujuan zona. |
+| **Relawan Lapangan (MPA)**                  | `relawan@gmail.com`     | `password` | `/field/home`             | Pelaporan lapangan _offline-first_, kompresi foto lokal, pengambilan GPS, dan status antrean sinkronisasi.                                           |
+| **Koordinator Posko (BPBD/Manggala Agni)**  | `posko@gmail.com`       | `password` | `/command/map`            | _Full-screen WebGIS Command Center_, agregasi titik panas NASA FIRMS, analisis jarak sumber air, dan triase AI.                                      |
+| **Verifikator Karbon (Auditor/CSR/Publik)** | `verifikator@gmail.com` | `password` | `/audit/dashboard`        | Dasbor MRV (_Monitoring, Reporting, Verification_), kalkulator deterministik $\text{CO}_2\text{e}$, generator laporan situasi, dan persetujuan zona. |
 
 > **Tips Pengujian Fitur AI Lapangan:**  
-> Pada formulir pelaporan relawan (`/field`), disediakan tombol **Sampel Foto Uji Coba** (asap pekat kebakaran, sekat kanal kering, dan kondisi aman) agar penguji dapat langsung mengevaluasi analisis _Multimodal AI_ tanpa harus mengunggah foto pribadi.
+> Pada formulir pelaporan relawan (`/field/reports/create`), disediakan tombol **Sampel Foto Uji Coba** (asap pekat kebakaran, sekat kanal kering, dan kondisi aman) agar penguji dapat langsung mengevaluasi analisis _Multimodal AI_ tanpa harus mengunggah foto pribadi.
 
 ---
 
@@ -62,19 +61,19 @@ Lahan gambut tropis Indonesia menyimpan cadangan karbon global yang sangat masif
 
 ### 3. Triase Visual Laporan Berbasis Multimodal AI (Vision LLM)
 
-- **Struktur JSON Terjamin (_Structured Outputs_):** Foto laporan lapangan dianalisis menggunakan _Multimodal Vision API_ dengan skema ketat (_strict JSON schema_).
+- **Validasi keluaran triase.** Foto dengan persetujuan relawan dianalisis menggunakan _Multimodal Vision API_. Server memeriksa keluaran JSON terhadap skema triase sebelum menyimpannya. Posko dapat mencoba ulang analisis yang gagal.
 - **Deteksi False Positive & Tingkat Keyakinan:** AI mengevaluasi apakah objek adalah kepulan asap kebakaran gambut nyata, kerusakan sekat kanal, atau sekadar kabut pagi biasa, lengkap dengan skor keyakinan (_confidence score_ 0.0 - 1.0).
 - **Rekomendasi Taktis Otomatis:** Menghasilkan 3 langkah mitigasi cepat bagi posko dan tim penindak di lapangan.
 
 ### 4. Kalkulator Karbon Deterministik & Log Audit MRV Bebas Halusinasi
 
-- **Perhitungan Emisi Bebas Halusinasi:** Total estimasi emisi karbon yang berhasil dicegah (dalam ton $\text{CO}_2\text{e}$) dihitung secara murni menggunakan kalkulasi matematis deterministik di _backend_, **bukan** ditebak atau diestimasi bebas oleh model LLM.
+- **Perhitungan Emisi Bebas Halusinasi:** Server menghitung estimasi simulasi dengan luas zona × biomassa × faktor emisi × konversi CO₂. Insentif adalah estimasi CO₂e × tarif per ton. Zona konflik dikeluarkan dari total dan parameter berversi dapat ditinjau di ruang kerja Verifikator.
 - **Append-Only Evidence Ledger:** Setiap verifikasi patroli, stempel waktu GPS, dan riwayat foto dicatat dalam log audit tak-dapat-diubah (_immutable ledger_) untuk transparansi kredit karbon.
 
 ### 5. Generator Laporan Kepatuhan & Situasi Otomatis
 
 - **Sintesis Narasi Eksekutif:** Memanfaatkan AI untuk menyusun narasi laporan situasi lapangan berdasarkan statistik faktual yang teragregasi dari basis data.
-- **Pratinjau & Ekspor Dokumen:** Mendukung pratinjau dokumen terstruktur yang siap dicetak atau diekspor ke format dokumen resmi.
+- **Pratinjau & Ekspor Dokumen:** Posko dan Verifikator dapat membuat pratinjau laporan situasi harian atau audit karbon bulanan. Verifikator dapat menerbitkan pratinjau ke arsip internal dengan unduhan PDF.
 
 ---
 
@@ -100,7 +99,7 @@ Sesuai ketentuan **Poin V.5 Guidebook IT RUSH 2026**, berikut rincian penggunaan
 
 ### C. Artificial Intelligence Engine
 
-- **Vision & LLM Reasoning:** DeepSeek Multimodal Vision API (kompatibel dengan OpenAI Structured Outputs spec).
+- **Vision & LLM Reasoning:** DeepSeek Multimodal Vision API dengan pemeriksaan keamanan penyedia dan validasi keluaran di server.
 - **AI Coding Assistant Disclosure:** Selama proses perancangan dan pengembangan perangkat lunak, tim memanfaatkan **Google Antigravity Agentic AI** sebagai asisten coding untuk membantu perancangan struktur arsitektur, implementasi boilerplate, refaktorisasi pola _1 File = 1 Component_, pembuatan suite pengujian otomatis, dan konfigurasi GitHub Actions CI/CD.
 
 ---
@@ -123,11 +122,11 @@ flowchart LR
 1. **Runner 1: Linting & Analisis Statis** (`lint-and-static-analysis`)
    - Memvalidasi kualitas kode dengan ESLint, Prettier format check, dan `tsc --noEmit` tipe data ketat tanpa toleransi `any` implisit.
 2. **Runner 2: Unit & Component Testing** (`unit-and-component-tests`)
-   - Menjalankan **211 pengujian unit** dengan Bun native test runner dan Testing Library (cakupan: validasi formula karbon, parsing CSV FIRMS, otorisasi RBAC, state PWA).
+   - Menjalankan pengujian unit dan komponen dengan Bun dan Testing Library, termasuk formula karbon, parsing CSV FIRMS, otorisasi RBAC, dan state PWA.
 3. **Runner 3: PostGIS Spatial Integration** (`database-and-spatial-integration`)
    - Menjalankan kontainer layanan PostGIS riil (`postgis/postgis:17-3.7`), migrasi database, seeding, dan pengujian fungsi spasial (`ST_DWithin`, `ST_Distance`).
 4. **Runner 4 & 5: End-to-End Playwright Tests (Horizontal Sharded)** (`e2e-playwright-shards`)
-   - Pengujian skenario menyeluruh menggunakan Playwright yang dipecah (_sharded_) menjadi 2 runner paralel untuk menjaga waktu eksekusi tetap di bawah 2 menit (cakupan: simulasi offline PWA, navigasi mobile viewport, alur approval zona, audit aksesibilitas).
+   - Menjalankan Playwright pada build produksi di dua runner paralel. Cakupan meliputi PWA saat jaringan browser diputus, navigasi seluler, persetujuan zona, dan audit aksesibilitas.
 5. **Continuous Deployment (CD) Zero-Downtime:**
    - Image Docker di-build dengan multi-stage caching, diunggah ke GitHub Container Registry (`ghcr.io/alfian57/peat-guard`), dan dideploy ke server VPS menggunakan helper script `update.sh` yang terintegrasi dengan arsitektur **Ansible**.
 
@@ -155,7 +154,7 @@ flowchart LR
    cp .env.example .env
    ```
 
-   _(Opsional: Isi `DEEPSEEK_API_KEY`, `NASA_FIRMS_MAP_KEY`, dan `NEXT_PUBLIC_MAPTILER_KEY` untuk menguji integrasi pihak ketiga secara penuh. Tanpa API key tersebut, sistem tetap berjalan normal menggunakan mode demonstrasi simulasi)._
+   _(Opsional: Isi `DEEPSEEK_API_KEY`, `NASA_FIRMS_MAP_KEY`, dan `NEXT_PUBLIC_MAPTILER_KEY` untuk menguji integrasi pihak ketiga secara penuh. Tanpa API key tersebut, data demo tetap tersedia dan integrasi terkait menampilkan status layanan)._
 
 3. **Jalankan Aplikasi dengan Docker Compose:**
 
@@ -170,15 +169,18 @@ flowchart LR
 
 5. **Menjalankan Pengujian Otomatis (Testing Suite):**
    ```sh
-   # Menjalankan seluruh pengujian unit & komponen (211 tests)
+   # Menjalankan pengujian unit dan komponen
    bun run test:unit
 
    # Menjalankan pengujian integrasi database PostGIS
    bun run test:integration
 
-   # Menjalankan seluruh pengujian E2E Playwright
-   bun run test:e2e
+   # Menjalankan seluruh pengujian Playwright, termasuk service worker PWA
+   bun run build
+   E2E_PRODUCTION=1 bun run test:e2e
    ```
+
+Untuk rilis dengan basis data yang sudah ada, jalankan `bun run db:migrate:deploy` pada basis data tujuan sebelum menjalankan aplikasi dan worker versi baru.
 
 ---
 

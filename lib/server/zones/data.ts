@@ -26,6 +26,9 @@ type ZoneRow = {
   isDemoData: boolean;
   geometryJson: string;
   reviewRevision: number;
+  reviewNote: string | null;
+  carbonParameterSetId: string;
+  overlapsApprovedZone: boolean;
 };
 
 export type CommandZone = {
@@ -41,6 +44,10 @@ export type CommandZone = {
   isApproved: boolean;
   isDemoData: boolean;
   geometry: ZonePolygon;
+  reviewRevision?: number;
+  reviewNote?: string | null;
+  carbonParameterSetId?: string;
+  overlapsApprovedZone?: boolean;
 };
 
 export async function listCommandZones(): Promise<CommandZone[]> {
@@ -50,7 +57,7 @@ export async function listCommandZones(): Promise<CommandZone[]> {
 
 export async function listPendingZoneReviews() {
   const rows = await queryZones(
-    Prisma.sql`WHERE zone.archived_at IS NULL AND NOT zone.is_approved`,
+    Prisma.sql`WHERE zone.archived_at IS NULL AND NOT zone.is_approved AND zone.review_note IS NULL`,
   );
   return rows.map((row) => ({
     zone: toCommandZone(row),
@@ -76,7 +83,9 @@ export async function createCommandZone(
   actorId: string,
 ): Promise<CommandZone> {
   const parameterSet = await prisma.carbonParameterSet.findFirst({
-    where: { isActive: true },
+    where: input.carbonParameterSetId
+      ? { id: input.carbonParameterSetId }
+      : { isActive: true },
     orderBy: { createdAt: "desc" },
     select: { id: true },
   });
@@ -172,19 +181,39 @@ export async function updateCommandZone(
   }
 
   const approvalSensitiveChange =
-    input.geometry !== undefined || input.peatDepthMeters !== undefined;
+    input.geometry !== undefined ||
+    input.peatDepthMeters !== undefined ||
+    input.carbonParameterSetId !== undefined;
+
+  if (input.carbonParameterSetId !== undefined) {
+    const parameter = await prisma.carbonParameterSet.findUnique({
+      where: { id: input.carbonParameterSetId },
+      select: { id: true },
+    });
+    if (!parameter)
+      throw new CommandApiError(
+        422,
+        "invalid_carbon_parameters",
+        "Versi parameter tidak ditemukan.",
+      );
+    assignments.push(
+      Prisma.sql`carbon_parameter_set_id = ${parameter.id}::uuid`,
+    );
+  }
 
   assignments.push(
-    Prisma.sql`updated_at = CURRENT_TIMESTAMP, review_revision = review_revision + 1`,
+    Prisma.sql`review_note = NULL, updated_at = CURRENT_TIMESTAMP, review_revision = review_revision + 1`,
   );
 
   try {
-    const changedFields = Object.keys(input);
+    const changedFields = Object.keys(input).filter(
+      (field) => field !== "expectedRevision",
+    );
     const changed = await prisma.$transaction(async (transaction) => {
       const currentRows = await transaction.$queryRaw<
-        Array<{ id: string; isApproved: boolean }>
+        Array<{ id: string; isApproved: boolean; reviewRevision: number }>
       >(Prisma.sql`
-        SELECT id::text AS id, is_approved AS "isApproved"
+        SELECT id::text AS id, is_approved AS "isApproved", review_revision AS "reviewRevision"
         FROM forest_zones
         WHERE id = ${zoneId}::uuid AND archived_at IS NULL
         FOR UPDATE
@@ -198,6 +227,12 @@ export async function updateCommandZone(
           "Zona tidak ditemukan.",
         );
       }
+
+      if (
+        input.expectedRevision !== undefined &&
+        input.expectedRevision !== current.reviewRevision
+      )
+        throw reviewConflict();
 
       const revokeApproval = current.isApproved && approvalSensitiveChange;
 
@@ -225,6 +260,9 @@ export async function updateCommandZone(
           zone.is_approved AS "isApproved",
           zone.is_demo_data AS "isDemoData",
           zone.review_revision AS "reviewRevision",
+          zone.review_note AS "reviewNote",
+          zone.carbon_parameter_set_id::text AS "carbonParameterSetId",
+          ${zoneConflictSql} AS "overlapsApprovedZone",
           ST_AsGeoJSON(zone.boundary) AS "geometryJson"
         FROM updated AS zone
         INNER JOIN carbon_parameter_sets AS parameters
@@ -271,6 +309,50 @@ export async function updateCommandZone(
   }
 }
 
+function reviewConflict() {
+  return new CommandApiError(
+    409,
+    "zone_revision_conflict",
+    "Data zona berubah. Muat ulang dan tinjau revisi terbaru.",
+  );
+}
+
+const zoneConflictSql = Prisma.sql`EXISTS (
+  SELECT 1 FROM forest_zones other
+  WHERE zone.is_approved AND other.id <> zone.id AND other.is_approved AND other.archived_at IS NULL
+    AND other.boundary && zone.boundary AND ST_Relate(other.boundary, zone.boundary, '2********')
+)`;
+
+export async function requestZoneRevision(
+  zoneId: string,
+  actorId: string,
+  expectedRevision: number,
+  note: string,
+) {
+  return prisma.$transaction(async (transaction) => {
+    const result = await transaction.forestZone.updateMany({
+      where: {
+        id: zoneId,
+        reviewRevision: expectedRevision,
+        archivedAt: null,
+        isApproved: false,
+        reviewNote: null,
+      },
+      data: { reviewNote: note, reviewRevision: { increment: 1 } },
+    });
+    if (!result.count) throw reviewConflict();
+    await transaction.auditEvent.create({
+      data: {
+        actorId,
+        aggregateType: "ForestZone",
+        aggregateId: zoneId,
+        eventType: "ZONE_CHANGES_REQUESTED",
+        payload: { note, revision: expectedRevision },
+      },
+    });
+  });
+}
+
 export async function approveCommandZone(
   zoneId: string,
   actorId: string,
@@ -287,6 +369,7 @@ export async function approveZoneReview(
   actorId: string,
   expectedRevision: number,
 ): Promise<{ zone: CommandZone; alreadyApproved: boolean }> {
+  await transaction.$executeRaw`SELECT pg_advisory_xact_lock(186202611, 20)`;
   await transaction.$queryRaw`SELECT id FROM forest_zones WHERE id = ${zoneId}::uuid FOR UPDATE`;
   const [current] = await queryZones(
     Prisma.sql`WHERE zone.id = ${zoneId}::uuid AND zone.archived_at IS NULL`,
@@ -294,15 +377,24 @@ export async function approveZoneReview(
   );
   if (!current)
     throw new CommandApiError(404, "zone_not_found", "Zona tidak ditemukan.");
-  if (current.reviewRevision !== expectedRevision) {
-    throw new CommandApiError(
-      409,
-      "zone_revision_conflict",
-      "Data zona berubah. Muat ulang dan tinjau kembali sebelum menyetujui.",
-    );
-  }
+  if (current.reviewRevision !== expectedRevision || current.reviewNote)
+    throw reviewConflict();
   if (current.isApproved)
     return { zone: toCommandZone(current), alreadyApproved: true };
+
+  const conflicts = await transaction.$queryRaw<Array<{ name: string }>>`
+    SELECT other.zone_name AS name FROM forest_zones zone
+    JOIN forest_zones other ON other.id <> zone.id AND other.boundary && zone.boundary
+    WHERE zone.id = ${zoneId}::uuid AND other.is_approved AND other.archived_at IS NULL
+      AND ST_Relate(other.boundary, zone.boundary, '2********')
+    ORDER BY other.zone_name LIMIT 5
+  `;
+  if (conflicts.length)
+    throw new CommandApiError(
+      409,
+      "zone_overlap",
+      `Batas bertumpang tindih dengan ${conflicts.map(({ name }) => name).join(", ")}. Minta Posko memperbaiki batas.`,
+    );
 
   await transaction.$executeRaw`
       UPDATE forest_zones SET is_approved = TRUE, updated_at = CURRENT_TIMESTAMP
@@ -395,6 +487,9 @@ async function queryZones(
       zone.is_approved AS "isApproved",
       zone.is_demo_data AS "isDemoData",
           zone.review_revision AS "reviewRevision",
+          zone.review_note AS "reviewNote",
+          zone.carbon_parameter_set_id::text AS "carbonParameterSetId",
+          ${zoneConflictSql} AS "overlapsApprovedZone",
       ST_AsGeoJSON(zone.boundary) AS "geometryJson"
     FROM forest_zones AS zone
     INNER JOIN carbon_parameter_sets AS parameters
@@ -418,6 +513,10 @@ function toCommandZone(row: ZoneRow): CommandZone {
     incentivePerTonIdr: Number(row.incentivePerTonIdr),
     isApproved: row.isApproved,
     isDemoData: row.isDemoData,
+    carbonParameterSetId: row.carbonParameterSetId,
+    reviewRevision: row.reviewRevision,
+    reviewNote: row.reviewNote,
+    overlapsApprovedZone: row.overlapsApprovedZone,
     geometry: JSON.parse(row.geometryJson) as ZonePolygon,
   };
 }

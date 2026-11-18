@@ -80,6 +80,28 @@ export async function loginAs(
   role: keyof typeof DEMO_CREDENTIALS,
 ): Promise<void> {
   const creds = DEMO_CREDENTIALS[role];
+  // Isolate local production login attempts so concurrent browser tests do not
+  // share a single loopback rate-limit bucket.
+  if (process.env.E2E_PRODUCTION === "1") {
+    const loginUrl = new URL(
+      process.env.E2E_BASE_URL ??
+        `http://localhost:${process.env.PORT ?? 3000}`,
+    );
+    if (["localhost", "127.0.0.1", "[::1]"].includes(loginUrl.hostname)) {
+      const unique = randomUUID().replaceAll("-", "").slice(0, 6).match(/../g)!;
+      await page.route(
+        "**/api/auth/sign-in/email",
+        (route) =>
+          route.continue({
+            headers: {
+              ...route.request().headers(),
+              "x-forwarded-for": `10.${unique.map((part) => Number.parseInt(part, 16)).join(".")}`,
+            },
+          }),
+        { times: 1 },
+      );
+    }
+  }
   await page.goto(APP_ROUTES.login);
 
   await page.fill('input[name="email"]', creds.email);
@@ -90,6 +112,7 @@ export async function loginAs(
     ? `/${creds.homeRoute.split("/")[1]}`
     : "/";
   await page.waitForURL((url) => url.pathname.startsWith(expectedPrefix), {
+    waitUntil: "domcontentloaded",
     timeout: 20_000,
   });
 }

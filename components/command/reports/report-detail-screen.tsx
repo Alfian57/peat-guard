@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  CANAL_CONDITION_LABELS,
+  isCanalCondition,
+} from "@/lib/canal-observation";
 import Link from "next/link";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -248,6 +252,19 @@ export function ReportDetailScreen({ reportId }: { reportId: string }) {
         />
         <div className="flex min-w-0 flex-col gap-5">
           <ReportAiAnalysis report={report} />
+          {isCanalCondition(report.canalCondition) ? (
+            <section className="rounded-xl border border-border bg-white p-4">
+              <h2 className="font-heading text-xl font-bold">
+                Observasi sekat kanal
+              </h2>
+              <p>{CANAL_CONDITION_LABELS[report.canalCondition]}</p>
+              {report.canalObservation ? (
+                <p className="mt-1 text-sm whitespace-pre-wrap">
+                  {report.canalObservation}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
           <ReportLocationDetails report={report} zoneName={zoneName} />
           <ReportStatusHistory
             className="xl:flex-1"

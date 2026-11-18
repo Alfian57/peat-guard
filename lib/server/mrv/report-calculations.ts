@@ -1,6 +1,7 @@
 import {
   calculateZoneImpact,
   roundToTwoDecimals,
+  summarizeZoneImpacts,
 } from "@/lib/server/mrv/calculations";
 import type {
   CarbonSnapshotZoneImpact,
@@ -112,25 +113,13 @@ function isNarrativeDraft(value: unknown): value is ExecutiveNarrativeDraft {
   );
 }
 
-function sumZoneImpact(impacts: ReturnType<typeof calculateZoneImpact>[]): {
-  carbonTons: number;
-  incentiveIdr: number;
-  areaHectares: number;
-} {
-  return impacts.reduce(
-    (totals, impact) => ({
-      carbonTons: roundToTwoDecimals(
-        totals.carbonTons + impact.estimatedCarbonTons,
-      ),
-      incentiveIdr: roundToTwoDecimals(
-        totals.incentiveIdr + impact.estimatedIncentiveIdr,
-      ),
-      areaHectares: roundToTwoDecimals(
-        totals.areaHectares + impact.areaHectares,
-      ),
-    }),
-    { areaHectares: 0, carbonTons: 0, incentiveIdr: 0 },
-  );
+function sumZoneImpact(impacts: ReturnType<typeof calculateZoneImpact>[]) {
+  const totals = summarizeZoneImpacts(impacts);
+  return {
+    areaHectares: totals.protectedAreaHectares,
+    carbonTons: totals.estimatedCarbonTons,
+    incentiveIdr: totals.estimatedIncentiveIdr,
+  };
 }
 
 function createNarrativeMetrics(
@@ -154,7 +143,9 @@ function createNarrativeMetrics(
     estimatedIncentiveIdr: carbon?.incentiveIdr ?? null,
     fieldReportCount: source.reports.nonDemoCount,
     reportsWithResponseTime: source.reports.nonDemoRespondedCount,
-    satelliteHotspotCount: source.hotspots.nonDemoCount,
+    satelliteHotspotCount: source.hotspots.historicalBoundaryUnavailable
+      ? null
+      : source.hotspots.nonDemoCount,
   };
 }
 
@@ -215,10 +206,10 @@ function buildGeneratedReport(
   const generatedAtIso = generatedAt.toISOString();
 
   return {
-    canalCondition: {
-      reason: "CANAL_CONDITION_NOT_RECORDED",
-      status: "unavailable",
-    },
+    canalCondition: source.canalObservations?.length
+      ? { status: "available", observations: source.canalObservations }
+      : { reason: "CANAL_CONDITION_NOT_RECORDED", status: "unavailable" },
+    partial: source.partial,
     containsIllustrativeData:
       source.reports.demoCount > 0 ||
       source.hotspots.demoCount > 0 ||
@@ -240,17 +231,30 @@ function buildGeneratedReport(
           ? null
           : "CARBON_SNAPSHOT_NOT_RECORDED",
         status: source.hasCarbonSnapshot ? "available" : "unavailable",
+        excludedZoneCount: source.excludedZoneCount,
+        periodChangeTons:
+          carbon && source.priorCarbonTons != null
+            ? roundToTwoDecimals(carbon.carbonTons - source.priorCarbonTons)
+            : null,
         zones: zoneImpacts,
       },
       hotspots: {
         demoCount: source.hotspots.demoCount,
         nonDemoCount: source.hotspots.nonDemoCount,
         totalCount: source.hotspots.totalCount,
+        ...(source.hotspots.historicalBoundaryUnavailable
+          ? { historicalBoundaryUnavailable: true }
+          : {}),
       },
       reports: {
         activeCount: source.reports.activeCount,
         aiTriagedCount: source.reports.aiTriagedCount,
         closedCount: source.reports.closedCount,
+        evidence: {
+          accepted: source.reports.acceptedEvidenceCount ?? 0,
+          followUp: source.reports.followUpEvidenceCount ?? 0,
+          rejected: source.reports.rejectedEvidenceCount ?? 0,
+        },
         demoCount: source.reports.demoCount,
         nonDemoActiveCount: source.reports.nonDemoActiveCount,
         nonDemoAiTriagedCount: source.reports.nonDemoAiTriagedCount,
@@ -280,14 +284,23 @@ function buildGeneratedReport(
         from: filters.range?.fromDate ?? null,
         to: filters.range?.toDate ?? null,
       },
-      sections: [
-        { key: "hotspots", title: "Titik panas satelit" },
-        { key: "field-reports", title: "Laporan lapangan dan penanganan" },
-        { key: "response-time", title: "Waktu respons posko" },
-        { key: "canal-condition", title: "Kondisi sekat kanal" },
-        { key: "carbon", title: "Estimasi pencegahan emisi karbon" },
-        { key: "narrative", title: "Draf narasi eksekutif" },
-      ],
+      sections:
+        documentType === "CARBON_AUDIT"
+          ? [
+              { key: "carbon", title: "Estimasi pencegahan emisi karbon" },
+              { key: "evidence", title: "Ringkasan bukti MRV" },
+              { key: "narrative", title: "Draf narasi eksekutif" },
+            ]
+          : [
+              { key: "hotspots", title: "Titik panas satelit" },
+              {
+                key: "field-reports",
+                title: "Laporan lapangan dan penanganan",
+              },
+              { key: "response-time", title: "Waktu respons posko" },
+              { key: "canal-condition", title: "Kondisi sekat kanal" },
+              { key: "narrative", title: "Draf narasi eksekutif" },
+            ],
       title:
         documentType === "CARBON_AUDIT"
           ? "Laporan Audit Karbon Bulanan PEATGUARD"
@@ -297,7 +310,9 @@ function buildGeneratedReport(
       from: filters.range?.fromDate ?? null,
       to: filters.range?.toDate ?? null,
       zoneId: filters.zoneId,
-      zoneName: source.zones[0]?.zoneName ?? null,
+      zoneName: filters.zoneId
+        ? (source.zoneName ?? source.zones[0]?.zoneName ?? null)
+        : null,
     },
   };
 }

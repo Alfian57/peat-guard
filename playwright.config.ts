@@ -32,7 +32,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "bun run dev",
+    command:
+      process.env.E2E_PRODUCTION === "1" ? "bun run start" : "bun run dev",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

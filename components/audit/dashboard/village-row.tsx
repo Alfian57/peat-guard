@@ -34,6 +34,21 @@ export function VillageRow({ village }: { village: DashboardVillage }) {
       <td className="px-4 py-4 text-sm text-foreground">
         {formatCurrency(village.estimatedIncentiveIdr)}
       </td>
+      {village.readinessComponents ? (
+        <td className="px-4 py-4 text-sm">
+          <strong>
+            {village.readinessScore === null
+              ? "Belum tersedia"
+              : `${village.readinessScore}/100`}
+          </strong>
+          <span className="block text-xs text-muted-foreground">
+            {village.readinessComponents.patrolledZones}/
+            {village.readinessComponents.zoneCount} zona dipatroli ·{" "}
+            {village.readinessComponents.timelyReports}/
+            {village.readinessComponents.eligibleReports} respons tepat waktu
+          </span>
+        </td>
+      ) : null}
     </tr>
   );
 }

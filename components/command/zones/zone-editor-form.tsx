@@ -14,6 +14,10 @@ export function ZoneEditorForm({
   onSubmit,
   onVillageNameChange,
   onZoneNameChange,
+  parameterOptions,
+  parameterId,
+  onParameterChange,
+  parameterError,
   peatDepth,
   savedMessage,
   villageName,
@@ -29,6 +33,15 @@ export function ZoneEditorForm({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onVillageNameChange: (name: string) => void;
   onZoneNameChange: (name: string) => void;
+  parameterOptions: Array<{
+    id: string;
+    name: string;
+    isActive: boolean;
+    isDemoData: boolean;
+  }>;
+  parameterId: string;
+  onParameterChange: (id: string) => void;
+  parameterError: string;
   peatDepth: string;
   savedMessage: string;
   villageName: string;
@@ -98,6 +111,35 @@ export function ZoneEditorForm({
               value={peatDepth}
             />
           </ZoneEditorFormField>
+          <ZoneEditorFormField label="Versi parameter karbon">
+            <select
+              className="min-h-11 w-full rounded-xl border px-3 text-sm"
+              disabled={isSaving || !parameterOptions.length}
+              value={parameterId}
+              onChange={(event) => onParameterChange(event.currentTarget.value)}
+            >
+              {isCreate ? <option value="">Gunakan versi aktif</option> : null}
+              {parameterOptions.map((parameter) => (
+                <option key={parameter.id} value={parameter.id}>
+                  {parameter.name}
+                  {parameter.isDemoData ? " (ilustratif)" : ""}
+                </option>
+              ))}
+            </select>
+            {parameterError ? <p role="status">{parameterError}</p> : null}
+          </ZoneEditorFormField>
+          {zone?.reviewNote ? (
+            <p className="rounded-lg bg-peat-paper p-3 text-sm">
+              <strong>Catatan revisi Verifikator</strong>
+              <br />
+              {zone.reviewNote}
+            </p>
+          ) : null}
+          {zone?.overlapsApprovedZone ? (
+            <p className="rounded-lg bg-peat-paper p-3 text-sm">
+              Batas zona tumpang tindih dengan zona yang sudah disetujui.
+            </p>
+          ) : null}
           {zone ? (
             <dl className="grid grid-cols-2 gap-4 border-t border-peat-forest/10 pt-5">
               <div className="min-w-0">
@@ -129,8 +171,9 @@ export function ZoneEditorForm({
           </p>
           {zone?.isApproved ? (
             <p className="border-l-2 border-peat-sun pl-3 text-xs leading-5 text-peat-forest/80">
-              Zona ini sudah disetujui Verifikator. Mengubah batas atau
-              kedalaman gambut akan mencabut persetujuan secara otomatis.
+              Zona ini sudah disetujui Verifikator. Mengubah batas, parameter
+              karbon, atau kedalaman gambut akan mencabut persetujuan secara
+              otomatis.
             </p>
           ) : null}
         </section>

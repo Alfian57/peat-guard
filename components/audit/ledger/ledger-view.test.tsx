@@ -341,7 +341,9 @@ test("review timeline exposes stored evidence and permits human review when AI w
     );
     expect(init?.cache).toBe("no-store");
     expect(init?.credentials).toBe("same-origin");
-    expect(init?.body).toBe(JSON.stringify({ decision: "ACCEPTED" }));
+    expect(init?.body).toBe(
+      JSON.stringify({ decision: "ACCEPTED", expectedVersion: null }),
+    );
 
     return new Response(JSON.stringify({ review: reviewEntry }), {
       headers: { "Content-Type": "application/json" },
@@ -385,6 +387,10 @@ test("review dialog preserves the history and permits retry after a failed decis
   globalThis.fetch = async () =>
     Response.json({ error: "Koneksi terputus, coba lagi." }, { status: 503 });
   try {
+    await user.type(
+      within(dialog).getByLabelText(/Catatan peninjauan/),
+      "Mohon tambahkan foto.",
+    );
     await user.click(
       within(dialog).getByRole("button", {
         name: "Minta tindak lanjut",
@@ -454,7 +460,17 @@ test("review dialog prevents accepting incomplete evidence while keeping follow-
     within(dialog)
       .getByRole("button", { name: "Minta tindak lanjut" })
       .hasAttribute("disabled"),
+  ).toBe(true);
+  await user.type(
+    within(dialog).getByLabelText(/Catatan peninjauan/),
+    "Foto belum tersedia.",
+  );
+  expect(
+    within(dialog)
+      .getByRole("button", { name: "Minta tindak lanjut" })
+      .hasAttribute("disabled"),
   ).toBe(false);
+  closeButton.focus();
   await user.keyboard("{Shift>}{Tab}{/Shift}");
   expect(
     document.activeElement ===

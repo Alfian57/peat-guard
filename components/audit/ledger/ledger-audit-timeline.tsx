@@ -1,3 +1,4 @@
+import { API_ROUTES } from "@/lib/routes";
 import type { MrvLedgerAuditEntry } from "@/lib/server/mrv/contracts";
 import {
   aiAnalysisStateLabel,
@@ -24,7 +25,9 @@ function eventTitle(event: MrvLedgerAuditEntry): string {
 
 export function LedgerAuditTimeline({
   history,
+  reportId,
 }: {
+  reportId?: string;
   history: MrvLedgerAuditEntry[];
 }) {
   return (
@@ -50,6 +53,20 @@ export function LedgerAuditTimeline({
                   ? ` · ${formatDecimal(event.classification.confidence * 100)}%`
                   : ""}
               </p>
+            ) : null}
+            {event.note ? (
+              <p className="mt-2 whitespace-pre-wrap">{event.note}</p>
+            ) : null}
+            {reportId && event.hasSupplementPhoto ? (
+              <a
+                className="mt-2 inline-block text-peat-green underline"
+                href={API_ROUTES.reports.supplementPhoto(
+                  reportId,
+                  event.eventId,
+                )}
+              >
+                Lihat foto bukti tambahan
+              </a>
             ) : null}
             <EvidenceSnapshotDetails event={event} />
           </li>

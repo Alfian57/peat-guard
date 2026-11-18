@@ -13,7 +13,7 @@ import {
 import { parseEvidenceReviewRequest } from "@/lib/server/mrv/validation";
 import { reportActorFromSession } from "@/lib/server/reports/access";
 
-const MAX_REQUEST_BYTES = 1_024;
+const MAX_REQUEST_BYTES = 4_096;
 
 type RouteContext = { params: Promise<{ reportId: string }> };
 
@@ -86,6 +86,9 @@ export async function POST(
       reportActorFromSession(session.user),
       reportId.toLowerCase(),
       parsed.value.decision,
+      ...(parsed.value.expectedVersion !== undefined || parsed.value.note
+        ? ([parsed.value] as const)
+        : ([] as const)),
     );
 
     return mrvPrivateJsonResponse({ review }, 201);

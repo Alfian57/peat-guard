@@ -15,9 +15,50 @@ test.describe("Public Transparency & Map Journeys", () => {
     await expect(metricsSection).toBeVisible();
 
     // Verify key metric labels
-    await expect(page.getByText("Kesatuan Hidrologis")).toBeVisible();
-    await expect(page.getByText("Kawasan lindung gambut")).toBeVisible();
-    await expect(page.getByText("Cadangan karbon")).toBeVisible();
+    await expect(
+      metricsSection.getByText("Zona disetujui", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      metricsSection.getByText("Luas zona terhitung", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      metricsSection.getByText("Estimasi emisi dicegah", { exact: true }),
+    ).toBeVisible();
+  });
+
+  test("landing shows zero detections only with a fresh FIRMS sync", async ({
+    page,
+  }) => {
+    let firmsFreshness = "not_configured";
+    await page.route(API_ROUTES.public.metrics, async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        json: {
+          ...(await response.json()),
+          firmsHotspotCount: 0,
+          firmsFreshness,
+        },
+      });
+    });
+    const card = page
+      .getByRole("article")
+      .filter({ hasText: "Hotspot NASA FIRMS" });
+
+    await page.goto(APP_ROUTES.home);
+    await expect(
+      card.getByText(/Sinkronisasi belum dikonfigurasi/),
+    ).toBeVisible();
+    await expect(card.getByText("0 titik", { exact: true })).toHaveCount(0);
+
+    firmsFreshness = "fresh";
+    await page.reload();
+    await expect(
+      card.getByText("0 titik", { exact: true }).first(),
+    ).toBeAttached();
+    await expect(
+      card.getByText(/Sinkronisasi belum dikonfigurasi/),
+    ).toHaveCount(0);
   });
 
   test("public map page renders map shell, controls, and filters without runtime error", async ({

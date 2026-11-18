@@ -5,8 +5,13 @@ export const MRV_PRIVATE_HEADERS = {
   "X-Content-Type-Options": "nosniff",
 } as const;
 
-type MrvOperation = (request: Request) => Promise<Response>;
-type MrvAuthorizer = (request: Request) => Promise<unknown>;
+type MrvOperation<Authorization> = (
+  request: Request,
+  authorization: Authorization,
+) => Promise<Response>;
+type MrvAuthorizer<Authorization> = (
+  request: Request,
+) => Promise<Authorization>;
 
 export type BoundedRequestBodyResult =
   | { ok: true; text: string }
@@ -134,10 +139,10 @@ export function isMrvSameOrigin(
   }
 }
 
-export function createMrvPrivateHandler(
-  operation: MrvOperation,
+export function createMrvPrivateHandler<Authorization>(
+  operation: MrvOperation<Authorization>,
   options: {
-    authorize: MrvAuthorizer;
+    authorize: MrvAuthorizer<Authorization>;
     failureMessage?: string;
   },
 ): (request: Request) => Promise<Response> {
@@ -147,8 +152,8 @@ export function createMrvPrivateHandler(
 
   return async (request) => {
     try {
-      await authorize(request);
-      return addPrivateHeaders(await operation(request));
+      const authorization = await authorize(request);
+      return addPrivateHeaders(await operation(request, authorization));
     } catch (error) {
       if (error instanceof AuthorizationError) {
         return addPrivateHeaders(

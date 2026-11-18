@@ -7,12 +7,23 @@ import { WorkspacePageHeading } from "@/components/workspace/workspace-page-head
 import { getAuditPageSession } from "@/lib/server/audit-page-access";
 import { listPendingZoneReviews } from "@/lib/server/zones/data";
 
+import { CarbonParameterManager } from "@/components/audit/zones/carbon-parameter-manager";
+import { listCarbonParameters } from "@/lib/server/mrv/parameters";
+import { listCommandZones } from "@/lib/server/zones/data";
+
 export async function AuditZonesData() {
   const session = await getAuditPageSession(["VERIFIKATOR"]);
   if (!session) return <AuditAccessDenied requiredRole="Verifikator" />;
 
-  const reviews = await listPendingZoneReviews().catch(() => null);
-  if (!reviews) return <AuditDataError title="Verifikasi zona" />;
+  const result = await Promise.all([
+    listPendingZoneReviews(),
+    listCarbonParameters(),
+    listCommandZones(),
+  ]).catch(() => null);
+  if (!result) return <AuditDataError title="Verifikasi zona" />;
+
+  const [reviews, parameters, zones] = result;
+  const conflicts = zones.filter((zone) => zone.overlapsApprovedZone);
 
   return (
     <div>
@@ -20,6 +31,22 @@ export async function AuditZonesData() {
         title="Verifikasi zona"
         description="Tinjau batas dan data zona gambut sebelum menyetujui penggunaannya."
       />
+      <CarbonParameterManager parameters={parameters} />
+      {conflicts.length ? (
+        <section className="mb-5 rounded-xl border border-warning/30 bg-white p-4">
+          <h2 className="font-semibold">
+            Zona disetujui dengan batas tumpang tindih
+          </h2>
+          <p className="mt-1 text-sm">
+            Posko perlu merevisi batas. Zona ini dikeluarkan dari total dampak.
+          </p>
+          <ul className="mt-2 list-disc pl-5 text-sm">
+            {conflicts.map((zone) => (
+              <li key={zone.id}>{zone.name}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {reviews.length ? (
         <section
           aria-label="Zona menunggu verifikasi"

@@ -14,16 +14,25 @@ describe("MRV query validation", () => {
       ok: true,
       value: { decision: "ACCEPTED" },
     });
-    expect(parseEvidenceReviewRequest({ decision: "NEEDS_FOLLOW_UP" })).toEqual(
-      { ok: true, value: { decision: "NEEDS_FOLLOW_UP" } },
+    expect(parseEvidenceReviewRequest({ decision: "NEEDS_FOLLOW_UP" }).ok).toBe(
+      false,
     );
+    expect(
+      parseEvidenceReviewRequest({
+        decision: "NEEDS_FOLLOW_UP",
+        note: " Periksa ulang. ",
+      }),
+    ).toEqual({
+      ok: true,
+      value: { decision: "NEEDS_FOLLOW_UP", note: "Periksa ulang." },
+    });
     expect(parseEvidenceReviewRequest({ decision: "VERIFIED_GPS" }).ok).toBe(
       false,
     );
     expect(
       parseEvidenceReviewRequest({
         decision: "ACCEPTED",
-        note: "not an accepted review field",
+        unsupported: "not an accepted review field",
       }).ok,
     ).toBe(false);
   });
@@ -156,14 +165,17 @@ describe("MRV query validation", () => {
   });
 
   test("accepts only bounded report filters and explicit narrative consent", () => {
-    const valid = parseMrvReportRequest({
-      aiConsent: true,
-      documentType: "CARBON_AUDIT",
-      from: "2026-11-01",
-      includeNarrative: true,
-      to: "2026-11-15",
-      zoneId: "61000000-0000-4000-8000-000000000001",
-    });
+    const valid = parseMrvReportRequest(
+      {
+        aiConsent: true,
+        documentType: "CARBON_AUDIT",
+        from: "2026-11-01",
+        includeNarrative: true,
+        to: "2026-11-30",
+        zoneId: "61000000-0000-4000-8000-000000000001",
+      },
+      new Date("2026-11-20"),
+    );
 
     expect(valid.ok).toBe(true);
 

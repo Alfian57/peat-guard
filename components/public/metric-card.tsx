@@ -17,10 +17,11 @@ export function MetricCard({
   decimals,
   suffix,
   detail,
-}: MetricCountProps & {
+}: Omit<MetricCountProps, "value"> & {
   icon: ReactNode;
   label: string;
   detail: string;
+  value: number | null;
 }) {
   return (
     <motion.article
@@ -31,12 +32,18 @@ export function MetricCard({
         <p>{label}</p>
         <span className="text-peat-green">{icon}</span>
       </div>
-      <MetricCount
-        value={value}
-        unit={unit}
-        decimals={decimals}
-        suffix={suffix}
-      />
+      {value === null ? (
+        <p aria-hidden="true" className="public-metric-card__value">
+          —
+        </p>
+      ) : (
+        <MetricCount
+          value={value}
+          unit={unit}
+          decimals={decimals}
+          suffix={suffix}
+        />
+      )}
       <p className="public-metric-card__detail">{detail}</p>
     </motion.article>
   );

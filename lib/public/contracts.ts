@@ -12,6 +12,11 @@ export type PublicMetrics = {
   estimatedIncentiveIdr: number;
   hotspotCount: number;
   containsIllustrativeData: boolean;
+  excludedZoneCount?: number;
+  illustrativeZoneCount?: number;
+  firmsHotspotCount?: number;
+  firmsFreshness?: FirmsFreshnessStatus;
+  hotspotPeriodDays?: number;
 };
 
 export type PublicHotspot = {

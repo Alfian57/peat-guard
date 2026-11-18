@@ -73,6 +73,23 @@ export function parsePublicMapData(value: unknown): PublicMapViewData {
 
 export function parsePublicMetrics(value: unknown): PublicMetrics {
   const metrics = asRecord(value);
+  const extraKeys = [
+    "illustrativeZoneCount",
+    "excludedZoneCount",
+    "firmsHotspotCount",
+    "hotspotPeriodDays",
+  ] as const;
+  const extras = Object.fromEntries(
+    extraKeys.flatMap((key) => {
+      if (!(key in metrics)) return [];
+      if (!isNonNegativeFiniteNumber(metrics[key]))
+        throw new Error("Invalid public metrics response.");
+      return [[key, metrics[key]]];
+    }),
+  );
+  const firmsFreshness = Object.hasOwn(metrics, "firmsFreshness")
+    ? parseEnum(metrics.firmsFreshness, FRESHNESS_STATUSES)
+    : undefined;
   assertExactKeys(metrics, [
     "approvedZoneCount",
     "protectedAreaHectares",
@@ -80,6 +97,8 @@ export function parsePublicMetrics(value: unknown): PublicMetrics {
     "estimatedIncentiveIdr",
     "hotspotCount",
     "containsIllustrativeData",
+    ...(firmsFreshness ? ["firmsFreshness"] : []),
+    ...Object.keys(extras),
   ]);
 
   const {
@@ -103,6 +122,8 @@ export function parsePublicMetrics(value: unknown): PublicMetrics {
   }
 
   return {
+    ...extras,
+    ...(firmsFreshness ? { firmsFreshness } : {}),
     approvedZoneCount,
     protectedAreaHectares,
     estimatedCarbonTons,

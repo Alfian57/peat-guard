@@ -1,3 +1,4 @@
+import { saveMrvDraft } from "@/lib/server/mrv/documents";
 import { requireRole } from "@/lib/authz";
 import { generateMrvReport } from "@/lib/server/mrv/report-generator";
 import {
@@ -9,8 +10,10 @@ import { parseMrvReportRequest } from "@/lib/server/mrv/validation";
 
 const MAX_REQUEST_BYTES = 4_096;
 
-export const POST = createMrvPrivateHandler(
-  async (request) => {
+export const POST = createMrvPrivateHandler<
+  Awaited<ReturnType<typeof requireRole>>
+>(
+  async (request, { user }) => {
     if (!isMrvSameOrigin(request)) {
       return Response.json(
         { error: "Permintaan harus berasal dari situs yang sama." },
@@ -82,7 +85,11 @@ export const POST = createMrvPrivateHandler(
       );
     }
 
-    return Response.json(report);
+    const draftId =
+      user.role === "VERIFIKATOR"
+        ? await saveMrvDraft(user.id, report)
+        : undefined;
+    return Response.json({ ...report, draftId });
   },
   {
     authorize: (request) =>

@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { API_ROUTES } from "@/lib/routes";
+import { requestCommandJson } from "@/components/command/command-api";
 import { ChevronDown } from "lucide-react";
 
 import {
@@ -10,6 +13,29 @@ import { formatDate } from "@/components/command/reports/report-date";
 import { ReportTextList } from "@/components/command/reports/report-text-list";
 
 export function ReportAiAnalysis({ report }: { report: ReportDetail }) {
+  const [retrying, setRetrying] = useState(false);
+  const [queued, setQueued] = useState(false);
+  const [retryError, setRetryError] = useState("");
+
+  async function retry() {
+    setRetrying(true);
+    setRetryError("");
+    try {
+      await requestCommandJson(API_ROUTES.command.retryReportAi(report.id), {
+        method: "POST",
+      });
+      setQueued(true);
+    } catch (error) {
+      setRetryError(
+        error instanceof Error
+          ? error.message
+          : "Analisis belum dapat diulang.",
+      );
+    } finally {
+      setRetrying(false);
+    }
+  }
+
   return (
     <section
       aria-labelledby="report-ai-heading"
@@ -24,7 +50,13 @@ export function ReportAiAnalysis({ report }: { report: ReportDetail }) {
             Analisis visual AI
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            <AiStateLabel state={report.aiState} />
+            <AiStateLabel
+              state={
+                queued && report.aiState === "FAILED"
+                  ? "PENDING"
+                  : report.aiState
+              }
+            />
             {report.aiAnalyzedAt
               ? " · dianalisis " + formatDate(report.aiAnalyzedAt)
               : ""}
@@ -81,6 +113,26 @@ export function ReportAiAnalysis({ report }: { report: ReportDetail }) {
             </div>
           ) : null}
         </details>
+      ) : null}
+      {report.aiState === "FAILED" && report.aiConsent && !queued ? (
+        <button
+          type="button"
+          disabled={retrying}
+          onClick={() => void retry()}
+          className="mt-4 rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
+        >
+          {retrying ? "Mengantrekan…" : "Ulangi analisis AI"}
+        </button>
+      ) : null}
+      {retryError ? (
+        <p className="mt-2 text-sm" role="alert">
+          {retryError}
+        </p>
+      ) : null}
+      {queued ? (
+        <p className="mt-2 text-sm" role="status">
+          Analisis dijadwalkan ulang. Muat ulang untuk melihat hasilnya.
+        </p>
       ) : null}
       {report.aiConsent ? null : (
         <p className="mt-4 rounded-xl bg-peat-paper p-3 text-xs leading-5 text-muted-foreground">

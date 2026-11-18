@@ -1,5 +1,11 @@
 import { afterEach, expect, mock, test } from "bun:test";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import type { NewFieldReport } from "@/lib/client/offline/types";
@@ -254,12 +260,15 @@ test("preserves the photo and entered values when saving fails, then permits ret
     screen.getByLabelText("Galeri"),
     new File(["photo"], "canal.jpg", { type: "image/jpeg" }),
   );
-  await user.type(screen.getByLabelText(/Lintang/), "-2.3194");
-  await user.type(screen.getByLabelText(/Bujur/), "113.9102");
-  await user.type(
-    screen.getByLabelText(/Keterangan tambahan/),
-    "Kanal perlu diperiksa.",
-  );
+  fireEvent.change(screen.getByLabelText(/Lintang/), {
+    target: { value: "-2.3194" },
+  });
+  fireEvent.change(screen.getByLabelText(/Bujur/), {
+    target: { value: "113.9102" },
+  });
+  fireEvent.change(screen.getByLabelText(/Keterangan tambahan/), {
+    target: { value: "Kanal perlu diperiksa." },
+  });
   await user.click(screen.getByRole("button", { name: "Kanal", exact: true }));
   await user.click(screen.getByRole("button", { name: "Simpan laporan" }));
   expect((await screen.findByRole("alert")).textContent).toBe(

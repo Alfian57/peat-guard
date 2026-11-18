@@ -1,5 +1,7 @@
 "use client";
 
+import { API_ROUTES } from "@/lib/routes";
+import type { listCarbonParameters } from "@/lib/server/mrv/parameters";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -42,6 +44,11 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
   const [loadError, setLoadError] = useState("");
   const [mapError, setMapError] = useState("");
   const [mapData, setMapData] = useState<CommandMapData | null>(null);
+  const [parameters, setParameters] = useState<
+    Awaited<ReturnType<typeof listCarbonParameters>>
+  >([]);
+  const [parameterId, setParameterId] = useState("");
+  const [parameterError, setParameterError] = useState("");
   const [zone, setZone] = useState<CommandZone | null>(null);
   const [zoneName, setZoneName] = useState("");
   const [villageName, setVillageName] = useState("");
@@ -63,6 +70,26 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
 
   useEffect(() => {
     const controller = new AbortController();
+    void requestCommandJson(API_ROUTES.command.mrvParameters, {
+      signal: controller.signal,
+    })
+      .then((value) => {
+        if (controller.signal.aborted) return;
+        if (
+          !value ||
+          typeof value !== "object" ||
+          !("parameters" in value) ||
+          !Array.isArray(value.parameters)
+        ) {
+          throw new Error("Respons parameter tidak valid.");
+        }
+        setParameters(value.parameters);
+        setParameterError("");
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setParameterError("Versi parameter belum dapat dimuat.");
+      });
     const mapRequest = requestCommandJson(COMMAND_API_ROUTES.map, {
       cache: "no-store",
       signal: controller.signal,
@@ -100,6 +127,7 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
         ) {
           const currentZone = zoneResult.value.zone;
           setZone(currentZone);
+          setParameterId(currentZone.carbonParameterSetId ?? "");
           setZoneName(currentZone.name);
           setVillageName(currentZone.villageName ?? "");
           setPeatDepth(String(currentZone.peatDepthMeters));
@@ -164,6 +192,7 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
   const approvalSensitiveChange = Boolean(
     zone?.isApproved &&
     (Number(peatDepth) !== zone.peatDepthMeters ||
+      Boolean(parameterId && parameterId !== zone.carbonParameterSetId) ||
       JSON.stringify(geometry) !== JSON.stringify(zone.geometry)),
   );
 
@@ -224,11 +253,15 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
       payload.peatDepthMeters = depth;
     if (isCreate || JSON.stringify(geometry) !== JSON.stringify(zone?.geometry))
       payload.geometry = geometry;
+    if (parameterId && (isCreate || parameterId !== zone?.carbonParameterSetId))
+      payload.carbonParameterSetId = parameterId;
     if (!isCreate && Object.keys(payload).length === 0) {
       setSavedMessage("Tidak ada perubahan untuk disimpan.");
       return;
     }
 
+    if (zone?.reviewRevision !== undefined)
+      payload.expectedRevision = zone.reviewRevision;
     setIsSaving(true);
     try {
       const result = await requestCommandJson(
@@ -244,6 +277,7 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
 
       const savedZone = result.zone;
       setZone(savedZone);
+      setParameterId(savedZone.carbonParameterSetId ?? "");
       setZoneName(savedZone.name);
       setVillageName(savedZone.villageName ?? "");
       setPeatDepth(String(savedZone.peatDepthMeters));
@@ -334,6 +368,10 @@ export function ZoneEditorScreen({ zoneId }: { zoneId?: string }) {
         onSubmit={onSubmit}
         onVillageNameChange={setVillageName}
         onZoneNameChange={setZoneName}
+        parameterOptions={parameters}
+        parameterId={parameterId}
+        onParameterChange={setParameterId}
+        parameterError={parameterError}
         peatDepth={peatDepth}
         savedMessage={savedMessage}
         villageName={villageName}

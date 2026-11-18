@@ -36,6 +36,18 @@ describe("MRV deterministic calculations", () => {
     expect(impact.parameters.isDemoData).toBe(true);
   });
 
+  test("rounds half a hundredth correctly and applies the tariff before rounding carbon", () => {
+    const impact = calculateZoneImpact({
+      ...demoZone,
+      areaHectares: 110,
+      biomassFactor: 1,
+      emissionFactor: 0.05,
+    });
+
+    expect(impact.estimatedCarbonTons).toBe(20.19);
+    expect(impact.estimatedIncentiveIdr).toBe(302_775);
+  });
+
   test("keeps report activity separate from zone carbon totals", () => {
     const activity: VillageActivity[] = [
       {

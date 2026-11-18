@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  CANAL_CONDITIONS,
+  CANAL_CONDITION_LABELS,
+  isCanalCondition,
+  type CanalCondition,
+} from "@/lib/canal-observation";
 import { Sparkles } from "lucide-react";
 import {
   useCallback,
@@ -64,6 +70,12 @@ export function FieldReportForm({
   );
   const [locationMessage, setLocationMessage] = useState("");
   const [fieldNotes, setFieldNotes] = useState(initialReport?.fieldNotes ?? "");
+  const [canalCondition, setCanalCondition] = useState<CanalCondition | "">(
+    initialReport?.canalCondition ?? "",
+  );
+  const [canalObservation, setCanalObservation] = useState(
+    initialReport?.canalObservation ?? "",
+  );
   const [tags, setTags] = useState<string[]>(initialReport?.tags ?? []);
   const [aiConsent, setAiConsent] = useState(initialReport?.aiConsent ?? false);
   const [isCompressing, setIsCompressing] = useState(false);
@@ -296,6 +308,8 @@ export function FieldReportForm({
         longitude: lon,
         accuracyMeters,
         fieldNotes: fieldNotes.trim(),
+        canalCondition: canalCondition || undefined,
+        canalObservation: canalCondition ? canalObservation.trim() : undefined,
         tags,
         aiConsent,
         isDemoSample,
@@ -352,6 +366,44 @@ export function FieldReportForm({
         onNotesChange={setFieldNotes}
         onToggleTag={toggleTag}
       />
+
+      <fieldset className="space-y-3 rounded-xl border border-border bg-white p-4">
+        <legend className="px-1 text-sm font-semibold">
+          Observasi sekat kanal (opsional)
+        </legend>
+        <label className="block text-sm">
+          Kondisi sekat kanal
+          <select
+            className="mt-1 block min-h-11 w-full rounded-lg border px-2"
+            value={canalCondition}
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              setCanalCondition(isCanalCondition(value) ? value : "");
+            }}
+          >
+            <option value="">Tidak ada observasi</option>
+            {CANAL_CONDITIONS.map((condition) => (
+              <option key={condition} value={condition}>
+                {CANAL_CONDITION_LABELS[condition]}
+              </option>
+            ))}
+          </select>
+        </label>
+        {canalCondition ? (
+          <label className="block text-sm">
+            Catatan kondisi
+            <textarea
+              className="mt-1 block w-full rounded-lg border p-2"
+              rows={2}
+              maxLength={500}
+              value={canalObservation}
+              onChange={(event) =>
+                setCanalObservation(event.currentTarget.value)
+              }
+            />
+          </label>
+        ) : null}
+      </fieldset>
 
       <div className={fieldFormActionsGrid}>
         <div className="min-w-0 self-center">

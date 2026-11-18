@@ -1,3 +1,4 @@
+import { isCanalCondition, type CanalCondition } from "@/lib/canal-observation";
 import type { QueuedFieldReport } from "./types";
 import { API_ROUTES } from "@/lib/routes";
 
@@ -50,6 +51,9 @@ export type ServerReportStatusEvent = {
 export type ServerReportDetail = ServerReportSummary & {
   clientReportId: string;
   fieldNotes: string | null;
+  canalCondition?: CanalCondition;
+  canalObservation?: string | null;
+  followUp?: { reviewId: string; note: string };
   tags: string[];
   aiConsent: boolean;
   aiConfidence: number | null;
@@ -269,6 +273,20 @@ export function parseServerReportDetail(value: unknown): ServerReportDetail {
     ...summary,
     clientReportId: reportUuid(value.clientReportId),
     fieldNotes: nullableString(value.fieldNotes),
+    ...(isCanalCondition(value.canalCondition)
+      ? {
+          canalCondition: value.canalCondition,
+          canalObservation: nullableString(value.canalObservation),
+        }
+      : {}),
+    ...(isRecord(value.followUp) && typeof value.followUp.note === "string"
+      ? {
+          followUp: {
+            reviewId: reportUuid(value.followUp.reviewId),
+            note: value.followUp.note,
+          },
+        }
+      : {}),
     tags: stringArray(value.tags),
     aiConsent: requiredBoolean(value.aiConsent),
     aiConfidence,

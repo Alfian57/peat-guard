@@ -29,9 +29,10 @@ export function ZoneReviewRow({
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [approved, setApproved] = useState(false);
+  const [note, setNote] = useState("");
   const [error, setError] = useState("");
 
-  async function approve() {
+  async function submitDecision(requestChanges = false) {
     if (saving || approved) return;
     setSaving(true);
     setError("");
@@ -40,17 +41,26 @@ export function ZoneReviewRow({
         API_ROUTES.command.zoneApprove(zone.id),
         {
           method: "POST",
-          body: JSON.stringify({ expectedRevision: revision }),
+          body: JSON.stringify({
+            expectedRevision: revision,
+            ...(requestChanges ? { decision: "REQUEST_CHANGES", note } : {}),
+          }),
         },
       );
-      if (!isZoneResponse(result) || !result.zone.isApproved) {
+      if (
+        !requestChanges &&
+        (!isZoneResponse(result) || !result.zone.isApproved)
+      ) {
         throw new Error(
           "Persetujuan belum terkonfirmasi. Muat ulang daftar zona.",
         );
       }
       setApproved(true);
       setOpen(false);
-      toast.success("Zona disetujui", zone.name);
+      toast.success(
+        requestChanges ? "Zona dikembalikan ke Posko" : "Zona disetujui",
+        zone.name,
+      );
       router.refresh();
     } catch (cause) {
       setError(
@@ -151,6 +161,17 @@ export function ZoneReviewRow({
                   {error}
                 </p>
               ) : null}
+              <label className="block text-sm font-medium text-peat-forest">
+                Catatan untuk Posko
+                <textarea
+                  className="mt-1 block w-full rounded-xl border p-2"
+                  rows={2}
+                  maxLength={500}
+                  value={note}
+                  onChange={(event) => setNote(event.currentTarget.value)}
+                  disabled={saving}
+                />
+              </label>
               <div className="flex flex-wrap justify-end gap-2">
                 <Dialog.Close
                   className="min-h-11 rounded-xl border border-border px-4 text-sm font-semibold text-peat-forest"
@@ -159,9 +180,17 @@ export function ZoneReviewRow({
                   Batal
                 </Dialog.Close>
                 <button
+                  className="min-h-11 rounded-xl border border-border px-4 text-sm disabled:opacity-60"
+                  type="button"
+                  disabled={saving || !note.trim()}
+                  onClick={() => void submitDecision(true)}
+                >
+                  Minta revisi
+                </button>
+                <button
                   className="min-h-11 rounded-xl bg-peat-forest px-4 text-sm font-semibold text-white disabled:opacity-60"
                   disabled={saving}
-                  onClick={() => void approve()}
+                  onClick={() => void submitDecision()}
                   type="button"
                 >
                   {saving ? "Menyimpan…" : "Setujui zona"}

@@ -156,7 +156,7 @@ export async function createFieldReport(
             "longitude", "accuracy_meters", "location", "image_path", "field_notes",
             "tags", "captured_at", "synced_at", "ai_consent", "ai_state",
             "handling_status", "nearest_water_distance_m", "is_demo_sample",
-            "created_at", "updated_at"
+            "created_at", "updated_at", "canal_condition", "canal_observation"
           ) VALUES (
             ${reportId}::uuid,
             ${input.clientReportId}::uuid,
@@ -177,7 +177,9 @@ export async function createFieldReport(
             ${spatial.nearestWaterDistanceMeters}::numeric,
             ${input.isDemoSample},
             CURRENT_TIMESTAMP,
-            CURRENT_TIMESTAMP
+            CURRENT_TIMESTAMP,
+            ${input.canalCondition ?? null}::"CanalCondition",
+            ${input.canalObservation ?? null}
           )
         `;
 

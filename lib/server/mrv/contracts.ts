@@ -1,3 +1,5 @@
+import type { CanalCondition } from "@/lib/canal-observation";
+
 export type DateRange = {
   from: Date | null;
   fromDate: string | null;
@@ -32,7 +34,7 @@ export type ExecutiveNarrativeMetrics = {
   estimatedIncentiveIdr: number | null;
   fieldReportCount: number;
   reportsWithResponseTime: number;
-  satelliteHotspotCount: number;
+  satelliteHotspotCount: number | null;
 };
 
 export type ExecutiveNarrativeInput = {
@@ -63,10 +65,18 @@ export type MrvGeneratedNarrative =
   | ({ status: "generated" } & ExecutiveNarrativeDraft);
 
 export type MrvGeneratedReport = {
-  canalCondition: {
-    reason: "CANAL_CONDITION_NOT_RECORDED";
-    status: "unavailable";
-  };
+  canalCondition:
+    | { reason: "CANAL_CONDITION_NOT_RECORDED"; status: "unavailable" }
+    | {
+        status: "available";
+        observations: Array<{
+          condition: CanalCondition;
+          demoCount: number;
+          nonDemoCount: number;
+        }>;
+      };
+  draftId?: string;
+  partial?: boolean;
   containsIllustrativeData: boolean;
   documentType: MrvDocumentType;
   generatedAt: string;
@@ -82,11 +92,14 @@ export type MrvGeneratedReport = {
       reason: "CARBON_SNAPSHOT_NOT_RECORDED" | null;
       status: "available" | "unavailable";
       zones: CarbonSnapshotZoneImpact[];
+      excludedZoneCount?: number;
+      periodChangeTons?: number | null;
     };
     hotspots: {
       demoCount: number;
       nonDemoCount: number;
       totalCount: number;
+      historicalBoundaryUnavailable?: boolean;
     };
     reports: {
       activeCount: number;
@@ -98,6 +111,7 @@ export type MrvGeneratedReport = {
       nonDemoCount: number;
       totalCount: number;
       closedCount: number;
+      evidence?: { accepted: number; followUp: number; rejected: number };
     };
     responseTime: {
       averageMinutes: number | null;
@@ -115,6 +129,7 @@ export type MrvGeneratedReport = {
     sections: Array<{
       key:
         | "carbon"
+        | "evidence"
         | "canal-condition"
         | "field-reports"
         | "hotspots"
@@ -165,6 +180,7 @@ export type ApprovedZoneValues = CarbonParameterValues & {
   villageName: string | null;
   zoneId: string;
   zoneName: string;
+  overlapsApprovedZone?: boolean;
 };
 
 export type CarbonSnapshotReason =
@@ -213,6 +229,13 @@ export type VillageActivity = {
   villageName: string;
 };
 
+export type ReadinessComponents = {
+  patrolledZones: number;
+  zoneCount: number;
+  timelyReports: number;
+  eligibleReports: number;
+};
+
 export type DashboardVillage = {
   aiTriagedFieldReportCount: number;
   demoAiTriagedFieldReportCount: number;
@@ -221,7 +244,8 @@ export type DashboardVillage = {
   estimatedIncentiveIdr: number;
   fieldReportCount: number;
   isIllustrative: boolean;
-  readinessScore: null;
+  readinessScore: number | null;
+  readinessComponents?: ReadinessComponents;
   villageName: string;
   zoneCount: number;
 };
@@ -233,16 +257,22 @@ export type MrvDashboard = {
     formula: "E_saved = A × B × EF × conversion";
     version: "peatguard-mrv-v1";
   };
-  carbonTrend: {
-    reason: "MONTHLY_ZONE_HISTORY_NOT_RECORDED";
-    status: "unavailable";
-  };
-  readiness: {
-    reason: "READINESS_SCORE_FORMULA_NOT_DEFINED";
-    status: "unavailable";
-  };
+  carbonTrend:
+    | { reason: "MONTHLY_ZONE_HISTORY_NOT_RECORDED"; status: "unavailable" }
+    | {
+        status: "available";
+        months: Array<{
+          month: string;
+          carbonTons: number | null;
+          partial: boolean;
+        }>;
+      };
+  readiness:
+    | { reason: "READINESS_SCORE_FORMULA_NOT_DEFINED"; status: "unavailable" }
+    | { status: "available"; from: string; to: string };
   totals: {
     approvedZoneCount: number;
+    excludedZoneCount?: number;
     containsIllustrativeData: boolean;
     estimatedCarbonTons: number;
     estimatedIncentiveIdr: number;
@@ -288,8 +318,13 @@ export type MrvLedgerAuditEntry = {
   createdAt: string;
   decision: EvidenceReviewDecision | null;
   eventId: string;
+  note?: string;
+  hasSupplementPhoto?: boolean;
   eventType:
     | "MRV_EVIDENCE_REVIEWED"
+    | "MRV_EVIDENCE_SUPPLEMENTED"
+    | "REPORT_AI_REQUEUED"
+    | "REPORT_AI_RETRY_SCHEDULED"
     | "REPORT_AI_ANALYSIS_COMPLETED"
     | "REPORT_AI_ANALYSIS_FAILED"
     | "REPORT_EVIDENCE_RECORDED";

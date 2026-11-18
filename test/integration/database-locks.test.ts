@@ -25,30 +25,32 @@ describe("Database Advisory Concurrency Locks", () => {
       releaseFirstTx = resolve;
     });
 
+    const firstAcquired = Promise.withResolvers<void>();
+    const secondRequested = Promise.withResolvers<void>();
     // Worker 1 acquires lock and holds it until released
     const worker1 = prisma.$transaction(async (tx) => {
       await tx.$executeRaw(
         Prisma.sql`SELECT pg_advisory_xact_lock(${lockKey1}, ${lockKey2})`,
       );
       executionOrder.push("worker1_acquired");
+      firstAcquired.resolve();
       await firstTxWait;
       executionOrder.push("worker1_released");
     });
 
-    // Wait a brief tick to ensure worker 1 enters transaction
-    await new Promise((r) => setTimeout(r, 50));
+    await firstAcquired.promise;
 
     // Worker 2 attempts to acquire same lock
     const worker2 = prisma.$transaction(async (tx) => {
       executionOrder.push("worker2_waiting");
+      secondRequested.resolve();
       await tx.$executeRaw(
         Prisma.sql`SELECT pg_advisory_xact_lock(${lockKey1}, ${lockKey2})`,
       );
       executionOrder.push("worker2_acquired");
     });
 
-    // Allow worker 2 to start waiting
-    await new Promise((r) => setTimeout(r, 100));
+    await secondRequested.promise;
 
     // Release worker 1
     releaseFirstTx();

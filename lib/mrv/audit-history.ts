@@ -6,6 +6,9 @@ import type {
 
 const AUDIT_EVENT_TYPES = new Set<MrvLedgerAuditEntry["eventType"]>([
   "MRV_EVIDENCE_REVIEWED",
+  "MRV_EVIDENCE_SUPPLEMENTED",
+  "REPORT_AI_REQUEUED",
+  "REPORT_AI_RETRY_SCHEDULED",
   "REPORT_AI_ANALYSIS_COMPLETED",
   "REPORT_AI_ANALYSIS_FAILED",
   "REPORT_EVIDENCE_RECORDED",
@@ -209,6 +212,13 @@ export function parseMrvLedgerAuditEntry(
       eventType === "MRV_EVIDENCE_REVIEWED"
         ? parseReviewDecision(payloadRecord?.decision)
         : null,
+    ...(typeof payloadRecord?.note === "string"
+      ? { note: payloadRecord.note }
+      : {}),
+    ...(eventType === "MRV_EVIDENCE_SUPPLEMENTED" &&
+    typeof payloadRecord?.imagePath === "string"
+      ? { hasSupplementPhoto: true }
+      : {}),
     eventId: value.id,
     eventType: eventType as MrvLedgerAuditEntry["eventType"],
     evidenceSnapshot:

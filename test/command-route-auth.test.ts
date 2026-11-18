@@ -26,7 +26,10 @@ mock.module("@/lib/authz", () => ({
   },
 }));
 
-mock.module("@/lib/server/zones/data", () => ({ approveCommandZone }));
+mock.module("@/lib/server/zones/data", () => ({
+  approveCommandZone,
+  requestZoneRevision: mock(async () => undefined),
+}));
 
 const { POST: approveZone } =
   await import("@/app/api/command/zones/[zoneId]/approve/route");

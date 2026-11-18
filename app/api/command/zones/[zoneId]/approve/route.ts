@@ -6,7 +6,11 @@ import {
   isUuid,
   readJsonObject,
 } from "@/lib/server/command/http";
-import { approveCommandZone } from "@/lib/server/zones/data";
+import { isMrvSameOrigin } from "@/lib/server/mrv/http";
+import {
+  approveCommandZone,
+  requestZoneRevision,
+} from "@/lib/server/zones/data";
 
 type RouteContext = { params: Promise<{ zoneId: string }> };
 
@@ -19,7 +23,7 @@ export async function POST(request: Request, context: RouteContext) {
       throw new CommandApiError(400, "invalid_zone_id", "ID zona tidak valid.");
     }
 
-    const { expectedRevision } = await readJsonObject(request);
+    const { expectedRevision, note, decision } = await readJsonObject(request);
     if (
       typeof expectedRevision !== "number" ||
       !Number.isSafeInteger(expectedRevision) ||
@@ -31,6 +35,34 @@ export async function POST(request: Request, context: RouteContext) {
         "Revisi zona tidak valid.",
       );
     }
+
+    if (decision === "REQUEST_CHANGES") {
+      if (!isMrvSameOrigin(request))
+        throw new CommandApiError(
+          403,
+          "invalid_origin",
+          "Permintaan harus berasal dari situs yang sama.",
+        );
+      if (typeof note !== "string" || !note.trim() || note.length > 500)
+        throw new CommandApiError(
+          400,
+          "invalid_review_note",
+          "Tulis catatan revisi (maksimal 500 karakter).",
+        );
+      await requestZoneRevision(
+        zoneId,
+        session.user.id,
+        expectedRevision,
+        note.trim(),
+      );
+      return jsonResponse({ requestedChanges: true });
+    }
+    if (decision !== undefined && decision !== "APPROVE")
+      throw new CommandApiError(
+        400,
+        "invalid_review_decision",
+        "Keputusan verifikasi tidak valid.",
+      );
 
     const result = await approveCommandZone(
       zoneId,

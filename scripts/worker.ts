@@ -1,3 +1,4 @@
+import { purgeExpiredMrvDrafts } from "@/lib/server/mrv/documents";
 import { prisma } from "@/lib/prisma";
 import { getFirmsSyncIntervalMinutes } from "@/lib/server/firms/config";
 import { processNextReportAnalysis } from "@/lib/server/reports/ai-job";
@@ -10,6 +11,14 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 }
 
 const jobs = [
+  scheduleJob(
+    "arsip MRV",
+    async () => {
+      await purgeExpiredMrvDrafts();
+      return undefined;
+    },
+    3600_000,
+  ),
   scheduleJob(
     "triase laporan",
     async () => {

@@ -34,7 +34,11 @@ export function ZoneCard({
               : "bg-peat-sun/30 text-peat-forest")
           }
         >
-          {zoneVerificationStatusLabel(zone.isApproved)}
+          {zone.reviewNote
+            ? "Perlu revisi"
+            : zone.overlapsApprovedZone
+              ? "Batas tumpang tindih"
+              : zoneVerificationStatusLabel(zone.isApproved)}
         </span>
       </div>
 

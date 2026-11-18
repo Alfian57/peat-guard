@@ -34,7 +34,9 @@ test.describe("Role-Based Access Control (RBAC) & Route Security Guard", () => {
     // Posko attempts to access audit ledger -> access denied warning
     await page.goto(APP_ROUTES.audit.ledger);
     await expect(
-      page.getByText(/Halaman ini memerlukan akses Verifikator karbon/i),
+      page.getByRole("heading", {
+        name: /Halaman ini memerlukan akses Verifikator karbon/i,
+      }),
     ).toBeVisible();
   });
 });

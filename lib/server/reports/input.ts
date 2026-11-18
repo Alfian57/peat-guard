@@ -1,3 +1,4 @@
+import { isCanalCondition, type CanalCondition } from "@/lib/canal-observation";
 import "server-only";
 
 import {
@@ -69,6 +70,8 @@ export type NewReportInput = {
   longitude: number;
   accuracyMeters: number | null;
   fieldNotes: string | null;
+  canalCondition?: CanalCondition;
+  canalObservation?: string;
   tags: string[];
   aiConsent: boolean;
   isDemoSample: boolean;
@@ -207,6 +210,18 @@ export function parseReportFormData(formData: FormData): NewReportInput {
     throw new ReportInputError(400, "The fieldNotes field is too long.");
   }
 
+  const canalCondition = formData.get("canalCondition");
+  const canalObservation = formData.get("canalObservation");
+  if (
+    (canalCondition !== null && !isCanalCondition(canalCondition)) ||
+    (canalObservation !== null &&
+      (!isCanalCondition(canalCondition) ||
+        typeof canalObservation !== "string" ||
+        canalObservation.length > 500))
+  ) {
+    throw new ReportInputError(400, "Observasi sekat kanal tidak valid.");
+  }
+
   const photoValue = formData.get("photo");
   if (!(photoValue instanceof File)) {
     throw new ReportInputError(400, "A report photo is required.");
@@ -232,6 +247,10 @@ export function parseReportFormData(formData: FormData): NewReportInput {
       formText(formData, "isDemoSample"),
       "isDemoSample",
     ),
+    ...(isCanalCondition(canalCondition) ? { canalCondition } : {}),
+    ...(typeof canalObservation === "string" && canalObservation.trim()
+      ? { canalObservation: canalObservation.trim() }
+      : {}),
     photo: photoValue,
   };
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  Archive,
   ChartNoAxesCombined,
   ClipboardList,
   FileText,
@@ -25,6 +26,7 @@ const navigation = [
     label: "Generator laporan",
     icon: FileText,
   },
+  { href: APP_ROUTES.audit.documents, label: "Arsip MRV", icon: Archive },
 ] as const;
 
 export function AuditNavigation({
@@ -39,7 +41,13 @@ export function AuditNavigation({
   return (
     <nav aria-label="Navigasi Verifikator" className="space-y-2">
       {navigation.map(({ href, label, icon: Icon }) => {
-        if (href === APP_ROUTES.audit.zones && !canVerifyZones) return null;
+        if (
+          !canVerifyZones &&
+          (href === APP_ROUTES.audit.zones ||
+            href === APP_ROUTES.audit.dashboard ||
+            href === APP_ROUTES.audit.ledger)
+        )
+          return null;
         const isActive = pathname === href || pathname.startsWith(`${href}/`);
 
         return (

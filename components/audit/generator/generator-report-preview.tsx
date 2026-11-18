@@ -1,3 +1,4 @@
+import { CANAL_CONDITION_LABELS } from "@/lib/canal-observation";
 import type {
   CarbonSnapshotReason,
   MrvGeneratedReport,
@@ -53,6 +54,9 @@ export function GeneratorReportPreview({
               Periode {formatDate(report.printable.period.from)} –{" "}
               {formatDate(report.printable.period.to)}
             </p>
+            {report.partial ? (
+              <p>Periode parsial · sampai saat laporan disusun</p>
+            ) : null}
             {report.scope.zoneName ? (
               <p>Wilayah {report.scope.zoneName}</p>
             ) : null}
@@ -94,195 +98,253 @@ export function GeneratorReportPreview({
                 </tr>
               </thead>
               <tbody className="divide-y divide-peat-forest/10 text-sm">
-                <tr className="hover:bg-peat-forest/[0.02]">
-                  <td className="px-4 py-3 font-medium text-peat-forest">
-                    Titik panas satelit
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-peat-forest">
-                    {formatCount(report.metrics.hotspots.totalCount)}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{`${formatCount(report.metrics.hotspots.nonDemoCount)} observasi non-demo · ${formatCount(report.metrics.hotspots.demoCount)} demo`}</td>
-                </tr>
-                <tr className="hover:bg-peat-forest/[0.02]">
-                  <td className="px-4 py-3 font-medium text-peat-forest">
-                    Laporan lapangan
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-peat-forest">
-                    {formatCount(report.metrics.reports.totalCount)}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{`${formatCount(report.metrics.reports.aiTriagedCount)} telah ditriase AI`}</td>
-                </tr>
-                <tr className="hover:bg-peat-forest/[0.02]">
-                  <td className="px-4 py-3 font-medium text-peat-forest">
-                    Laporan belum selesai
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-peat-forest">
-                    {formatCount(report.metrics.reports.activeCount)}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{`${formatCount(report.metrics.reports.closedCount)} selesai`}</td>
-                </tr>
-                <tr className="hover:bg-peat-forest/[0.02]">
-                  <td className="px-4 py-3 font-medium text-peat-forest">
-                    Rata-rata waktu respons
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-peat-forest">
-                    {report.metrics.responseTime.averageMinutes === null
-                      ? "Belum tersedia"
-                      : `${formatDecimal(report.metrics.responseTime.averageMinutes)} menit`}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {report.metrics.responseTime.status === "available"
-                      ? `Dari laporan diterima hingga status pertama ditangani · ${formatCount(report.metrics.responseTime.respondedReportCount)} laporan`
-                      : "Belum ada laporan dengan waktu respons tercatat"}
-                  </td>
-                </tr>
-                <tr className="hover:bg-peat-forest/[0.02]">
-                  <td className="px-4 py-3 font-medium text-peat-forest">
-                    Estimasi emisi dicegah
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-peat-green">
-                    {report.metrics.carbon.estimatedCarbonTons === null
-                      ? "Belum tersedia"
-                      : formatCarbon(report.metrics.carbon.estimatedCarbonTons)}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {report.metrics.carbon.asOf
-                      ? `Snapshot zona disetujui sampai ${formatDateTime(report.metrics.carbon.asOf)}`
-                      : "Riwayat snapshot tidak tersedia untuk periode ini"}
-                  </td>
-                </tr>
-                <tr className="hover:bg-peat-forest/[0.02]">
-                  <td className="px-4 py-3 font-medium text-peat-forest">
-                    Area zona disetujui
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-peat-forest">
-                    {report.metrics.carbon.protectedAreaHectares === null
-                      ? "Belum tersedia"
-                      : formatHectares(
-                          report.metrics.carbon.protectedAreaHectares,
+                {!isCarbonAudit ? (
+                  <>
+                    <tr className="hover:bg-peat-forest/[0.02]">
+                      <td className="px-4 py-3 font-medium text-peat-forest">
+                        Titik panas satelit
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-peat-forest">
+                        {report.metrics.hotspots.historicalBoundaryUnavailable
+                          ? "Riwayat batas belum lengkap"
+                          : formatCount(report.metrics.hotspots.totalCount)}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {report.metrics.hotspots.historicalBoundaryUnavailable
+                          ? "Cakupan historis zona belum bisa ditelusuri."
+                          : `${formatCount(report.metrics.hotspots.nonDemoCount)} observasi non-demo · ${formatCount(report.metrics.hotspots.demoCount)} demo`}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-peat-forest/[0.02]">
+                      <td className="px-4 py-3 font-medium text-peat-forest">
+                        Laporan lapangan
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-peat-forest">
+                        {formatCount(report.metrics.reports.totalCount)}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{`${formatCount(report.metrics.reports.aiTriagedCount)} telah ditriase AI`}</td>
+                    </tr>
+                    <tr className="hover:bg-peat-forest/[0.02]">
+                      <td className="px-4 py-3 font-medium text-peat-forest">
+                        Laporan belum selesai
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-peat-forest">
+                        {formatCount(report.metrics.reports.activeCount)}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{`${formatCount(report.metrics.reports.closedCount)} selesai`}</td>
+                    </tr>
+                    <tr className="hover:bg-peat-forest/[0.02]">
+                      <td className="px-4 py-3 font-medium text-peat-forest">
+                        Rata-rata waktu respons
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-peat-forest">
+                        {report.metrics.responseTime.averageMinutes === null
+                          ? "Belum tersedia"
+                          : `${formatDecimal(report.metrics.responseTime.averageMinutes)} menit`}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {report.metrics.responseTime.status === "available"
+                          ? `Dari laporan diterima hingga status pertama ditangani · ${formatCount(report.metrics.responseTime.respondedReportCount)} laporan`
+                          : "Belum ada laporan dengan waktu respons tercatat"}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 font-medium">
+                        Kondisi sekat kanal
+                      </td>
+                      <td className="px-4 py-3" colSpan={2}>
+                        {report.canalCondition.status === "available" ? (
+                          <ul>
+                            {report.canalCondition.observations.map((row) => (
+                              <li key={row.condition}>
+                                {CANAL_CONDITION_LABELS[row.condition]} ·{" "}
+                                {row.nonDemoCount} observasi · {row.demoCount}{" "}
+                                ilustratif
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          "Belum tersedia"
                         )}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">-</td>
-                </tr>
-                <tr className="hover:bg-peat-forest/[0.02]">
-                  <td className="px-4 py-3 font-medium text-peat-forest">
-                    Estimasi insentif
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-peat-forest">
-                    {report.metrics.carbon.estimatedIncentiveIdr === null
-                      ? "Belum tersedia"
-                      : formatCurrency(
-                          report.metrics.carbon.estimatedIncentiveIdr,
-                        )}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
-                    Ilustrasi CO₂e × tarif tersimpan; bukan formula insentif
-                    patroli final.
-                  </td>
-                </tr>
-                <tr className="hover:bg-peat-forest/[0.02]">
-                  <td className="px-4 py-3 font-medium text-peat-forest">
-                    Kondisi sekat kanal
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-peat-forest">
-                    Belum tersedia
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
-                    Skema belum menyimpan kondisi kanal hasil observasi
-                  </td>
-                </tr>
+                      </td>
+                    </tr>
+                  </>
+                ) : (
+                  <>
+                    <tr className="hover:bg-peat-forest/[0.02]">
+                      <td className="px-4 py-3 font-medium text-peat-forest">
+                        Estimasi emisi dicegah
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-peat-green">
+                        {report.metrics.carbon.estimatedCarbonTons === null
+                          ? "Belum tersedia"
+                          : formatCarbon(
+                              report.metrics.carbon.estimatedCarbonTons,
+                            )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {report.metrics.carbon.asOf
+                          ? `Snapshot zona disetujui sampai ${formatDateTime(report.metrics.carbon.asOf)}`
+                          : "Riwayat snapshot tidak tersedia untuk periode ini"}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-peat-forest/[0.02]">
+                      <td className="px-4 py-3 font-medium text-peat-forest">
+                        Area zona disetujui
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-peat-forest">
+                        {report.metrics.carbon.protectedAreaHectares === null
+                          ? "Belum tersedia"
+                          : formatHectares(
+                              report.metrics.carbon.protectedAreaHectares,
+                            )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        -
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-peat-forest/[0.02]">
+                      <td className="px-4 py-3 font-medium text-peat-forest">
+                        Estimasi insentif
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-peat-forest">
+                        {report.metrics.carbon.estimatedIncentiveIdr === null
+                          ? "Belum tersedia"
+                          : formatCurrency(
+                              report.metrics.carbon.estimatedIncentiveIdr,
+                            )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        Ilustrasi CO₂e × tarif tersimpan; bukan formula insentif
+                        patroli final.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 font-medium">
+                        Perubahan sejak akhir bulan sebelumnya
+                      </td>
+                      <td className="px-4 py-3" colSpan={2}>
+                        {report.metrics.carbon.periodChangeTons == null
+                          ? "Riwayat pembanding belum tersedia"
+                          : formatCarbon(
+                              report.metrics.carbon.periodChangeTons,
+                            )}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 font-medium">
+                        Ringkasan bukti MRV
+                      </td>
+                      <td className="px-4 py-3" colSpan={2}>
+                        {report.metrics.reports.evidence?.accepted ?? 0}{" "}
+                        diterima ·{" "}
+                        {report.metrics.reports.evidence?.followUp ?? 0} perlu
+                        tindak lanjut ·{" "}
+                        {report.metrics.reports.evidence?.rejected ?? 0} ditolak
+                      </td>
+                    </tr>
+                  </>
+                )}
               </tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <section
-        aria-labelledby="generator-zones-title"
-        className="border-t border-peat-forest/10 py-5"
-      >
-        <h3
-          className="font-heading text-2xl font-bold text-peat-forest"
-          id="generator-zones-title"
+      {isCarbonAudit ? (
+        <section
+          aria-labelledby="generator-zones-title"
+          className="border-t border-peat-forest/10 py-5"
         >
-          Estimasi emisi dicegah per zona
-        </h3>
-        {report.metrics.carbon.status === "unavailable" ? (
-          <p className="mt-3 rounded-xl border border-warning/20 bg-warning/5 px-4 py-3 text-sm text-foreground">
-            Riwayat snapshot karbon belum tersedia pada periode yang dipilih.
-            Nilai karbon tidak dihitung dari data saat ini untuk menggantikan
-            riwayat tersebut.
-          </p>
-        ) : report.metrics.carbon.zones.length > 0 ? (
-          <div className="mt-3 overflow-hidden rounded-2xl border border-peat-forest/10 bg-white shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[570px] border-collapse text-left">
-                <caption className="sr-only">
-                  Estimasi luas, emisi dicegah, dan insentif setiap zona yang
-                  disetujui
-                </caption>
-                <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3" scope="col">
-                      Zona gambut
-                    </th>
-                    <th className="px-4 py-3" scope="col">
-                      Luas zona
-                    </th>
-                    <th className="px-4 py-3" scope="col">
-                      Estimasi emisi dicegah
-                    </th>
-                    <th className="px-4 py-3" scope="col">
-                      Estimasi insentif
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-peat-forest/10 text-sm">
-                  {report.metrics.carbon.zones.map((zone) => (
-                    <tr
-                      className="transition-colors hover:bg-peat-forest/[0.02]"
-                      key={zone.zoneId}
-                    >
-                      <th
-                        className="px-4 py-3 text-left font-semibold text-peat-forest"
-                        scope="row"
-                      >
-                        {zone.zoneName}
-                        <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                          Snapshot {formatDateTime(zone.snapshotAt)} ·{" "}
-                          {CARBON_SNAPSHOT_REASON_LABELS[zone.snapshotReason]}
-                        </span>
-                        {zone.isIllustrative ? (
-                          <span className="mt-1 block text-xs font-normal text-warning">
-                            Data ilustratif
-                          </span>
-                        ) : null}
+          <h3
+            className="font-heading text-2xl font-bold text-peat-forest"
+            id="generator-zones-title"
+          >
+            Estimasi emisi dicegah per zona
+          </h3>
+          {report.metrics.carbon.excludedZoneCount ? (
+            <p className="mt-2 text-sm">
+              {report.metrics.carbon.excludedZoneCount} zona konflik
+              dikecualikan dari estimasi.
+            </p>
+          ) : null}
+          {report.metrics.carbon.status === "unavailable" ? (
+            <p className="mt-3 rounded-xl border border-warning/20 bg-warning/5 px-4 py-3 text-sm text-foreground">
+              Riwayat snapshot karbon belum tersedia pada periode yang dipilih.
+              Nilai karbon tidak dihitung dari data saat ini untuk menggantikan
+              riwayat tersebut.
+            </p>
+          ) : report.metrics.carbon.zones.length > 0 ? (
+            <div className="mt-3 overflow-hidden rounded-2xl border border-peat-forest/10 bg-white shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[570px] border-collapse text-left">
+                  <caption className="sr-only">
+                    Estimasi luas, emisi dicegah, dan insentif setiap zona yang
+                    disetujui
+                  </caption>
+                  <thead className="border-b border-peat-forest/10 bg-[#f6f7ef] text-xs font-semibold text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3" scope="col">
+                        Zona gambut
                       </th>
-                      <td className="px-4 py-3 text-foreground">
-                        {formatHectares(zone.areaHectares)}
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-peat-green">
-                        {formatCarbon(zone.estimatedCarbonTons)}
-                      </td>
-                      <td className="px-4 py-3 text-foreground">
-                        {formatCurrency(zone.estimatedIncentiveIdr)}
-                      </td>
+                      <th className="px-4 py-3" scope="col">
+                        Luas zona
+                      </th>
+                      <th className="px-4 py-3" scope="col">
+                        Estimasi emisi dicegah
+                      </th>
+                      <th className="px-4 py-3" scope="col">
+                        Estimasi insentif
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-peat-forest/10 text-sm">
+                    {report.metrics.carbon.zones.map((zone) => (
+                      <tr
+                        className="transition-colors hover:bg-peat-forest/[0.02]"
+                        key={zone.zoneId}
+                      >
+                        <th
+                          className="px-4 py-3 text-left font-semibold text-peat-forest"
+                          scope="row"
+                        >
+                          {zone.zoneName}
+                          <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                            Snapshot {formatDateTime(zone.snapshotAt)} ·{" "}
+                            {CARBON_SNAPSHOT_REASON_LABELS[zone.snapshotReason]}
+                          </span>
+                          {zone.isIllustrative ? (
+                            <span className="mt-1 block text-xs font-normal text-warning">
+                              Data ilustratif
+                            </span>
+                          ) : null}
+                        </th>
+                        <td className="px-4 py-3 text-foreground">
+                          {formatHectares(zone.areaHectares)}
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-peat-green">
+                          {formatCarbon(zone.estimatedCarbonTons)}
+                        </td>
+                        <td className="px-4 py-3 text-foreground">
+                          {formatCurrency(zone.estimatedIncentiveIdr)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-muted-foreground">
-            Belum ada data zona disetujui pada periode ini.
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Belum ada data zona disetujui pada periode ini.
+            </p>
+          )}
+          <p className="mt-3 text-xs leading-5 text-muted-foreground">
+            Laporan patroli dan hotspot merupakan konteks aktivitas, bukan
+            kontribusi karbon tambahan di luar estimasi zona.
           </p>
-        )}
-        <p className="mt-3 text-xs leading-5 text-muted-foreground">
-          Laporan patroli dan hotspot merupakan konteks aktivitas, bukan
-          kontribusi karbon tambahan di luar estimasi zona.
-        </p>
-      </section>
+        </section>
+      ) : null}
 
       <section
         aria-labelledby="generator-narrative-title"
