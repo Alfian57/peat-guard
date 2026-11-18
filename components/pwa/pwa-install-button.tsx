@@ -6,26 +6,10 @@ import { useRef, useState } from "react";
 import { usePwaInstall } from "./pwa-install-provider";
 
 export function PwaInstallButton({ className }: { className: string }) {
-  const {
-    canInstall,
-    error,
-    install,
-    installed,
-    ios,
-    isInstalling,
-    isSecureContext,
-  } = usePwaInstall();
+  const { canInstall, error, install, installed, ios, isInstalling } =
+    usePwaInstall();
   const [guideOpen, setGuideOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
-
-  if (
-    process.env.NODE_ENV !== "production" ||
-    !isSecureContext ||
-    installed ||
-    (!canInstall && !isInstalling && !ios && !error && !guideOpen)
-  ) {
-    return null;
-  }
 
   async function handleInstall() {
     if (!canInstall || !(await install())) {
@@ -37,14 +21,23 @@ export function PwaInstallButton({ className }: { className: string }) {
     <Dialog.Root open={guideOpen} onOpenChange={setGuideOpen}>
       <button
         type="button"
-        aria-haspopup={canInstall ? undefined : "dialog"}
+        aria-label={
+          installed
+            ? "PEATGUARD sudah terpasang"
+            : isInstalling
+              ? "Membuka pemasangan aplikasi"
+              : "Pasang aplikasi relawan"
+        }
+        title={
+          installed ? "PEATGUARD sudah terpasang" : "Pasang aplikasi relawan"
+        }
+        aria-haspopup={canInstall && !installed ? undefined : "dialog"}
         className={className}
         disabled={isInstalling}
         onClick={() => void handleInstall()}
         ref={triggerRef}
       >
         <Download aria-hidden="true" className="shrink-0" size={16} />
-        {isInstalling ? "Membuka pemasangan…" : "Pasang aplikasi relawan"}
       </button>
 
       <Dialog.Portal>
@@ -55,7 +48,7 @@ export function PwaInstallButton({ className }: { className: string }) {
         >
           <div className="flex items-center justify-between gap-3">
             <Dialog.Title className="font-heading text-2xl font-bold text-peat-forest">
-              Pasang PEATGUARD
+              {installed ? "PEATGUARD sudah terpasang" : "Pasang PEATGUARD"}
             </Dialog.Title>
             <Dialog.Close
               aria-label="Tutup panduan pemasangan"
@@ -66,10 +59,18 @@ export function PwaInstallButton({ className }: { className: string }) {
             </Dialog.Close>
           </div>
           <Dialog.Description className="mt-2 text-sm leading-6 text-muted-foreground">
-            Setelah terpasang, buka ikon PEATGUARD dan masuk dengan akun relawan
-            untuk menyiapkan akses offline.
+            {installed
+              ? "Aplikasi ini sudah tersedia di perangkat. Buka PEATGUARD dari ikon di layar utama."
+              : "Setelah terpasang, buka ikon PEATGUARD dan masuk dengan akun relawan untuk menyiapkan akses offline."}
           </Dialog.Description>
-          {ios ? (
+          {installed ? (
+            <p
+              className="mt-3 text-sm leading-6 text-peat-forest"
+              role="status"
+            >
+              PEATGUARD sudah siap digunakan di perangkat ini.
+            </p>
+          ) : ios ? (
             <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-peat-forest">
               <li>
                 Buka halaman ini di Safari, lalu ketuk <strong>Bagikan</strong>.
@@ -91,6 +92,11 @@ export function PwaInstallButton({ className }: { className: string }) {
               <strong>Tambahkan ke layar utama</strong> jika tersedia.
             </p>
           )}
+          {error ? (
+            <p className="mt-3 text-sm leading-6 text-destructive" role="alert">
+              {error}
+            </p>
+          ) : null}
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

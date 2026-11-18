@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 
 import { APP_ROUTES } from "@/lib/routes";
 import { BrandLogo } from "@/components/brand/brand-logo";
-import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { handleSectionScroll } from "@/components/public/smooth-scroll";
 import { configureFieldServiceWorker } from "@/lib/client/offline/service-worker";
 
@@ -204,13 +203,6 @@ export function SiteHeader({
           >
             {workspaceHref ? "Profil" : "Masuk"}
           </Link>
-          <PwaInstallButton
-            className={`hidden min-h-11 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-3 disabled:opacity-60 lg:inline-flex ${
-              isHeroSurface
-                ? "border-white/45 bg-black/20 text-white hover:bg-white/15 focus-visible:outline-white"
-                : "border-peat-forest/20 bg-white text-peat-forest hover:bg-peat-paper focus-visible:outline-peat-green"
-            }`}
-          />
           <Link
             className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-peat-sun px-4 text-sm font-semibold text-peat-forest transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-3 sm:px-5 ${
               isHeroSurface
