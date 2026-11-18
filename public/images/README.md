@@ -19,13 +19,15 @@ use these assets in reports or as proof of field activity.
 
 ## Application screenshots
 
-These are captures from the running application using the local demo volunteer
-account. They retain the application's own demo labels and are displayed inside
-the phone frame without an additional illustration caption.
+These are Playwright captures from the running local application using the demo
+volunteer account. They use a synthetic canal photo and seeded demo reports; the
+home capture keeps the application's native `Sampel demo` labels visible. The
+current report form does not show a demo badge for uploaded photos. The section
+caption identifies the visuals as illustrative.
 
-- `field-app-capture.webp` — real application screenshot of the volunteer report form with a demo canal sample selected.
-- `field-app-saved.webp` — real application screenshot of the offline queue with one local draft.
-- `field-app-sent.webp` — real application screenshot of the volunteer home after that demo report synced. Capture details: [field-app-screenshots.md](field-app-screenshots.md).
+- `field-app-capture.webp` — the report form with a synthetic canal photo and the `Kanal` category.
+- `field-app-saved.webp` — the offline queue with one local draft; remote history is unavailable while offline.
+- `field-app-sent.webp` — the connected home screen scrolled to seeded reports labeled `Sampel demo`. Capture details: [field-app-screenshots.md](field-app-screenshots.md).
 
 ## Landing behavior
 

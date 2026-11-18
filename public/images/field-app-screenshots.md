@@ -1,33 +1,30 @@
 # Volunteer application screenshots
 
-These are actual application captures made with Playwright on localhost using
-the seeded **Relawan Demo** account. They are not generated mock interfaces.
-The desktop landing page displays them inside a decorative phone frame.
+These are genuine screens from the local PEATGUARD application, captured with
+Playwright using the seeded **Relawan Demo** account. They are not composed or
+retouched mock interfaces. Each capture is **390 × 844 CSS pixels** and stored
+as lossless WebP. The Next.js development toolbar was hidden.
 
-| Asset                    | Application view        | State                                                                                 |
-| ------------------------ | ----------------------- | ------------------------------------------------------------------------------------- |
-| `field-app-capture.webp` | `/field/reports/create` | Kanal kering demo sample selected in the actual report form.                          |
-| `field-app-saved.webp`   | `/field/queue`          | Built-in offline simulation active; one pending draft and one previously sent report. |
-| `field-app-sent.webp`    | `/field/home`           | Offline simulation disabled; the home screen shows the previously synced demo report. |
+| Asset                    | Application view        | Captured state                                                                                              |
+| ------------------------ | ----------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `field-app-capture.webp` | `/field/reports/create` | Offline indicator, synthetic canal photo selected, and the `Kanal` category.                                |
+| `field-app-saved.webp`   | `/field/queue`          | One local draft waiting to sync while offline; the current UI reports `0 terkirim` and unavailable history. |
+| `field-app-sent.webp`    | `/field/home`           | Connected home screen, scrolled to reports carrying the application's native `Sampel demo` label.           |
 
-Refreshed with the selected **Akar Kehidupan** brand at a **390 × 844 CSS pixel** viewport on 17–18 November 2026 and compressed
-to lossless WebP without cropping, retouching, or replacing application text.
-Only the Next.js development toolbar was hidden during capture. The camera,
-speaker, metal edge, side buttons, and home indicator belong to the surrounding
-CSS frame and do not cover application content.
+The form capture uses `public/samples/kanal-kering.webp`, a synthetic demo
+image, with a note identifying it as a landing-page illustration. The current
+form treats uploaded photos as regular evidence and does not add a native demo
+badge to this view. The section's exterior caption identifies the visuals as
+illustrative.
 
-The flow used the built-in canal demo sample, its supplied example coordinates,
-and a note identifying it as a demonstration for the landing page. AI analysis
-was left off. The new pending draft was removed through the application's local
-draft action after capture; the already synced report was retained. No additional
-server report was submitted to refresh the branding. The application retains its own **Sampel demo** labels; these
-screenshots do not document an operational incident. No private account data,
-customer reports, authentication tokens, or live session content are embedded
-by the landing page.
+The offline draft was created in the browser's local report store and deleted
+through the app after capture. Connectivity was restored only after deletion,
+so no report was submitted to the server. Existing seeded reports were left
+unchanged. No authentication tokens or private account data are embedded.
 
-To refresh the captures, use a local demo volunteer session, select the canal
-sample in the form, activate the built-in offline simulation before saving,
-capture the local queue, and reconnect to capture the synced home screen.
-Wait for the visible session, sample preview, and queue states to finish loading.
-Keep the native demo labels. Preserve the viewport aspect ratio and use lossless
-compression for UI text.
+To refresh the captures, run the local app, sign in with the demo volunteer,
+upload the synthetic canal image, set the sample coordinates and category, and
+enable offline simulation before saving. Capture the queue before deleting the
+draft. Reconnect and capture the home screen at the first rows labeled
+`Sampel demo`. Preserve the 390 × 844 viewport and lossless compression so UI
+text remains clear.

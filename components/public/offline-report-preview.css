@@ -1,53 +1,80 @@
 .offline-phone {
-  width: min(100%, clamp(248px, 32dvh, 304px));
+  width: min(100%, clamp(250px, 36dvh, 326px));
   justify-self: center;
   perspective: 1200px;
 }
 
 .offline-phone__device {
-  --phone-radius: 38px;
+  --phone-radius: 42px;
+  isolation: isolate;
   position: relative;
-  padding: 2px;
+  padding: 3px;
   border-radius: var(--phone-radius);
   background: linear-gradient(
-    125deg,
-    #a2aca5 0%,
-    #38473e 18%,
-    #7d8d81 48%,
-    #23362b 75%,
-    #a2aca5 100%
+    135deg,
+    #d2dbd3 0%,
+    #718176 4%,
+    #26382d 12%,
+    #627369 40%,
+    #15231a 70%,
+    #c3cec5 100%
   );
   box-shadow:
-    0 30px 65px rgb(0 0 0 / 34%),
-    10px 7px 20px rgb(0 0 0 / 16%),
-    inset 0 0 0 1px rgb(255 255 255 / 28%);
-  transform: rotateY(-5deg);
+    0 36px 74px rgb(0 0 0 / 42%),
+    12px 9px 26px rgb(0 0 0 / 18%),
+    inset 0 1px 0 rgb(255 255 255 / 56%),
+    inset 0 0 0 1px rgb(255 255 255 / 24%);
+  transform: rotateY(-7deg) rotateX(1deg);
 }
 .offline-phone__device::before {
   content: "";
   position: absolute;
-  z-index: 2;
-  top: 52px;
-  bottom: 52px;
-  left: 1px;
-  width: 1px;
-  background: linear-gradient(transparent, rgb(255 255 255 / 55%), transparent);
+  z-index: 3;
+  top: 48px;
+  bottom: 48px;
+  left: 2px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    transparent,
+    rgb(255 255 255 / 74%) 28%,
+    rgb(255 255 255 / 38%) 72%,
+    transparent
+  );
+  box-shadow: 1px 0 0 rgb(0 0 0 / 35%);
+  pointer-events: none;
+}
+.offline-phone__device::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 2px;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 34%),
+    inset 0 -1px 0 rgb(0 0 0 / 48%);
   pointer-events: none;
 }
 .offline-phone__frame {
   position: relative;
-  padding: 17px 6px 10px;
-  border: 1px solid #142219;
-  border-radius: calc(var(--phone-radius) - 2px);
-  background: #101c16;
+  z-index: 1;
+  padding: 17px 7px 11px;
+  border: 1px solid #101a14;
+  border-radius: calc(var(--phone-radius) - 3px);
+  background: linear-gradient(145deg, #17251c, #08120c 72%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 14%),
+    inset 0 -2px 5px rgb(0 0 0 / 72%);
 }
 .offline-phone__screen {
   position: relative;
   aspect-ratio: 390 / 844;
   overflow: hidden;
-  border-radius: 26px;
+  border-radius: 27px;
   background: var(--peat-paper);
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 65%);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 72%),
+    inset 0 0 0 1px rgb(255 255 255 / 18%);
 }
 .offline-phone__state {
   position: absolute;
@@ -58,78 +85,95 @@
 }
 .offline-phone__speaker {
   position: absolute;
-  top: 7px;
-  left: calc(50% - 24px);
-  width: 40px;
-  height: 3px;
+  z-index: 2;
+  top: 6px;
+  left: calc(50% - 27px);
+  width: 44px;
+  height: 5px;
+  border: 1px solid rgb(255 255 255 / 8%);
   border-radius: 10px;
-  background: #030906;
-  box-shadow: 0 1px 0 rgb(255 255 255 / 9%);
+  background: linear-gradient(180deg, #020805, #0a130e);
+  box-shadow:
+    inset 0 1px 1px rgb(0 0 0 / 95%),
+    0 1px 0 rgb(255 255 255 / 8%);
 }
 .offline-phone__lens {
   position: absolute;
+  z-index: 2;
   top: 6px;
-  left: calc(50% + 22px);
-  width: 5px;
-  height: 5px;
-  border: 1px solid #293b32;
+  left: calc(50% + 24px);
+  width: 6px;
+  height: 6px;
+  border: 1px solid #52675a;
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 40%, #40675f, #020a06 65%);
+  background: radial-gradient(
+    circle at 38% 38%,
+    #78a193,
+    #10241c 42%,
+    #020806 72%
+  );
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 50%);
 }
 .offline-phone__home-indicator {
   position: absolute;
+  z-index: 2;
   bottom: 4px;
   left: 39%;
   width: 22%;
   height: 2px;
   border-radius: 10px;
-  background: #78857c;
+  background: linear-gradient(90deg, #59665c, #c4cdc5 50%, #59665c);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 62%);
 }
 .offline-phone__key {
   position: absolute;
-  width: 3px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, #a0aca3, #263a2d);
+  z-index: 2;
+  width: 4px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 3px;
+  background: linear-gradient(90deg, #d2dbd3, #526257 32%, #233329);
+  box-shadow: 0 2px 3px rgb(0 0 0 / 40%);
 }
 .offline-phone__key--mute {
   top: 70px;
-  left: -2px;
+  left: -3px;
   height: 22px;
 }
 .offline-phone__key--volume {
   top: 112px;
-  left: -2px;
+  left: -3px;
   height: 50px;
 }
 .offline-phone__key--power {
   top: 122px;
-  right: -2px;
+  right: -3px;
   height: 58px;
 }
 
 @media (max-width: 767px) {
   .offline-phone {
-    width: min(34vw, 15dvh, 148px);
+    width: min(38vw, 17dvh, 150px);
   }
   .offline-phone__device {
-    --phone-radius: 22px;
-    padding: 1px;
+    --phone-radius: 26px;
+    padding: 2px;
+    transform: rotateY(-4deg) rotateX(0.5deg);
   }
   .offline-phone__frame {
-    padding: 10px 3px 6px;
+    padding: 10px 4px 7px;
   }
   .offline-phone__screen {
-    border-radius: 16px;
+    border-radius: 18px;
   }
   .offline-phone__speaker {
     top: 4px;
-    left: calc(50% - 14px);
-    width: 24px;
-    height: 2px;
+    left: calc(50% - 15px);
+    width: 25px;
+    height: 3px;
   }
   .offline-phone__lens {
-    top: 3px;
-    left: calc(50% + 14px);
+    top: 4px;
+    left: calc(50% + 13px);
     width: 4px;
     height: 4px;
   }
@@ -138,15 +182,18 @@
     height: 1px;
   }
   .offline-phone__key--mute {
-    top: 36px;
+    top: 40px;
+    left: -2px;
     height: 14px;
   }
   .offline-phone__key--volume {
-    top: 60px;
+    top: 64px;
+    left: -2px;
     height: 26px;
   }
   .offline-phone__key--power {
-    top: 64px;
+    top: 68px;
+    right: -2px;
     height: 30px;
   }
 }
