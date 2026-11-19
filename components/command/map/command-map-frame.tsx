@@ -25,8 +25,8 @@ export function CommandMapFrame({
   zones: MapZone[];
 }) {
   return (
-    <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-peat-forest/10 bg-white p-2 shadow-xs sm:p-3">
-      <div className="relative h-[clamp(320px,68vh,720px)] overflow-hidden rounded-xl xl:h-auto xl:min-h-[clamp(320px,68vh,720px)] xl:flex-1">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-peat-forest/10 bg-white p-2 shadow-xs sm:p-3">
+      <div className="relative h-[clamp(280px,52dvh,630px)] overflow-hidden rounded-xl sm:h-[clamp(320px,60dvh,720px)] xl:h-auto xl:min-h-[clamp(320px,68vh,720px)] xl:flex-1">
         {state === "ready" && error ? (
           <p
             className="absolute top-3 left-3 z-10 max-w-sm rounded-lg border border-amber-900/15 bg-white/95 px-3 py-2 text-xs leading-5 text-amber-950 shadow-sm"

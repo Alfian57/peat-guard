@@ -128,6 +128,7 @@
   gap: 40px 36px;
 }
 .public-metric-card {
+  container-type: inline-size;
   min-width: 0;
   border-top: 1px solid rgb(31 77 61 / 24%);
   padding-top: 18px;
@@ -148,6 +149,7 @@
   margin-top: 18px;
   font-family: var(--font-barlow-condensed);
   font-size: clamp(36px, 4.4vw, 72px);
+  font-size: clamp(28px, 16cqi, 72px);
   font-weight: 500;
   line-height: 1;
   letter-spacing: -0.03em;
@@ -496,6 +498,7 @@
   .public-metric-card__value {
     margin-top: 8px;
     font-size: clamp(30px, 9.6vw, 48px);
+    font-size: clamp(24px, 16cqi, 48px);
   }
   .public-metric-card__detail {
     margin-top: 8px;
@@ -717,6 +720,7 @@
   }
   .public-metric-card__value {
     font-size: 32px;
+    font-size: clamp(24px, 16cqi, 32px);
   }
   .public-workflow__step {
     gap: 10px;

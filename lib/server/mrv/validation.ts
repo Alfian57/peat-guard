@@ -294,7 +294,18 @@ export function parseDashboardFilters(
     return range;
   }
 
-  return { ok: true, value: { range: range.value } };
+  const dataset = searchParams.get("dataset");
+  if (
+    searchParams.getAll("dataset").length > 1 ||
+    (dataset !== null && dataset !== "operational" && dataset !== "simulation")
+  ) {
+    return { ok: false, error: "Pilih data operasional atau simulasi." };
+  }
+
+  return {
+    ok: true,
+    value: { range: range.value, ...(dataset ? { dataset } : {}) },
+  };
 }
 
 export function parseLedgerFilters(

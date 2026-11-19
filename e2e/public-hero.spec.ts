@@ -44,6 +44,43 @@ test.describe("Public landing introduction", () => {
     }
   });
 
+  test("uses the poster on Save-Data and loads the video only on request", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "connection", {
+        value: Object.assign(new EventTarget(), {
+          saveData: true,
+          effectiveType: "4g",
+        }),
+      });
+    });
+    const videoRequests: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().endsWith("/videos/peatland-hero.mp4")) {
+        videoRequests.push(request.url());
+      }
+    });
+
+    await openLanding(page);
+    const stage = page.locator(".public-hero__stage");
+    await expect(
+      stage.getByText(/Pantau zona gambut dan hotspot/),
+    ).toBeInViewport();
+    const play = stage.getByRole("button", { name: "Putar video latar" });
+    await expect(play).toBeInViewport({ ratio: 1 });
+    await expect(play).toHaveText("Putar");
+    await expect(stage.locator("img")).toHaveJSProperty("complete", true);
+    expect(videoRequests).toHaveLength(0);
+
+    await play.click();
+    await expect.poll(() => videoRequests.length).toBeGreaterThan(0);
+    await expect(
+      stage.getByRole("button", { name: "Jeda video latar" }),
+    ).toBeVisible();
+  });
+
   for (const viewport of [
     { width: 1904, height: 900 },
     { width: 1366, height: 768 },

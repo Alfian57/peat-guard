@@ -68,7 +68,13 @@ test("dashboard labels the estimate and unavailable history without a readiness 
   expect(calculation.closest("details")).toBeNull();
   expect(screen.getByText("E_saved = A × B × EF × conversion")).toBeTruthy();
   expect(screen.queryByText("Skor kesiapsiagaan")).toBeNull();
-  expect(screen.getByText(/estimasi simulasi/)).toBeTruthy();
+  expect(screen.getByText(/estimasi berbasis parameter/)).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: "Operasional" })
+      .getAttribute("aria-current"),
+  ).toBe("page");
+  expect(screen.getAllByText(/15 Nov 2026/)).toHaveLength(2);
 });
 
 test("dashboard displays filter validation feedback near the form", () => {

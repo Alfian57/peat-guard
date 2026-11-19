@@ -5,7 +5,7 @@ const workerSource = await Bun.file(
   new URL("../public/sw.js", import.meta.url),
 ).text();
 const origin = "https://peatguard.test";
-const cacheName = "peatguard-field-v7";
+const cacheName = "peatguard-field-v8";
 const shellPaths = [
   "/field/home",
   "/field/reports/create",
@@ -360,7 +360,7 @@ test("offline preparation retries missing shells when the connection becomes ava
 
 test("an incomplete update preserves prepared shells from the preceding version", async () => {
   const harness = workerHarness();
-  const previous = await harness.open("peatguard-field-v6");
+  const previous = await harness.open("peatguard-field-v7");
   for (const path of shellPaths) {
     await previous.put(
       path,
@@ -383,5 +383,5 @@ test("an incomplete update preserves prepared shells from the preceding version"
   expect(await (await harness.navigate("/field/reports/create"))?.text()).toBe(
     "Previous shell",
   );
-  expect(harness.cacheData.has("peatguard-field-v6")).toBe(true);
+  expect(harness.cacheData.has("peatguard-field-v7")).toBe(true);
 });

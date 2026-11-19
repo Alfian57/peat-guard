@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import {
+  ArrowLeft,
+  RefreshCw,
+  SlidersHorizontal,
+  TriangleAlert,
+} from "lucide-react";
+import { useState } from "react";
 import { BrandLogo } from "@/components/brand/brand-logo";
 
 import { MapCanvasLoader } from "@/components/maps/map-canvas-loader";
@@ -7,7 +13,6 @@ import {
   PublicMapFiltersPanel,
   type PublicMapFilters,
 } from "@/components/public/public-map-filters";
-import { PublicMapFreshness } from "@/components/public/public-map-freshness";
 import { PublicMapResults } from "@/components/public/public-map-results";
 import { PublicMapResultsSkeleton } from "@/components/public/public-map-results-skeleton";
 import type { MapViewport } from "@/lib/maps/types";
@@ -17,6 +22,15 @@ import { APP_ROUTES } from "@/lib/routes";
 export type PublicMapLoadState = "loading" | "ready" | "error";
 
 const INITIAL_CENTER: [number, number] = [113.9, -2.01];
+
+const satelliteNotices = {
+  fresh: null,
+  partial: "Pembaruan hotspot parsial",
+  stale: "Data hotspot belum mutakhir",
+  unavailable: "Data hotspot belum tersedia",
+  not_configured: "Pembaruan hotspot belum tersedia",
+  configuration_error: "Pembaruan hotspot terkendala",
+} satisfies Record<PublicMapViewData["freshness"]["status"], string | null>;
 
 export function PublicMapScreen({
   filters,
@@ -39,10 +53,13 @@ export function PublicMapScreen({
   onRetry: () => void;
   onViewportChange: (viewport: MapViewport) => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const satelliteNotice = data && satelliteNotices[data.freshness.status];
+
   return (
-    <main className="flex min-h-[100dvh] flex-col bg-peat-paper text-peat-forest">
-      <header className="relative z-10 flex min-h-16 items-center justify-between gap-4 border-b border-peat-forest/10 bg-white px-4 sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
+    <main className="flex h-dvh min-h-0 flex-col overflow-hidden bg-peat-paper text-peat-forest">
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-peat-forest/10 bg-white px-3 pt-[env(safe-area-inset-top)] sm:px-6">
+        <div className="flex min-h-16 min-w-0 items-center gap-2 sm:gap-3">
           <Link
             aria-label="Kembali ke beranda PEATGUARD"
             className="grid size-11 shrink-0 place-items-center rounded-full text-peat-forest hover:bg-peat-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-peat-green"
@@ -51,35 +68,32 @@ export function PublicMapScreen({
             <ArrowLeft aria-hidden="true" size={20} />
           </Link>
           <BrandLogo height={32} variant="circle" />
-          <div className="min-w-0">
-            <p className="font-heading text-lg leading-none font-bold tracking-wide">
-              Pantauan publik
-            </p>
-            <p className="mt-1 truncate text-xs text-peat-forest/65">
-              Peta bentang gambut
-            </p>
-          </div>
+          <h1 className="min-w-0 truncate font-heading text-xl leading-none font-bold">
+            Pantauan gambut
+          </h1>
         </div>
-        <p className="hidden max-w-md text-right text-xs leading-5 text-peat-forest/65 sm:block">
+        <p className="hidden max-w-md text-right text-xs leading-5 text-peat-forest/65 lg:block">
           Hanya zona disetujui dan hotspot satelit yang ditampilkan.
         </p>
+        <button
+          aria-controls="public-map-menu"
+          aria-expanded={menuOpen}
+          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border border-peat-forest/15 px-2.5 text-sm font-semibold aria-expanded:bg-peat-paper lg:hidden"
+          onClick={() => setMenuOpen((open) => !open)}
+          type="button"
+        >
+          <SlidersHorizontal aria-hidden="true" size={16} />
+          Menu peta
+        </button>
       </header>
 
-      <div className="grid flex-1 grid-rows-[minmax(22rem,58svh)_auto] lg:min-h-[calc(100dvh-4rem)] lg:grid-cols-[minmax(20rem,24rem)_minmax(0,1fr)] lg:grid-rows-1">
-        <aside className="order-2 min-h-0 overflow-y-auto border-t border-peat-forest/10 bg-peat-paper p-4 sm:p-5 lg:order-1 lg:border-t-0 lg:border-r">
-          <div className="mb-5">
-            <p className="text-xs font-bold tracking-[.14em] text-peat-green uppercase">
-              Informasi publik
-            </p>
-            <h1 className="mt-1 font-heading text-3xl leading-none font-bold">
-              Pantauan gambut
-            </h1>
-            <p className="mt-2 text-sm leading-6 text-peat-forest/70">
-              Jelajahi batas zona yang disetujui dan indikasi titik panas dari
-              pengamatan satelit.
-            </p>
-          </div>
-
+      <div className="relative isolate grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] overflow-hidden lg:grid-cols-[minmax(20rem,24rem)_minmax(0,1fr)]">
+        <aside
+          aria-label="Filter dan hasil peta"
+          className={`${menuOpen ? "block" : "hidden"} absolute inset-x-0 bottom-0 z-10 max-h-[75%] min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain rounded-t-2xl border-t border-peat-forest/10 bg-peat-paper px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-peat-green sm:px-5 lg:relative lg:inset-auto lg:col-start-1 lg:row-start-1 lg:block lg:max-h-none lg:rounded-none lg:border-t-0 lg:border-r lg:shadow-none`}
+          id="public-map-menu"
+          tabIndex={0}
+        >
           <PublicMapFiltersPanel
             filters={filters}
             hasUnappliedViewport={hasUnappliedViewport}
@@ -111,8 +125,7 @@ export function PublicMapScreen({
           ) : null}
 
           {data ? (
-            <div className="mt-5 space-y-5">
-              <PublicMapFreshness freshness={data.freshness} />
+            <div className="mt-5">
               <PublicMapResults data={data} />
             </div>
           ) : null}
@@ -124,26 +137,29 @@ export function PublicMapScreen({
 
         <section
           aria-label="Peta interaktif publik"
-          className="relative order-1 min-h-[22rem] bg-[#e6ebdf] lg:order-2 lg:min-h-0"
+          className="col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#e6ebdf] lg:col-start-2"
         >
-          <MapCanvasLoader
-            autoFit={false}
-            className="absolute inset-0 h-full min-h-[22rem] overflow-hidden"
-            clusterPoints={false}
-            initialCenter={INITIAL_CENTER}
-            initialZoom={6.5}
-            maxAutoFitZoom={6.5}
-            onViewportChange={onViewportChange}
-            points={data?.hotspots ?? []}
-            zones={data?.zones ?? []}
-          />
-          <div className="pointer-events-none absolute top-3 left-3 z-[1] max-w-[min(26rem,calc(100%-1.5rem))] rounded-xl border border-white/75 bg-white/95 px-3 py-2 text-xs leading-5 text-peat-forest shadow-sm">
-            Zona berwarna hijau telah disetujui. Titik hotspot adalah indikasi
-            satelit, bukan konfirmasi api.
+          <div className="relative min-h-0 flex-1 overflow-hidden [&>[data-map-placeholder]]:min-h-0 [&>[data-map-placeholder]]:rounded-none">
+            <MapCanvasLoader
+              autoFit={false}
+              className="h-full overflow-hidden"
+              clusterPoints={false}
+              cooperativeGestures={false}
+              initialCenter={INITIAL_CENTER}
+              initialZoom={6.5}
+              maxAutoFitZoom={6.5}
+              onViewportChange={onViewportChange}
+              points={data?.hotspots ?? []}
+              zones={data?.zones ?? []}
+            />
+            <div className="pointer-events-none absolute top-3 left-3 z-[1] max-w-[min(26rem,calc(100%-4.25rem))] rounded-xl border border-white/75 bg-white/95 px-3 py-2 text-xs leading-5 text-peat-forest shadow-sm">
+              Titik hotspot adalah indikasi satelit. Konfirmasi kejadian api
+              memerlukan pemeriksaan lapangan.
+            </div>
           </div>
           <ul
             aria-label="Legenda peta"
-            className="absolute right-3 bottom-3 z-[1] flex flex-wrap gap-x-4 gap-y-2 rounded-xl border border-white/75 bg-white/95 px-3 py-2 text-xs font-medium text-peat-forest shadow-sm"
+            className="flex shrink-0 flex-wrap gap-x-4 gap-y-2 border-t border-peat-forest/10 bg-white px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-xs font-medium text-peat-forest"
           >
             <li className="inline-flex items-center gap-2">
               <span
@@ -175,6 +191,12 @@ export function PublicMapScreen({
                   className="size-3 rounded-full border-2 border-[#dc5a1b] bg-peat-sun"
                 />
                 Hotspot ilustrasi sintetis
+              </li>
+            ) : null}
+            {satelliteNotice ? (
+              <li className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-0.5 text-amber-950">
+                <TriangleAlert aria-hidden="true" size={13} />
+                <span role="status">{satelliteNotice}</span>
               </li>
             ) : null}
           </ul>

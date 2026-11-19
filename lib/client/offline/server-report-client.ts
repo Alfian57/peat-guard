@@ -38,6 +38,7 @@ export type ServerReportSummary = {
   isDemoSample: boolean;
   hasPhoto: boolean;
   photoHref: string | null;
+  needsFollowUp?: boolean;
 };
 
 export type ServerReportStatusEvent = {
@@ -215,6 +216,9 @@ function parseReportSummary(value: unknown): ServerReportSummary {
     isDemoSample: requiredBoolean(value.isDemoSample),
     hasPhoto,
     photoHref,
+    ...(typeof value.needsFollowUp === "boolean"
+      ? { needsFollowUp: value.needsFollowUp }
+      : {}),
   };
 }
 

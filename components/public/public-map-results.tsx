@@ -1,5 +1,7 @@
-import { Flame, MapPinned } from "lucide-react";
+import { CircleAlert, Flame, MapPinned } from "lucide-react";
 
+import { PublicMapFreshness } from "@/components/public/public-map-freshness";
+import { PublicMapInfoPopover } from "@/components/public/public-map-info-popover";
 import type { PublicMapViewData } from "@/lib/public/client-contracts";
 
 const MAX_VISIBLE_HOTSPOTS = 12;
@@ -17,23 +19,29 @@ export function PublicMapResults({ data }: { data: PublicMapViewData | null }) {
   return (
     <section aria-labelledby="map-results-title">
       <div className="flex items-center justify-between gap-2">
-        <h2
-          className="font-heading text-xl font-bold text-peat-forest"
-          id="map-results-title"
-        >
-          Hasil area ini
-        </h2>
-        <span className="text-xs font-medium text-peat-forest/65">
-          {data.zones.length} zona · {data.hotspots.length} hotspot
-        </span>
+        <div>
+          <h2
+            className="font-heading text-xl font-bold text-peat-forest"
+            id="map-results-title"
+          >
+            Hasil area ini
+          </h2>
+          <p className="text-xs font-medium text-peat-forest/65">
+            {data.zones.length} zona · {data.hotspots.length} hotspot
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-1">
+          <PublicMapFreshness freshness={data.freshness} />
+          {data.truncated.zones || data.truncated.hotspots ? (
+            <PublicMapInfoPopover title="Hasil dibatasi" icon={CircleAlert}>
+              <p>
+                Hasil dibatasi demi kinerja. Perbesar peta atau gunakan filter
+                untuk melihat area yang lebih sempit.
+              </p>
+            </PublicMapInfoPopover>
+          ) : null}
+        </div>
       </div>
-
-      {data.truncated.zones || data.truncated.hotspots ? (
-        <p className="mt-3 rounded-xl border border-peat-sun/45 bg-peat-sun/15 px-3 py-2 text-xs leading-5 text-peat-forest">
-          Hasil dibatasi demi kinerja. Perbesar peta atau gunakan filter untuk
-          melihat area yang lebih sempit.
-        </p>
-      ) : null}
 
       {isEmpty ? (
         <p className="mt-3 rounded-xl bg-white px-3 py-3 text-sm leading-6 text-peat-forest/70">

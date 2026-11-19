@@ -35,7 +35,6 @@ export function PublicHeroHeadline({
 
   return (
     <motion.div
-      aria-hidden="true"
       className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-5 pt-16 pb-24 text-center sm:px-8"
       style={
         prefersReducedMotion
@@ -49,12 +48,15 @@ export function PublicHeroHeadline({
       }
     >
       <div className="mx-auto flex max-w-4xl flex-col items-center">
-        <h2 className="font-heading text-5xl font-bold tracking-tight text-white sm:text-7xl lg:text-8xl">
+        <p
+          aria-hidden="true"
+          className="font-heading text-5xl font-bold tracking-tight text-white sm:text-7xl lg:text-8xl"
+        >
           Bentang Gambut <span className="text-peat-sun">Indonesia.</span>
-        </h2>
+        </p>
         <p className="mt-4 max-w-2xl text-base leading-relaxed font-normal text-white/85 sm:text-xl lg:text-2xl">
-          Penjaga iklim global, benteng keanekaragaman hayati, dan arsip purba
-          bumi.
+          Pantau zona gambut dan hotspot satelit, serta catat temuan patroli
+          untuk ditindaklanjuti posko.
         </p>
       </div>
     </motion.div>

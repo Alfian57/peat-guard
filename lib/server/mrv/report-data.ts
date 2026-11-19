@@ -45,6 +45,7 @@ export type MrvReportSource = {
   excludedZoneCount?: number;
   partial?: boolean;
   priorCarbonTons?: number | null;
+  priorZones?: CarbonSnapshotZoneValues[];
   canalObservations?: Array<{
     condition: CanalCondition;
     demoCount: number;
@@ -282,6 +283,7 @@ export async function getMrvReportSource(
     priorCarbonTons: previous?.hasSnapshot
       ? previous.totals.estimatedCarbonTons
       : null,
+    priorZones: previous?.hasSnapshot ? previous.zones : undefined,
     partial: Boolean(
       filters.range?.toExclusive && filters.range.toExclusive > currentTime,
     ),

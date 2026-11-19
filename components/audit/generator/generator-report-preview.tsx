@@ -169,6 +169,59 @@ export function GeneratorReportPreview({
                       </td>
                     </tr>
                   </>
+                ) : report.metrics.carbon.byDataset ? (
+                  <>
+                    {(
+                      [
+                        [
+                          "Operasional",
+                          report.metrics.carbon.byDataset.operational,
+                        ],
+                        [
+                          "Simulasi",
+                          report.metrics.carbon.byDataset.simulation,
+                        ],
+                      ] as const
+                    ).map(([label, totals]) => (
+                      <tr
+                        className="align-top hover:bg-peat-forest/[0.02]"
+                        key={label}
+                      >
+                        <th
+                          className="px-4 py-3 font-medium text-peat-forest"
+                          scope="row"
+                        >
+                          {label}
+                          <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                            {formatCount(totals.approvedZoneCount)} zona
+                          </span>
+                        </th>
+                        <td className="px-4 py-3">
+                          <p className="font-semibold text-peat-green">
+                            {formatCarbon(totals.estimatedCarbonTons)}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Estimasi emisi dicegah
+                          </p>
+                        </td>
+                        <td className="space-y-1 px-4 py-3 text-xs text-peat-forest">
+                          <p>
+                            {formatHectares(totals.protectedAreaHectares)} area
+                            zona
+                          </p>
+                          <p>
+                            {formatCurrency(totals.estimatedIncentiveIdr)}{" "}
+                            estimasi insentif
+                          </p>
+                          <p className="text-muted-foreground">
+                            {totals.periodChangeTons == null
+                              ? "Riwayat pembanding belum tersedia"
+                              : `${formatCarbon(totals.periodChangeTons)} perubahan dari bulan sebelumnya`}
+                          </p>
+                        </td>
+                      </tr>
+                    ))}
+                  </>
                 ) : (
                   <>
                     <tr className="hover:bg-peat-forest/[0.02]">
@@ -312,6 +365,12 @@ export function GeneratorReportPreview({
                           <span className="mt-1 block text-xs font-normal text-muted-foreground">
                             Snapshot {formatDateTime(zone.snapshotAt)} ·{" "}
                             {CARBON_SNAPSHOT_REASON_LABELS[zone.snapshotReason]}
+                          </span>
+                          <span className="mt-1 block max-w-64 text-xs font-normal wrap-anywhere text-muted-foreground">
+                            {zone.parameters.name}
+                            {zone.parameters.source
+                              ? ` · ${zone.parameters.source}`
+                              : " · sumber belum dicatat"}
                           </span>
                           {zone.isIllustrative ? (
                             <span className="mt-1 block text-xs font-normal text-warning">

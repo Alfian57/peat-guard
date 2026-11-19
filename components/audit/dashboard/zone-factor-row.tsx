@@ -24,6 +24,11 @@ export function ZoneFactorRow({ zone }: { zone: ZoneImpact }) {
         >
           {zone.parameters.name} · {zone.parameters.parameterSetId}
         </span>
+        <span className="mt-1 block max-w-52 text-xs font-normal wrap-anywhere text-muted-foreground">
+          {zone.parameters.source
+            ? `Sumber parameter ${zone.parameters.source}`
+            : "Sumber parameter belum dicatat"}
+        </span>
       </th>
       <td className="px-3 py-3 font-mono text-xs">
         {formatHectares(zone.areaHectares)}

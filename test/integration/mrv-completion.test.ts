@@ -9,6 +9,7 @@ import {
   updateCommandZone,
 } from "@/lib/server/zones/data";
 import { getMrvReportSource } from "@/lib/server/mrv/report-data";
+import { getPrivateReportList } from "@/lib/server/reports/read";
 import { updateReportStatus } from "@/lib/server/reports/status";
 import {
   parseDashboardFilters,
@@ -150,6 +151,20 @@ test("historical reports retain status, response, canal, and hotspot scope after
   const id = crypto.randomUUID();
   const zoneId = crypto.randomUUID();
   const village = `Desa Historis ${zoneId}`;
+  const reference = "Rujukan parameter pengujian audit";
+  const parameters = await createCarbonParameters(
+    {
+      name: `Parameter historis ${zoneId}`,
+      source: reference,
+      isDemoData: false,
+      isActive: false,
+      biomassFactor: 1,
+      emissionFactor: 0.2,
+      co2ConversionFactor: 3.667,
+      incentivePerTonIdr: 0,
+    },
+    verifier.id,
+  );
   const observed = new Date("2026-08-14T05:00:00.000Z");
   const parsed = parseMrvReportRequest({ from: "2026-08-14", zoneId });
   if (!parsed.ok) throw new Error(parsed.error);
@@ -157,7 +172,7 @@ test("historical reports retain status, response, canal, and hotspot scope after
     INSERT INTO forest_zones (id, slug, zone_name, village_name, boundary, carbon_parameter_set_id, is_approved, updated_at)
     SELECT ${zoneId}::uuid, ${"historical-" + zoneId}, 'Zona Uji Historis', ${village},
       ST_GeomFromText('POLYGON((111 -2,111.01 -2,111.01 -2.01,111 -2.01,111 -2))', 4326),
-      id, TRUE, CURRENT_TIMESTAMP FROM carbon_parameter_sets WHERE is_active
+      ${parameters.id}::uuid, TRUE, CURRENT_TIMESTAMP
   `;
   await prisma.$executeRaw`
     INSERT INTO forest_zone_carbon_snapshots (zone_id, zone_name, village_name, area_hectares, carbon_parameter_set_id,
@@ -183,6 +198,7 @@ test("historical reports retain status, response, canal, and hotspot scope after
   const [singleCutoff] = await getCarbonHistory([observed], zoneId);
   const repeatedCutoffs = await getCarbonHistory([observed, observed], zoneId);
   expect(singleCutoff.zones).toHaveLength(1);
+  expect(singleCutoff.zones[0].parameterSource).toBe(reference);
   expect(repeatedCutoffs).toEqual([singleCutoff, singleCutoff]);
   await updateReportStatus(posko, id, {
     expectedStatus: "MENUNGGU_TINDAKAN",
@@ -218,8 +234,19 @@ test("historical reports retain status, response, canal, and hotspot scope after
     canalObservations: [{ condition: "RUSAK", demoCount: 0, nonDemoCount: 1 }],
   });
   expect(after).toEqual(before);
+  // Put a sample report in the same zone and period to detect score contamination.
+  await prisma.$executeRaw`
+    INSERT INTO field_reports (id, client_report_id, reporter_id, zone_id, latitude, longitude, location, image_path,
+      captured_at, synced_at, created_at, updated_at, is_demo_sample)
+    SELECT ${crypto.randomUUID()}::uuid, ${crypto.randomUUID()}::uuid, reporter_id, zone_id, latitude, longitude, location, image_path,
+      captured_at, synced_at, created_at, updated_at, TRUE FROM field_reports WHERE id = ${id}::uuid
+  `;
   const filters = parseDashboardFilters(
-    new URLSearchParams({ from: "2026-08-13", to: "2026-08-15" }),
+    new URLSearchParams({
+      from: "2026-08-13",
+      to: "2026-08-15",
+      dataset: "operational",
+    }),
   );
   if (!filters.ok) throw new Error(filters.error);
   const dashboard = await getMrvDashboard(filters.value);
@@ -227,6 +254,7 @@ test("historical reports retain status, response, canal, and hotspot scope after
     dashboard.villages.find(({ villageName }) => villageName === village),
   ).toMatchObject({
     fieldReportCount: 1,
+    demoFieldReportCount: 0,
     readinessComponents: {
       eligibleReports: 1,
       patrolledZones: 1,
@@ -235,6 +263,20 @@ test("historical reports retain status, response, canal, and hotspot scope after
     },
     readinessScore: 50,
   });
+  const simulation = await getMrvDashboard({
+    ...filters.value,
+    dataset: "simulation",
+  });
+  expect(
+    simulation.villages.find(({ villageName }) => villageName === village),
+  ).toMatchObject({
+    fieldReportCount: 0,
+    demoFieldReportCount: 1,
+    readinessScore: null,
+  });
+  expect(dashboard.zones.every((zone) => !zone.isIllustrative)).toBe(true);
+  expect(simulation.zones.length).toBeGreaterThan(0);
+  expect(simulation.zones.every((zone) => zone.isIllustrative)).toBe(true);
   await prisma.satelliteHotspot.deleteMany({ where: { externalId: id } });
 });
 
@@ -263,8 +305,19 @@ test("follow-up feedback and supplementary evidence keep independent revisions",
   const report = await prisma.fieldReport.findFirstOrThrow({
     where: { reporterId: volunteer.id, isDemoSample: true },
     select: { id: true, fieldNotes: true },
-    orderBy: { createdAt: "asc" },
+    orderBy: { capturedAt: "asc" },
   });
+  const firstPage = () =>
+    getPrivateReportList(volunteer, {
+      from: null,
+      toExclusive: null,
+      isDemoSample: true,
+      page: 1,
+      pageSize: 1,
+      status: null,
+      zoneId: null,
+    });
+  expect((await firstPage()).reports[0]?.id).not.toBe(report.id);
   const latest = await prisma.auditEvent.findFirst({
     where: {
       reportId: report.id,
@@ -282,6 +335,9 @@ test("follow-up feedback and supplementary evidence keep independent revisions",
       expectedVersion: latest?.id ?? null,
     },
   );
+  expect((await firstPage()).reports).toMatchObject([
+    { id: report.id, needsFollowUp: true },
+  ]);
   const supplement = await recordEvidenceSupplement(
     volunteer,
     report.id,
@@ -289,6 +345,7 @@ test("follow-up feedback and supplementary evidence keep independent revisions",
     "Foto diambil dari tepi kanal.",
     null,
   );
+  expect((await firstPage()).reports[0]?.id).not.toBe(report.id);
   await expect(
     recordMrvEvidenceReview(verifier, report.id, "REJECTED", {
       expectedVersion: review.eventId,

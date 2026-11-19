@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { useState } from "react";
 import { CalendarDays, Filter, X } from "lucide-react";
+import type { MrvDataset } from "@/lib/server/mrv/contracts";
 import { APP_ROUTES } from "@/lib/routes";
 import { DashboardDateFilterDialog } from "@/components/audit/dashboard/dashboard-date-filter-dialog";
 
 export function DashboardDateFilter({
+  dataset,
   from,
   to,
 }: {
+  dataset: MrvDataset;
   from: string;
   to: string;
 }) {
@@ -41,12 +44,12 @@ export function DashboardDateFilter({
                 size={13}
               />
               <span>
-                Periode aktivitas: {from || "awal"} – {to || "sekarang"} WIB
+                Aktivitas dan tren: {from || "awal"} – {to || "sekarang"} WIB
               </span>
             </span>
             <Link
               className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted-foreground transition hover:text-red-700"
-              href={APP_ROUTES.audit.dashboard}
+              href={`${APP_ROUTES.audit.dashboard}?dataset=${dataset}`}
             >
               <X aria-hidden="true" size={13} />
               Hapus filter
@@ -54,13 +57,13 @@ export function DashboardDateFilter({
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Menampilkan seluruh aktivitas tanpa batasan periode.
+            Pilih tanggal untuk menyaring aktivitas dan tren.
           </p>
         )}
       </div>
 
       <button
-        aria-label="Filter periode aktivitas"
+        aria-label="Filter periode aktivitas dan tren"
         aria-controls="dashboard-date-filter-dialog"
         aria-expanded={isOpen}
         aria-haspopup="dialog"
@@ -83,6 +86,7 @@ export function DashboardDateFilter({
           className="space-y-4"
           method="get"
         >
+          <input name="dataset" type="hidden" value={dataset} />
           <div className="space-y-1.5">
             <label
               className="block text-xs font-semibold text-peat-forest"

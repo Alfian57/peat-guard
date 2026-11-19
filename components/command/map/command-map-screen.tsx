@@ -19,6 +19,7 @@ import {
   type FirmsSyncStatus,
 } from "@/components/command/command-api";
 import { COMMAND_API_ROUTES } from "@/components/command/routes";
+import { MapInspector } from "@/components/command/map/map-inspector";
 import { CommandMapFrame } from "@/components/command/map/command-map-frame";
 import { CommandMapSidePanel } from "@/components/command/map/command-map-side-panel";
 import {
@@ -270,12 +271,10 @@ export function CommandMapScreen() {
 
     reportViewportRef.current = viewport;
     setReportViewport(viewport);
-    // Keep the last result during viewport refreshes. Replacing it with a
-    // skeleton resizes the aligned map, emitting another viewport update.
+    // Keep the last result and selection when the map viewport resizes.
     setReportMapState((currentState) =>
       currentState === "idle" ? "loading" : currentState,
     );
-    setSelectedPoint(null);
   }
 
   function applyReportFilters(event: FormEvent<HTMLFormElement>) {
@@ -359,22 +358,32 @@ export function CommandMapScreen() {
         aria-label="Peta komando dan layer"
         className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,1fr)_320px]"
       >
-        <CommandMapFrame
-          error={error}
-          onPointSelect={(point) => {
-            setSelectedPoint(point);
-            setSelectedZone(null);
-          }}
-          onRetry={refreshMap}
-          onViewportChange={updateReportViewport}
-          onZoneSelect={(zone) => {
-            setSelectedZone(zone);
-            setSelectedPoint(null);
-          }}
-          points={visiblePoints}
-          state={state}
-          zones={visibleZones}
-        />
+        <div className="flex min-w-0 flex-col gap-3">
+          <CommandMapFrame
+            error={error}
+            onPointSelect={(point) => {
+              setSelectedPoint(point);
+              setSelectedZone(null);
+            }}
+            onRetry={refreshMap}
+            onViewportChange={updateReportViewport}
+            onZoneSelect={(zone) => {
+              setSelectedZone(zone);
+              setSelectedPoint(null);
+            }}
+            points={visiblePoints}
+            state={state}
+            zones={visibleZones}
+          />
+          {selectedPoint || selectedZone ? (
+            <section
+              aria-label="Pilihan pada peta"
+              className="rounded-2xl border border-peat-forest/10 bg-white px-4 py-3 shadow-xs xl:hidden"
+            >
+              <MapInspector point={selectedPoint} zone={selectedZone} />
+            </section>
+          ) : null}
+        </div>
         <CommandMapSidePanel
           firmsError={firmsError}
           firmsNotice={firmsNotice}
@@ -405,7 +414,12 @@ export function CommandMapScreen() {
             onDraftChange: setDraftReportFilters,
             onReset: resetReportFilters,
             onRetry: retryReportPoints,
-            onVisibilityChange: setShowReports,
+            onVisibilityChange: (show) => {
+              setShowReports(show);
+              if (!show && selectedPoint?.kind === "report") {
+                setSelectedPoint(null);
+              }
+            },
             pointCount: reportMapResult?.points.length,
             truncated: reportMapResult?.truncated ?? false,
           }}

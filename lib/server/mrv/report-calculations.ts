@@ -203,6 +203,26 @@ function buildGeneratedReport(
     snapshotReason: zone.snapshotReason,
   }));
   const carbon = source.hasCarbonSnapshot ? sumZoneImpact(zoneImpacts) : null;
+  const previousImpacts = source.priorZones?.map(calculateZoneImpact);
+  function datasetTotals(isIllustrative: boolean) {
+    const zones = zoneImpacts.filter(
+      (zone) => zone.isIllustrative === isIllustrative,
+    );
+    const priorZones = previousImpacts?.filter(
+      (zone) => zone.isIllustrative === isIllustrative,
+    );
+    const totals = summarizeZoneImpacts(zones);
+    return {
+      ...totals,
+      approvedZoneCount: zones.length,
+      periodChangeTons: priorZones
+        ? roundToTwoDecimals(
+            totals.estimatedCarbonTons -
+              summarizeZoneImpacts(priorZones).estimatedCarbonTons,
+          )
+        : null,
+    };
+  }
   const generatedAtIso = generatedAt.toISOString();
 
   return {
@@ -221,6 +241,12 @@ function buildGeneratedReport(
       carbon: {
         asOf: source.hasCarbonSnapshot ? source.carbonSnapshotAsOf : null,
         approvedZoneCount: source.hasCarbonSnapshot ? zoneImpacts.length : null,
+        byDataset: source.hasCarbonSnapshot
+          ? {
+              operational: datasetTotals(false),
+              simulation: datasetTotals(true),
+            }
+          : null,
         containsIllustrativeData: zoneImpacts.some(
           (zone) => zone.isIllustrative,
         ),

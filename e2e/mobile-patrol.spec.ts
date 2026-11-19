@@ -42,9 +42,10 @@ test.describe("Mobile Viewport & Touch Interaction", () => {
     await expect(queueTitle).toBeVisible();
   });
 
-  test("public map layout fits mobile viewport without horizontal scrolling", async ({
+  test("public map fits the mobile viewport while the menu scrolls independently", async ({
     page,
   }) => {
+    await page.setViewportSize({ width: 393, height: 620 });
     await page.goto(APP_ROUTES.publicMap);
     await expect(page).toHaveURL(new RegExp(APP_ROUTES.publicMap));
 
@@ -52,13 +53,51 @@ test.describe("Mobile Viewport & Touch Interaction", () => {
     const backBtn = page.getByLabel("Kembali ke beranda PEATGUARD");
     await expect(backBtn).toBeVisible();
 
-    // Check page width does not cause horizontal scroll
-    const scrollWidth = await page.evaluate(
-      () => document.documentElement.scrollWidth,
-    );
-    const clientWidth = await page.evaluate(
-      () => document.documentElement.clientWidth,
-    );
-    expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+    const map = page.getByRole("region", { name: "Peta interaktif publik" });
+    const menuButton = page.getByRole("button", { name: "Menu peta" });
+    const menu = page.getByRole("complementary", {
+      name: "Filter dan hasil peta",
+    });
+    await expect(map).toBeInViewport({ ratio: 1 });
+    const mapBounds = await map.boundingBox();
+    await expect(menu).toBeHidden();
+    await expect(
+      page.getByRole("button", {
+        name: "Status data satelit",
+        includeHidden: true,
+      }),
+    ).toBeAttached();
+
+    await menuButton.tap();
+    await expect(menuButton).toHaveAttribute("aria-expanded", "true");
+    await expect(menu).toBeVisible();
+    await menu.evaluate((panel) => panel.scrollTo(0, panel.scrollHeight));
+    await expect
+      .poll(() => menu.evaluate((panel) => panel.scrollTop))
+      .toBeGreaterThan(0);
+    expect(await map.boundingBox()).toEqual(mapBounds);
+
+    const satelliteStatus = menu.getByRole("button", {
+      name: "Status data satelit",
+    });
+    const statusPopover = page.getByRole("dialog", {
+      name: "Status data satelit",
+    });
+    await satelliteStatus.tap();
+    await expect(statusPopover).toBeInViewport({ ratio: 1 });
+    await satelliteStatus.tap();
+    await expect(statusPopover).toBeHidden();
+
+    await menuButton.tap();
+    await expect(menu).toBeHidden();
+    expect(
+      await page.evaluate(() => {
+        const root = document.documentElement;
+        return (
+          root.scrollWidth === root.clientWidth &&
+          root.scrollHeight === root.clientHeight
+        );
+      }),
+    ).toBe(true);
   });
 });

@@ -7,8 +7,8 @@ import {
 import {
   addMapPopup,
   POINTS_SOURCE_ID,
-  type PointFeature,
-  type ZoneFeature,
+  type PointProperties,
+  type ZoneProperties,
 } from "@/components/maps/map-data";
 import type { MapPoint, MapZone } from "@/lib/maps/types";
 
@@ -26,23 +26,43 @@ export function addMapInteractions(
 ) {
   const isDraftEditing = handlers.isDraftEditing ?? (() => false);
   const interactiveLayers = [
-    "peatguard-zone-fill",
-    ...(clustersEnabled ? ["peatguard-clusters"] : []),
     "peatguard-points",
+    ...(clustersEnabled ? ["peatguard-clusters"] : []),
+    "peatguard-zone-fill",
   ];
+  let popup: ReturnType<typeof addMapPopup> | undefined;
+  let latestClick = 0;
 
-  if (clustersEnabled) {
-    map.on("click", "peatguard-clusters", async (event) => {
-      if (isDraftEditing()) {
-        return;
-      }
+  map.on("click", async (event: MapMouseEvent) => {
+    const click = ++latestClick;
+    popup?.remove();
+    popup = undefined;
 
-      const feature = event.features?.[0];
-      const clusterId = feature?.properties?.cluster_id;
-      const pointSource = map.getSource(POINTS_SOURCE_ID) as
-        GeoJSONSource | undefined;
+    const coordinates: [number, number] = [event.lngLat.lng, event.lngLat.lat];
+    if (isDraftEditing()) {
+      handlers.onMapClick?.(coordinates);
+      return;
+    }
 
-      if (!feature || typeof clusterId !== "number" || !pointSource) {
+    const layers = interactiveLayers.filter((layer) => map.getLayer(layer));
+    // MapLibre returns the topmost feature first, including where layers overlap.
+    const [feature] = layers.length
+      ? map.queryRenderedFeatures(event.point, { layers })
+      : [];
+
+    if (!feature) {
+      handlers.onMapClick?.(coordinates);
+      return;
+    }
+
+    const { geometry } = feature;
+    const layer = feature.layer.id;
+
+    if (layer === "peatguard-clusters" && geometry.type === "Point") {
+      const clusterId = feature.properties.cluster_id;
+      const pointSource = map.getSource<GeoJSONSource>(POINTS_SOURCE_ID);
+
+      if (typeof clusterId !== "number" || !pointSource) {
         return;
       }
 
@@ -50,92 +70,68 @@ export function addMapInteractions(
         const expansionZoom =
           await pointSource.getClusterExpansionZoom(clusterId);
 
-        if (isDraftEditing()) {
+        if (
+          click !== latestClick ||
+          isDraftEditing() ||
+          map.getSource(POINTS_SOURCE_ID) !== pointSource
+        ) {
           return;
         }
 
-        if (feature.geometry.type === "Point") {
-          map.easeTo({
-            center: feature.geometry.coordinates as [number, number],
-            zoom: expansionZoom,
-          });
-        }
+        map.easeTo({
+          center: [geometry.coordinates[0], geometry.coordinates[1]],
+          zoom: expansionZoom,
+        });
       } catch {
         // The map can be removed while the cluster expansion request is pending.
       }
-    });
-  }
-
-  map.on("click", "peatguard-points", (event) => {
-    if (isDraftEditing()) {
       return;
     }
 
-    const feature = event.features?.[0] as PointFeature | undefined;
+    if (layer === "peatguard-points" && geometry.type === "Point") {
+      const properties = feature.properties as PointProperties;
+      const point: MapPoint = {
+        id: properties.id,
+        coordinates: [geometry.coordinates[0], geometry.coordinates[1]],
+        kind: properties.kind,
+        label: properties.label,
+        description: properties.description,
+        urgency: properties.urgency || undefined,
+        source: properties.source || undefined,
+        isDemoData: properties.isDemoData,
+      };
 
-    if (!feature) {
+      handlers.onPointSelect?.(point);
+      popup = addMapPopup(
+        map,
+        point.coordinates,
+        point.label,
+        point.description ?? "",
+      );
       return;
     }
 
-    const properties = feature.properties;
-    const point: MapPoint = {
-      id: properties.id,
-      coordinates: [
-        feature.geometry.coordinates[0],
-        feature.geometry.coordinates[1],
-      ],
-      kind: properties.kind,
-      label: properties.label,
-      description: properties.description,
-      urgency: properties.urgency || undefined,
-      source: properties.source || undefined,
-      isDemoData: properties.isDemoData,
-    };
+    if (layer === "peatguard-zone-fill") {
+      const properties = feature.properties as ZoneProperties;
+      const zone: MapZone = {
+        ...properties,
+        geometry: geometry as MapZone["geometry"],
+      };
+      const hectares = new Intl.NumberFormat("id-ID", {
+        maximumFractionDigits: 0,
+      }).format(zone.areaHectares);
 
-    handlers.onPointSelect?.(point);
-    addMapPopup(map, point.coordinates, point.label, point.description ?? "");
+      handlers.onZoneSelect?.(zone);
+      popup = addMapPopup(
+        map,
+        coordinates,
+        zone.name,
+        `${hectares} ha${zone.isDemoData ? " · data ilustrasi" : ""}`,
+      );
+    }
   });
 
-  map.on("click", "peatguard-zone-fill", (event) => {
-    if (isDraftEditing()) {
-      return;
-    }
-
-    const feature = event.features?.[0] as ZoneFeature | undefined;
-
-    if (!feature) {
-      return;
-    }
-
-    const zone: MapZone = {
-      id: feature.properties.id,
-      name: feature.properties.name,
-      areaHectares: feature.properties.areaHectares,
-      isDemoData: feature.properties.isDemoData,
-      geometry: feature.geometry,
-    };
-    const coordinates = [event.lngLat.lng, event.lngLat.lat] as [
-      number,
-      number,
-    ];
-    const hectares = new Intl.NumberFormat("id-ID", {
-      maximumFractionDigits: 0,
-    }).format(zone.areaHectares);
-
-    handlers.onZoneSelect?.(zone);
-    addMapPopup(
-      map,
-      coordinates,
-      zone.name,
-      `${hectares} ha${zone.isDemoData ? " · data ilustrasi" : ""}`,
-    );
-  });
-
-  for (const layerId of [
-    ...(clustersEnabled ? ["peatguard-clusters"] : []),
-    "peatguard-points",
-    "peatguard-zone-fill",
-  ]) {
+  for (const layerId of interactiveLayers) {
     map.on("mouseenter", layerId, () => {
       map.getCanvas().style.cursor = isDraftEditing() ? "crosshair" : "pointer";
     });
@@ -143,19 +139,4 @@ export function addMapInteractions(
       map.getCanvas().style.cursor = "";
     });
   }
-
-  map.on("click", (event: MapMouseEvent) => {
-    if (isDraftEditing()) {
-      handlers.onMapClick?.([event.lngLat.lng, event.lngLat.lat]);
-      return;
-    }
-
-    const features = map.queryRenderedFeatures(event.point, {
-      layers: interactiveLayers,
-    });
-
-    if (features.length === 0) {
-      handlers.onMapClick?.([event.lngLat.lng, event.lngLat.lat]);
-    }
-  });
 }

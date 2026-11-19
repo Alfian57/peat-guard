@@ -1,10 +1,11 @@
 import { WorkspacePageHeading } from "@/components/workspace/workspace-page-heading";
-import { CalendarDays } from "lucide-react";
+import Link from "next/link";
 
-import type { MrvDashboard } from "@/lib/server/mrv/contracts";
+import { APP_ROUTES } from "@/lib/routes";
+
+import type { MrvDashboard, MrvDataset } from "@/lib/server/mrv/contracts";
 
 import { AuditFilterError } from "../audit-states";
-import { formatDate } from "../audit-formatters";
 import { DashboardCarbonDetails } from "./dashboard-carbon-details";
 import { DashboardDateFilter } from "./dashboard-date-filter";
 import { DashboardCarbonTrend } from "./dashboard-carbon-trend";
@@ -13,6 +14,7 @@ import { DashboardVillages } from "./dashboard-villages";
 
 type DashboardViewProps = {
   dashboard: MrvDashboard;
+  dataset?: MrvDataset;
   filterError: string | null;
   from: string;
   to: string;
@@ -20,6 +22,7 @@ type DashboardViewProps = {
 
 export function DashboardView({
   dashboard,
+  dataset = "operational",
   filterError,
   from,
   to,
@@ -30,35 +33,46 @@ export function DashboardView({
         className="mb-0"
         title="Dasbor dampak"
         description="Tinjau estimasi emisi dicegah, zona terlindungi, dan aktivitas patroli."
-        action={
-          dashboard.totals.containsIllustrativeData ? (
-            <span className="rounded-full bg-peat-sun/20 px-3 py-1 text-xs font-semibold text-peat-forest">
-              Data demo termasuk
-            </span>
-          ) : undefined
-        }
       />
-      <section
-        aria-label="Periode aktivitas"
-        className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
-      >
-        <CalendarDays
-          aria-hidden="true"
-          className="text-peat-green"
-          size={17}
-        />
-        <span>
-          Aktivitas: {formatDate(dashboard.activityPeriod.from)} –{" "}
-          {formatDate(dashboard.activityPeriod.to)}
-        </span>
-        <span aria-hidden="true">·</span>
-        <span>Snapshot zona per {formatDate(dashboard.asOf.slice(0, 10))}</span>
-      </section>
-
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <nav
+          aria-label="Jenis data MRV"
+          className="inline-flex gap-1 rounded-full border border-peat-forest/10 bg-white p-1 shadow-xs"
+        >
+          {(["operational", "simulation"] as const).map((option) => {
+            const active = dataset === option;
+            const params = new URLSearchParams({ dataset: option });
+            if (from) params.set("from", from);
+            if (to) params.set("to", to);
+            return (
+              <Link
+                aria-current={active ? "page" : undefined}
+                className={`inline-flex min-h-10 items-center rounded-full px-3.5 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${active ? "bg-peat-forest text-white" : "text-peat-forest hover:bg-peat-paper"}`}
+                href={`${APP_ROUTES.audit.dashboard}?${params}`}
+                key={option}
+              >
+                {option === "operational" ? "Operasional" : "Simulasi"}
+              </Link>
+            );
+          })}
+        </nav>
+        <p className="text-xs leading-5 text-muted-foreground">
+          {dataset === "operational"
+            ? "Zona, parameter, dan laporan non-demo."
+            : "Zona atau parameter ilustratif dan laporan sampel demo."}
+        </p>
+      </div>
       {filterError ? <AuditFilterError message={filterError} /> : null}
-      <DashboardDateFilter from={from} to={to} />
+      <DashboardDateFilter dataset={dataset} from={from} to={to} />
 
       <DashboardKpis dashboard={dashboard} />
+      {!dashboard.totals.approvedZoneCount && !dashboard.villages.length ? (
+        <p className="rounded-xl border border-peat-forest/10 bg-white px-4 py-3 text-sm text-muted-foreground">
+          {dataset === "operational"
+            ? "Belum ada zona atau laporan operasional untuk ditampilkan."
+            : "Belum ada zona ilustratif atau laporan demo untuk ditampilkan."}
+        </p>
+      ) : null}
 
       <DashboardVillages dashboard={dashboard} />
       <DashboardCarbonDetails dashboard={dashboard} />

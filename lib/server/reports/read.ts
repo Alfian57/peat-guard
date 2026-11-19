@@ -74,30 +74,78 @@ export async function getPrivateReportList(
     ...(Object.keys(capturedAt).length > 0 ? { capturedAt } : {}),
   };
 
-  const [reports, total] = await prisma.$transaction([
-    prisma.fieldReport.findMany({
-      where,
-      orderBy: [{ capturedAt: "desc" }, { id: "desc" }],
-      skip: (filters.page - 1) * filters.pageSize,
-      take: filters.pageSize,
-      select: {
-        id: true,
-        zoneId: true,
-        latitude: true,
-        longitude: true,
-        accuracyMeters: true,
-        capturedAt: true,
-        syncedAt: true,
-        handlingStatus: true,
-        aiState: true,
-        aiCategory: true,
-        aiUrgency: true,
-        imagePath: true,
-        isDemoSample: true,
-      },
-    }),
-    prisma.fieldReport.count({ where }),
-  ]);
+  const offset = (filters.page - 1) * filters.pageSize;
+  const select = {
+    id: true,
+    zoneId: true,
+    latitude: true,
+    longitude: true,
+    accuracyMeters: true,
+    capturedAt: true,
+    syncedAt: true,
+    handlingStatus: true,
+    aiState: true,
+    aiCategory: true,
+    aiUrgency: true,
+    imagePath: true,
+    isDemoSample: true,
+  } as const;
+
+  const [reports, total, pendingIds] =
+    actor.role === "RELAWAN"
+      ? await prisma.$transaction(async (tx) => {
+          // Prioritize the latest evidence version before applying pagination.
+          const page = await tx.$queryRaw<
+            Array<{ id: string; needsFollowUp: boolean }>
+          >`
+            SELECT report.id::text AS id, COALESCE(
+              evidence.event_type = 'MRV_EVIDENCE_REVIEWED'
+              AND evidence.payload->>'decision' = 'NEEDS_FOLLOW_UP'
+              AND jsonb_typeof(evidence.payload->'note') = 'string',
+              FALSE
+            ) AS "needsFollowUp"
+            FROM field_reports AS report
+            LEFT JOIN LATERAL (
+              SELECT event_type, payload
+              FROM audit_events
+              WHERE report_id = report.id
+                AND event_type IN ('MRV_EVIDENCE_REVIEWED', 'MRV_EVIDENCE_SUPPLEMENTED')
+              ORDER BY created_at DESC, id DESC LIMIT 1
+            ) AS evidence ON TRUE
+            WHERE report.reporter_id = ${actor.id}::uuid
+              AND (${filters.status}::text IS NULL OR report.handling_status::text = ${filters.status})
+              AND (${filters.zoneId}::uuid IS NULL OR report.zone_id = ${filters.zoneId}::uuid)
+              AND (${filters.isDemoSample}::boolean IS NULL OR report.is_demo_sample = ${filters.isDemoSample})
+              AND (${filters.from}::timestamptz IS NULL OR report.captured_at >= ${filters.from})
+              AND (${filters.toExclusive}::timestamptz IS NULL OR report.captured_at < ${filters.toExclusive})
+            ORDER BY "needsFollowUp" DESC, report.captured_at DESC, report.id DESC
+            OFFSET ${offset} LIMIT ${filters.pageSize}
+          `;
+          const rows = await tx.fieldReport.findMany({
+            where: { ...where, id: { in: page.map(({ id }) => id) } },
+            select,
+          });
+          const byId = new Map(rows.map((report) => [report.id, report]));
+          return [
+            page.flatMap(({ id }) => byId.get(id) ?? []),
+            await tx.fieldReport.count({ where }),
+            new Set(
+              page.filter((item) => item.needsFollowUp).map(({ id }) => id),
+            ),
+          ] as const;
+        })
+      : await prisma
+          .$transaction([
+            prisma.fieldReport.findMany({
+              where,
+              orderBy: [{ capturedAt: "desc" }, { id: "desc" }],
+              skip: offset,
+              take: filters.pageSize,
+              select,
+            }),
+            prisma.fieldReport.count({ where }),
+          ])
+          .then(([rows, count]) => [rows, count, null] as const);
 
   return {
     reports: reports.map((report) => {
@@ -115,6 +163,7 @@ export async function getPrivateReportList(
         aiCategory: report.aiCategory,
         aiUrgency: report.aiUrgency,
         isDemoSample: report.isDemoSample,
+        ...(pendingIds ? { needsFollowUp: pendingIds.has(report.id) } : {}),
         ...photo,
       };
     }),

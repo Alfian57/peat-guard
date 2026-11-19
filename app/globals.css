@@ -219,6 +219,23 @@
   }
 }
 
+.peatguard-map-popup .maplibregl-popup-content {
+  padding-inline-end: 2.5rem;
+  overflow-wrap: anywhere;
+}
+
+.peatguard-map-popup .maplibregl-popup-close-button {
+  inset-block-start: 0.25rem;
+  inset-inline-end: 0.25rem;
+  inline-size: 1.75rem;
+  min-block-size: 1.75rem;
+  border-radius: 0.25rem;
+}
+
+.peatguard-map-popup .maplibregl-popup-close-button:focus-visible {
+  outline-offset: -3px;
+}
+
 /* Subtle forest scrollbar for ivory sidebars. */
 .sidebar-scroll {
   scrollbar-width: thin;

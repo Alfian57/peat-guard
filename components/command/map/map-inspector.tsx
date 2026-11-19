@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Droplets, Flame, MapPinned } from "lucide-react";
+import { ClipboardList, Droplets, Flame, MapPinned } from "lucide-react";
 
 import { ReportUrgencyBadge } from "@/components/command/reports/report-status-badge";
 import { reportDetailRoute } from "@/components/command/routes";
@@ -40,16 +40,23 @@ export function MapInspector({
 
   if (point) {
     const isWater = point.kind === "water";
-    const Icon = isWater ? Droplets : Flame;
+    const Icon = isWater
+      ? Droplets
+      : point.kind === "report"
+        ? ClipboardList
+        : Flame;
+    const iconColor = isWater
+      ? "text-sky-700"
+      : point.kind === "report"
+        ? "text-peat-green"
+        : "text-orange-700";
 
     return (
       <div className="min-w-0">
         <div className="flex items-center gap-3">
           <Icon
             aria-hidden="true"
-            className={
-              isWater ? "shrink-0 text-sky-700" : "shrink-0 text-orange-700"
-            }
+            className={`shrink-0 ${iconColor}`}
             size={19}
           />
           <p className="min-w-0 text-sm font-semibold wrap-anywhere text-peat-forest">

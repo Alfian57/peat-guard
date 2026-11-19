@@ -38,6 +38,7 @@ export function calculateZoneImpact(zone: ApprovedZoneValues): ZoneImpact {
       isDemoData: zone.parameterIsDemoData,
       name: zone.name,
       parameterSetId: zone.parameterSetId,
+      ...(zone.parameterSource ? { source: zone.parameterSource } : {}),
     },
     villageName: zone.villageName,
     zoneId: zone.zoneId,

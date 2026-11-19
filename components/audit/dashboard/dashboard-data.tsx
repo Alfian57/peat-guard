@@ -28,10 +28,11 @@ export async function DashboardData({
   const params = toURLSearchParams(values);
   const parsed = parseDashboardFilters(params);
   const dashboardFilters = parsed.ok ? parsed.value : { range: null };
+  const dataset = dashboardFilters.dataset ?? "operational";
   let dashboard: MrvDashboard;
 
   try {
-    dashboard = await getMrvDashboard(dashboardFilters);
+    dashboard = await getMrvDashboard({ ...dashboardFilters, dataset });
   } catch {
     return <AuditDataError title="Dasbor dampak karbon" />;
   }
@@ -39,6 +40,7 @@ export async function DashboardData({
   return (
     <DashboardView
       dashboard={dashboard}
+      dataset={dataset}
       filterError={parsed.ok ? null : parsed.error}
       from={firstSearchValue(values, "from")}
       to={firstSearchValue(values, "to")}

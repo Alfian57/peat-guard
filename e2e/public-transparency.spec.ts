@@ -64,6 +64,22 @@ test.describe("Public Transparency & Map Journeys", () => {
   test("public map page renders map shell, controls, and filters without runtime error", async ({
     page,
   }) => {
+    await page.setViewportSize({ width: 1280, height: 540 });
+    await page.route(
+      (url) => url.pathname === API_ROUTES.public.map,
+      async (route) => {
+        const response = await route.fetch();
+        const data = await response.json();
+        await route.fulfill({
+          response,
+          json: {
+            ...data,
+            freshness: { ...data.freshness, status: "stale" },
+            truncated: { ...data.truncated, hotspots: true },
+          },
+        });
+      },
+    );
     const pageErrors: string[] = [];
     page.on("pageerror", (err) => pageErrors.push(err.message));
 
@@ -78,6 +94,51 @@ test.describe("Public Transparency & Map Journeys", () => {
     // Filter controls should be visible
     await expect(page.getByLabel(/Waktu pengamatan/i)).toBeVisible();
     await expect(page.getByLabel(/Sumber hotspot/i)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Cari di area peta" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Area pencarian mengikuti batas peta/),
+    ).toHaveCount(0);
+
+    const menu = page.getByRole("complementary", {
+      name: "Filter dan hasil peta",
+    });
+    const map = page.getByRole("region", { name: "Peta interaktif publik" });
+    await expect(map).toBeInViewport({ ratio: 1 });
+    const mapBounds = await map.boundingBox();
+    await expect(
+      map.getByLabel("Legenda peta").getByText("Data hotspot belum mutakhir"),
+    ).toBeVisible();
+
+    const freshness = page.getByRole("dialog", { name: "Status data satelit" });
+    await expect(freshness).toBeHidden();
+    await menu.getByRole("button", { name: "Status data satelit" }).click();
+    await expect(
+      freshness.getByText("NASA FIRMS", { exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(freshness).toBeHidden();
+
+    const limitedResults = page.getByRole("dialog", { name: "Hasil dibatasi" });
+    await expect(limitedResults).toBeHidden();
+    await menu.getByRole("button", { name: "Hasil dibatasi" }).click();
+    await expect(
+      limitedResults.getByText(/Hasil dibatasi demi kinerja/),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(limitedResults).toBeHidden();
+
+    await menu.evaluate((panel) => {
+      panel.scrollTop = 0;
+    });
+    await menu.hover();
+    await page.mouse.wheel(0, 320);
+    await expect
+      .poll(() => menu.evaluate((panel) => panel.scrollTop))
+      .toBeGreaterThan(0);
+    expect(await map.boundingBox()).toEqual(mapBounds);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
 
     // Verify zero fatal JavaScript page errors
     expect(pageErrors).toHaveLength(0);

@@ -29,7 +29,7 @@ export function DashboardCarbonTrend({
       ) : (
         <>
           <p className="my-3 text-sm text-muted-foreground">
-            Estimasi simulasi berdasarkan snapshot zona pada akhir bulan di WIB.
+            Estimasi berdasarkan snapshot zona pada akhir bulan di WIB.
           </p>
           <ul className="space-y-2">
             {months.map(({ month, carbonTons, partial }) => (

@@ -190,6 +190,7 @@ export function FieldAppShell({
   const verifyLogin =
     online &&
     authEvent.startsWith("login:") &&
+    !sessionError &&
     !isSessionPending &&
     !isSessionRefetching &&
     isFieldVolunteerRole(sessionRole) &&
@@ -243,19 +244,65 @@ export function FieldAppShell({
   const sessionIsUnauthorized = sessionError?.status === 401;
   const sessionIsForbidden = sessionError?.status === 403;
   const sessionIsAuthDenied = isSessionAuthDenied(sessionError?.status);
+  const sessionIsTransient =
+    sessionError !== null &&
+    (sessionError.status == null ||
+      sessionError.status === 0 ||
+      sessionError.status === 408 ||
+      sessionError.status === 429 ||
+      sessionError.status >= 500);
+  const [retryingSession, setRetryingSession] = useState(false);
+  const nextSessionRetryDelay = useRef(2_000);
+  const sessionIsChecking = isSessionPending || isSessionRefetching;
+  const serverUnavailable =
+    sessionIsTransient || (retryingSession && sessionIsChecking);
   const canUseOfflineOwner =
     !loggedOut &&
-    (!online || simulatedOffline) &&
+    (!online || simulatedOffline || serverUnavailable) &&
     !sessionRoleIsDenied &&
-    !sessionIsAuthDenied;
+    !sessionIsAuthDenied &&
+    (!sessionUserId || sessionUserId === lastKnownOwnerId);
   const ownerId =
     activeSessionOwnerId ??
-    (canUseOfflineOwner &&
-    (isSessionPending ||
-      isSessionRefetching ||
-      (sessionError && !sessionIsAuthDenied))
+    (canUseOfflineOwner && (sessionIsChecking || sessionIsTransient)
       ? lastKnownOwnerId
       : null);
+
+  useEffect(() => {
+    if (!sessionIsTransient && !retryingSession && !sessionIsChecking) {
+      nextSessionRetryDelay.current = 2_000;
+    }
+    if (
+      !online ||
+      simulatedOffline ||
+      loggedOut ||
+      !sessionIsTransient ||
+      sessionIsChecking ||
+      retryingSession
+    ) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      nextSessionRetryDelay.current = Math.min(
+        nextSessionRetryDelay.current * 2,
+        30_000,
+      );
+      setRetryingSession(true);
+      void refetchSession().finally(() => setRetryingSession(false));
+    }, nextSessionRetryDelay.current);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    loggedOut,
+    online,
+    refetchSession,
+    retryingSession,
+    sessionError,
+    sessionIsChecking,
+    sessionIsTransient,
+    simulatedOffline,
+  ]);
   const ownerStatus: FieldOwnerStatus = loggedOut
     ? "signed-out"
     : sessionRoleIsDenied || sessionIsForbidden
@@ -294,7 +341,7 @@ export function FieldAppShell({
   );
   const [notice, setNotice] = useState("");
 
-  const isConnected = online && !simulatedOffline;
+  const isConnected = online && !simulatedOffline && !serverUnavailable;
   const queueCount =
     queueSnapshot.ownerId === ownerId ? queueSnapshot.count : 0;
   const canUseDemoSamples = canUseLocalDemoSamples({

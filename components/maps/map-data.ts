@@ -130,7 +130,12 @@ export function addMapPopup(
   description.textContent = detail;
   content.append(heading, description);
 
-  new Popup({ closeButton: true, maxWidth: "260px", offset: 12 })
+  return new Popup({
+    className: "peatguard-map-popup",
+    closeOnClick: false,
+    maxWidth: "260px",
+    offset: 12,
+  })
     .setLngLat(coordinates)
     .setDOMContent(content)
     .addTo(map);

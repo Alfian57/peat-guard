@@ -63,6 +63,7 @@ export type MapCanvasProps = {
   points: MapPoint[];
   className?: string;
   interactive?: boolean;
+  cooperativeGestures?: boolean;
   clusterPoints?: boolean;
   autoFit?: boolean;
   maxAutoFitZoom?: number;
@@ -85,6 +86,7 @@ export default function MapCanvas({
   points,
   className,
   interactive = true,
+  cooperativeGestures = true,
   clusterPoints = true,
   autoFit = true,
   maxAutoFitZoom = DEFAULT_MAX_AUTOFIT_ZOOM,
@@ -168,7 +170,7 @@ export default function MapCanvas({
           encodeURIComponent(mapTilerKey),
         center: initialCenterRef.current,
         zoom: initialZoomRef.current,
-        cooperativeGestures: true,
+        cooperativeGestures,
         interactive,
         maxZoom: 17,
         minZoom: 4,
@@ -332,7 +334,7 @@ export default function MapCanvas({
       }
       setMapIsReady(false);
     };
-  }, [clusterPoints, interactive, mapTilerKey]);
+  }, [clusterPoints, cooperativeGestures, interactive, mapTilerKey]);
 
   useEffect(() => {
     if (
@@ -398,7 +400,7 @@ export default function MapCanvas({
       className={`${className ?? "h-full min-h-72 overflow-hidden rounded-2xl"} relative`}
       role="region"
     >
-      <div className="h-full min-h-72 w-full" ref={containerRef} />
+      <div className="h-full w-full" ref={containerRef} />
       {usingFallbackBasemap || basemapUnavailable ? (
         <p
           aria-live="polite"

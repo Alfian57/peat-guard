@@ -10,6 +10,16 @@ test.describe("MRV Verifier & Carbon Audit Journey", () => {
       page.getByRole("heading", { name: "Tren estimasi emisi dicegah" }),
     ).toBeVisible();
     await expect(
+      page.getByRole("link", { name: "Operasional" }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(page.locator("article time")).toHaveCount(2);
+    await page.getByRole("link", { name: "Simulasi" }).click();
+    await expect(page.getByRole("link", { name: "Simulasi" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(page.getByText(/Sumber parameter/).first()).toBeVisible();
+    await expect(
       page.getByRole("columnheader", { name: "Kesiapsiagaan" }),
     ).toBeVisible();
 

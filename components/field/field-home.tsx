@@ -53,8 +53,10 @@ export function FieldHome() {
   ]
     .sort(
       (left, right) =>
+        Number(right.kind === "server" && !!right.report.needsFollowUp) -
+          Number(left.kind === "server" && !!left.report.needsFollowUp) ||
         Date.parse(right.report.capturedAt) -
-        Date.parse(left.report.capturedAt),
+          Date.parse(left.report.capturedAt),
     )
     .slice(0, 4);
 

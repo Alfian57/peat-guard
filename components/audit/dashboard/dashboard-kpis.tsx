@@ -29,12 +29,14 @@ export function DashboardKpis({ dashboard }: { dashboard: MrvDashboard }) {
       <h2 className="sr-only">Ringkasan</h2>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          description={`${formatCount(dashboard.totals.approvedZoneCount)} zona disetujui · estimasi simulasi`}
+          asOf={dashboard.asOf}
+          description={`${formatCount(dashboard.totals.approvedZoneCount)} zona disetujui · estimasi berbasis parameter`}
           icon={Leaf}
           label="Estimasi emisi dicegah"
           value={formatCarbon(dashboard.totals.estimatedCarbonTons)}
         />
         <KpiCard
+          asOf={dashboard.asOf}
           description="Luas gabungan zona gambut yang disetujui"
           icon={MapPinned}
           label="Area zona terlindungi"

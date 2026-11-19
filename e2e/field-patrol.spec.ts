@@ -1,9 +1,11 @@
+import sharp from "sharp";
 import { test, expect } from "./fixtures/auth.fixture";
 import { APP_ROUTES } from "@/lib/routes";
 
 test.describe("Field Volunteer Patrol & Incident Reporting Journey", () => {
   test("volunteer logs in, creates a field report with photo and coordinates, and sees it in queue", async ({
     relawanPage: page,
+    request,
   }) => {
     // 1. Relawan arrives at field home
     await expect(page).toHaveURL(new RegExp(APP_ROUTES.field.root));
@@ -55,5 +57,24 @@ test.describe("Field Volunteer Patrol & Incident Reporting Journey", () => {
     // Verify there is at least one report item visible in the queue
     const reportItem = page.locator("article, li, a[href*='reportId']").first();
     await expect(reportItem).toBeVisible();
+
+    const thumbnail = page.locator('img[src*="/photo?size=thumb"]').first();
+    await expect(thumbnail).toBeVisible();
+    const thumbnailUrl = (await thumbnail.getAttribute("src"))!;
+    const thumbResponse = await page.request.get(thumbnailUrl);
+    expect(thumbResponse.status()).toBe(200);
+    expect(thumbResponse.headers()["cache-control"]).toContain("no-store");
+    expect(await sharp(await thumbResponse.body()).metadata()).toMatchObject({
+      format: "webp",
+      width: 112,
+      height: 112,
+    });
+
+    const original = await page.request.get(thumbnailUrl.split("?")[0]);
+    expect(original.status()).toBe(200);
+    expect((await thumbResponse.body()).length).toBeLessThan(
+      (await original.body()).length,
+    );
+    expect((await request.get(thumbnailUrl)).status()).toBe(401);
   });
 });

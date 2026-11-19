@@ -82,7 +82,7 @@ export function CommandMapSidePanel({
         </div>
       </section>
       <ReportMapControls {...reportControls} />
-      <div className="border-t border-peat-forest/10 pt-5">
+      <div className="hidden border-t border-peat-forest/10 pt-5 xl:block">
         <MapInspector point={selectedPoint} zone={selectedZone} />
       </div>
       <MapFirmsStatus

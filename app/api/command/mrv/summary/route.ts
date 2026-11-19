@@ -11,7 +11,10 @@ export const GET = createMrvPrivateHandler(
       return Response.json({ error: parsed.error }, { status: 400 });
     }
 
-    const dashboard = await getMrvDashboard(parsed.value);
+    const dashboard = await getMrvDashboard({
+      ...parsed.value,
+      dataset: parsed.value.dataset ?? "operational",
+    });
     return Response.json(dashboard);
   },
   {

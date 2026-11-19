@@ -1,4 +1,4 @@
-const CACHE_NAME = "peatguard-field-v7";
+const CACHE_NAME = "peatguard-field-v8";
 const CACHE_PREFIX = "peatguard-field-";
 const STATIC_ASSETS = [
   "/offline.html",

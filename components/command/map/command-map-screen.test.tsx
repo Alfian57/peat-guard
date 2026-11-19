@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import type { MapCanvasProps } from "@/components/maps/map-canvas";
 import { MapConfigurationState } from "@/components/maps/map-configuration-state";
@@ -13,6 +14,7 @@ import { API_ROUTES } from "@/lib/routes";
 
 const originalFetch = globalThis.fetch;
 let publishViewport: MapCanvasProps["onViewportChange"];
+let selectPoint: MapCanvasProps["onPointSelect"];
 
 function firmsStatusResponse(configured = false) {
   return Response.json({
@@ -35,6 +37,7 @@ mock.module("@/components/maps/map-canvas-loader", () => ({
   MapLoadingState,
   MapCanvasLoader: (props: MapCanvasProps) => {
     publishViewport = props.onViewportChange;
+    selectPoint = props.onPointSelect;
     return <MapConfigurationState />;
   },
 }));
@@ -42,6 +45,7 @@ mock.module("@/components/maps/map-canvas-loader", () => ({
 afterEach(() => {
   globalThis.fetch = originalFetch;
   publishViewport = undefined;
+  selectPoint = undefined;
 });
 
 const { CommandMapScreen } =
@@ -86,7 +90,21 @@ test("ignores viewport jitter and keeps the last report count while a new area l
   });
   expect(requests).toHaveLength(1);
 
+  act(() =>
+    selectPoint?.({
+      id: "report-1",
+      label: "Laporan terpilih",
+      kind: "report",
+      coordinates: [114, -2],
+    }),
+  );
   act(() => publishViewport?.({ ...viewport, north: 0 }));
+  const inspector = screen.getByRole("region", { name: "Pilihan pada peta" });
+  expect(
+    within(inspector)
+      .getByRole("link", { name: "Buka detail laporan" })
+      .getAttribute("href"),
+  ).toBe("/command/reports/report-1");
   await waitFor(() => expect(requests).toHaveLength(2));
   expect(screen.getByText("0 laporan pada area peta.")).toBeTruthy();
   expect(

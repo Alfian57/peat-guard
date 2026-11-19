@@ -43,7 +43,7 @@ export function DashboardDateFilterDialog({
 
     const focusable = Array.from(
       event.currentTarget.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        'a[href], button:not([disabled]), input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
       ),
     );
     const first = focusable[0];
@@ -97,17 +97,18 @@ export function DashboardDateFilterDialog({
             className="font-heading text-2xl font-bold text-peat-forest"
             id="dashboard-date-filter-title"
           >
-            Filter periode aktivitas
+            Filter periode aktivitas dan tren
           </h2>
           <p
             className="mt-1 text-sm text-muted-foreground"
             id="dashboard-date-filter-desc"
           >
-            Pilih rentang tanggal aktivitas untuk mempersempit ringkasan audit.
+            Pilih periode laporan dan tren bulanan. Kartu emisi dan luas zona
+            tetap menampilkan snapshot terkini.
           </p>
         </div>
         <button
-          aria-label="Tutup dialog filter periode aktivitas"
+          aria-label="Tutup dialog filter periode aktivitas dan tren"
           className="grid size-9 shrink-0 place-items-center rounded-xl text-muted-foreground transition hover:bg-peat-paper hover:text-peat-forest"
           onClick={onClose}
           type="button"

@@ -13,11 +13,18 @@ import "./public-hero.css";
 const HERO_VIDEO_PATH = "/videos/peatland-hero.mp4";
 const HERO_POSTER_PATH = "/images/peatland-hero-poster.png";
 
+type NetworkPreference = EventTarget & {
+  effectiveType?: string;
+  saveData?: boolean;
+};
+
 export function PublicHero() {
   const videoWindowRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(true);
   const [isInView, setIsInView] = useState(false);
+  const [conserveData, setConserveData] = useState(true);
+  const playbackPreference = useRef<"play" | "pause" | null>(null);
   const [videoUnavailable, setVideoUnavailable] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -30,6 +37,20 @@ export function PublicHero() {
     preference.addEventListener("change", updatePreference);
 
     return () => preference.removeEventListener("change", updatePreference);
+  }, []);
+
+  useEffect(() => {
+    const { connection } = navigator as Navigator & {
+      connection?: NetworkPreference;
+    };
+    const update = () =>
+      setConserveData(
+        Boolean(connection?.saveData) ||
+          ["slow-2g", "2g", "3g"].includes(connection?.effectiveType ?? ""),
+      );
+    update();
+    connection?.addEventListener("change", update);
+    return () => connection?.removeEventListener("change", update);
   }, []);
 
   useEffect(() => {
@@ -56,13 +77,19 @@ export function PublicHero() {
       return;
     }
 
-    if (prefersReducedMotion || !isInView || videoUnavailable) {
+    if (
+      !isInView ||
+      videoUnavailable ||
+      playbackPreference.current === "pause" ||
+      (playbackPreference.current !== "play" &&
+        (prefersReducedMotion || conserveData))
+    ) {
       video.pause();
       return;
     }
 
     void video.play().catch(() => setIsPlaying(false));
-  }, [isInView, prefersReducedMotion, videoUnavailable]);
+  }, [conserveData, isInView, prefersReducedMotion, videoUnavailable]);
 
   async function togglePlayback() {
     const video = videoRef.current;
@@ -72,10 +99,12 @@ export function PublicHero() {
     }
 
     if (video.paused) {
+      playbackPreference.current = "play";
       await video.play().catch(() => setIsPlaying(false));
       return;
     }
 
+    playbackPreference.current = "pause";
     video.pause();
   }
 
@@ -124,7 +153,6 @@ export function PublicHero() {
             onPause={() => setIsPlaying(false)}
             onPlay={() => setIsPlaying(true)}
             playsInline
-            poster={HERO_POSTER_PATH}
             preload="none"
             ref={videoRef}
             src={HERO_VIDEO_PATH}
@@ -144,11 +172,11 @@ export function PublicHero() {
           prefersReducedMotion={prefersReducedMotion}
         />
         <div className="public-hero__controls pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-4 px-5 pb-5 sm:px-8 lg:px-14">
-          <div className="public-hero__video-controls pointer-events-auto flex shrink-0 items-center gap-2 rounded-full border border-white/20 bg-black/20 px-2 py-2 text-xs text-white/90 backdrop-blur-sm md:gap-3 md:px-3">
+          <div className="public-hero__video-controls pointer-events-auto flex min-w-0 shrink-0 items-center gap-2 rounded-full border border-white/20 bg-black/20 px-2 py-2 text-xs text-white/90 backdrop-blur-sm md:gap-3 md:px-3">
             <span className="hidden md:inline">
               Visual ilustratif · bukan bukti pantauan
             </span>
-            <span className="md:hidden">Ilustratif · bukan bukti</span>
+            <span className="md:hidden">Ilustratif</span>
             {!videoUnavailable ? (
               <>
                 <span aria-hidden="true" className="h-4 w-px bg-white/25" />
@@ -156,14 +184,17 @@ export function PublicHero() {
                   aria-label={
                     isPlaying ? "Jeda video latar" : "Putar video latar"
                   }
-                  className="grid size-11 shrink-0 place-items-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full bg-white/15 px-2.5 text-white transition-colors hover:bg-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                   onClick={togglePlayback}
                   type="button"
                 >
                   {isPlaying ? (
                     <Pause aria-hidden="true" fill="currentColor" size={15} />
                   ) : (
-                    <Play aria-hidden="true" fill="currentColor" size={15} />
+                    <>
+                      <Play aria-hidden="true" fill="currentColor" size={15} />
+                      {conserveData ? <span>Putar</span> : null}
+                    </>
                   )}
                 </button>
                 <button

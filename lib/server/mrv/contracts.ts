@@ -7,7 +7,10 @@ export type DateRange = {
   toExclusive: Date | null;
 };
 
+export type MrvDataset = "operational" | "simulation";
+
 export type DashboardFilters = {
+  dataset?: MrvDataset;
   range: DateRange | null;
 };
 
@@ -64,6 +67,14 @@ export type MrvGeneratedNarrative =
     }
   | ({ status: "generated" } & ExecutiveNarrativeDraft);
 
+type CarbonDatasetTotals = {
+  approvedZoneCount: number;
+  estimatedCarbonTons: number;
+  estimatedIncentiveIdr: number;
+  protectedAreaHectares: number;
+  periodChangeTons: number | null;
+};
+
 export type MrvGeneratedReport = {
   canalCondition:
     | { reason: "CANAL_CONDITION_NOT_RECORDED"; status: "unavailable" }
@@ -85,6 +96,7 @@ export type MrvGeneratedReport = {
     carbon: {
       asOf: string | null;
       approvedZoneCount: number | null;
+      byDataset?: Record<MrvDataset, CarbonDatasetTotals> | null;
       containsIllustrativeData: boolean;
       estimatedCarbonTons: number | null;
       estimatedIncentiveIdr: number | null;
@@ -172,6 +184,7 @@ export type CarbonParameterValues = {
   parameterSetId: string;
   biomassFactor: number;
   parameterIsDemoData: boolean;
+  parameterSource?: string | null;
 };
 
 export type ApprovedZoneValues = CarbonParameterValues & {
@@ -210,6 +223,7 @@ export type ZoneImpact = {
     name: string;
     isDemoData: boolean;
     parameterSetId: string;
+    source?: string | null;
   };
   villageName: string | null;
   zoneId: string;

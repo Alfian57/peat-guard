@@ -1,11 +1,14 @@
 import type { LucideIcon } from "lucide-react";
+import { formatDateTime } from "../audit-formatters";
 
 export function KpiCard({
+  asOf,
   label,
   value,
   description,
   icon: Icon,
 }: {
+  asOf?: string;
   label: string;
   value: string;
   description: string;
@@ -26,6 +29,11 @@ export function KpiCard({
       <p className="mt-3 font-heading text-3xl leading-tight font-bold wrap-anywhere text-peat-forest tabular-nums sm:text-4xl">
         {value}
       </p>
+      {asOf ? (
+        <p className="mt-1 text-xs font-medium text-peat-forest">
+          Per <time dateTime={asOf}>{formatDateTime(asOf)} WIB</time>
+        </p>
+      ) : null}
       <p className="mt-3 text-xs leading-5 text-muted-foreground">
         {description}
       </p>

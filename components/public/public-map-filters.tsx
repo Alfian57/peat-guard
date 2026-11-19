@@ -122,20 +122,14 @@ export function PublicMapFiltersPanel({
         </label>
       </div>
 
-      <div className="mt-4 rounded-xl border border-peat-forest/10 bg-white px-3 py-3">
-        <p className="text-xs leading-5 text-peat-forest/70">
-          Area pencarian mengikuti batas peta. Geser atau perbesar peta, lalu
-          tekan tombol untuk memuat area baru.
-        </p>
-        <button
-          className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-peat-forest px-4 text-sm font-semibold text-white transition-colors hover:bg-peat-green disabled:cursor-not-allowed disabled:opacity-45"
-          disabled={!hasUnappliedViewport || isLoading}
-          onClick={onSearchViewport}
-          type="button"
-        >
-          Cari di area peta
-        </button>
-      </div>
+      <button
+        className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-peat-forest px-4 text-sm font-semibold text-white transition-colors hover:bg-peat-green disabled:cursor-not-allowed disabled:opacity-45"
+        disabled={!hasUnappliedViewport || isLoading}
+        onClick={onSearchViewport}
+        type="button"
+      >
+        Cari di area peta
+      </button>
     </section>
   );
 }

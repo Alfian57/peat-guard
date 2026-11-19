@@ -180,19 +180,44 @@ async function renderMrvPdf(
     switch (section.key) {
       case "carbon":
         paragraph("Snapshot", metrics.carbon.asOf ?? "Belum tersedia");
-        paragraph(
-          "Emisi dicegah",
-          display(metrics.carbon.estimatedCarbonTons, " t CO₂e"),
-        );
-        paragraph(
-          "Perubahan sejak akhir bulan sebelumnya",
-          display(metrics.carbon.periodChangeTons, " t CO₂e"),
-        );
-        paragraph("Luas", display(metrics.carbon.protectedAreaHectares, " ha"));
-        paragraph(
-          "Insentif",
-          display(metrics.carbon.estimatedIncentiveIdr, " rupiah"),
-        );
+        if (metrics.carbon.byDataset) {
+          for (const [label, totals] of [
+            ["Operasional", metrics.carbon.byDataset.operational],
+            ["Simulasi", metrics.carbon.byDataset.simulation],
+          ] as const) {
+            paragraph(label, `${totals.approvedZoneCount} zona disetujui`);
+            paragraph(
+              "Emisi dicegah",
+              display(totals.estimatedCarbonTons, " t CO₂e"),
+            );
+            paragraph(
+              "Perubahan sejak akhir bulan sebelumnya",
+              display(totals.periodChangeTons, " t CO₂e"),
+            );
+            paragraph("Luas", display(totals.protectedAreaHectares, " ha"));
+            paragraph(
+              "Insentif",
+              display(totals.estimatedIncentiveIdr, " rupiah"),
+            );
+          }
+        } else {
+          paragraph(
+            "Emisi dicegah",
+            display(metrics.carbon.estimatedCarbonTons, " t CO₂e"),
+          );
+          paragraph(
+            "Perubahan sejak akhir bulan sebelumnya",
+            display(metrics.carbon.periodChangeTons, " t CO₂e"),
+          );
+          paragraph(
+            "Luas",
+            display(metrics.carbon.protectedAreaHectares, " ha"),
+          );
+          paragraph(
+            "Insentif",
+            display(metrics.carbon.estimatedIncentiveIdr, " rupiah"),
+          );
+        }
         if (metrics.carbon.excludedZoneCount)
           paragraph(
             "Zona konflik dikecualikan",
@@ -205,7 +230,11 @@ async function renderMrvPdf(
           );
           paragraph(
             "Parameter",
-            `${zone.parameters.name} · B ${zone.parameters.biomassFactorTonsCarbonPerHectare} · EF ${zone.parameters.emissionFactor} · K ${zone.parameters.co2ConversionFactor} · Tarif ${zone.parameters.incentivePerTonIdr}`,
+            `${zone.parameters.name} · Versi ${zone.parameters.parameterSetId} · B ${zone.parameters.biomassFactorTonsCarbonPerHectare} · EF ${zone.parameters.emissionFactor} · K ${zone.parameters.co2ConversionFactor} · Tarif ${zone.parameters.incentivePerTonIdr}`,
+          );
+          paragraph(
+            "Sumber parameter",
+            zone.parameters.source ?? "Belum dicatat",
           );
           paragraph("Snapshot zona", zone.snapshotAt);
         }

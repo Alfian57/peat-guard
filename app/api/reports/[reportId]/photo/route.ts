@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { requireRole } from "@/lib/authz";
 import {
   reportActorFromSession,
@@ -20,7 +21,7 @@ type ReportPhotoRouteContext = {
 };
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: ReportPhotoRouteContext,
 ): Promise<Response> {
   try {
@@ -32,8 +33,15 @@ export async function GET(
     }
 
     const photoPath = await getPrivateReportPhotoPath(actor, reportId);
-    const photo = await readPrivateReportPhoto(photoPath);
-    if (!photo) throw new ReportNotFoundError();
+    const original = await readPrivateReportPhoto(photoPath);
+    if (!original) throw new ReportNotFoundError();
+    const photo =
+      new URL(request.url).searchParams.get("size") === "thumb"
+        ? await sharp(original)
+            .resize(112, 112, { fit: "cover", withoutEnlargement: true })
+            .webp({ quality: 75 })
+            .toBuffer()
+        : original;
 
     const photoBytes = new ArrayBuffer(photo.byteLength);
     new Uint8Array(photoBytes).set(photo);

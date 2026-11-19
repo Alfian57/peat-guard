@@ -194,7 +194,7 @@ peat-guard-web/
 │   ├── (command)/           # Workspace Koordinator Posko & WebGIS Command Center
 │   ├── (field)/             # Workspace Relawan Lapangan PWA Offline-First
 │   ├── api/                 # Endpoint RESTful API & Server Actions
-│   └── login/               # Halaman autentikasi dengan selector demo
+│   └── login/               # Halaman autentikasi dengan formulir email dan kata sandi
 ├── components/              # Komponen UI modular (Prinsip Ketat: 1 File = 1 Component)
 │   ├── audit/               # Antarmuka MRV ledger, preview dokumen, kalkulator karbon
 │   ├── command/             # WebGIS inspector, marker renderer, filter dialogs

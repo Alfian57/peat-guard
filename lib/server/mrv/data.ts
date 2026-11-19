@@ -14,6 +14,7 @@ import type {
   DashboardFilters,
   LedgerFilters,
   MrvDashboard,
+  MrvDataset,
   MrvLedger,
   MrvLedgerRow,
   ReadinessComponents,
@@ -27,7 +28,9 @@ type VillageActivityRow = VillageActivity;
 
 export async function getApprovedZoneValues(
   zoneId: string | null = null,
+  dataset?: MrvDataset,
 ): Promise<CarbonZoneRow[]> {
+  const illustrative = dataset ? dataset === "simulation" : null;
   return prisma.$queryRaw<CarbonZoneRow[]>`
     SELECT
       zone.id::text AS "zoneId",
@@ -37,6 +40,7 @@ export async function getApprovedZoneValues(
       zone.is_demo_data AS "isDemoData",
       parameters.id::text AS "parameterSetId",
       parameters.name AS name,
+      parameters.source AS "parameterSource",
       parameters.biomass_factor::double precision AS "biomassFactor",
       parameters.emission_factor::double precision AS "emissionFactor",
       parameters.co2_conversion_factor::double precision AS "co2ConversionFactor",
@@ -44,13 +48,16 @@ export async function getApprovedZoneValues(
       parameters.is_demo_data AS "parameterIsDemoData",
       EXISTS (
         SELECT 1 FROM forest_zones other
+        INNER JOIN carbon_parameter_sets other_params ON other_params.id = other.carbon_parameter_set_id
         WHERE other.id <> zone.id AND other.is_approved AND other.archived_at IS NULL
+          AND (${illustrative}::boolean IS NULL OR (other.is_demo_data OR other_params.is_demo_data) = ${illustrative})
           AND other.boundary && zone.boundary AND ST_Relate(other.boundary, zone.boundary, '2********')
       ) AS "overlapsApprovedZone"
     FROM forest_zones AS zone
     INNER JOIN carbon_parameter_sets AS parameters
       ON parameters.id = zone.carbon_parameter_set_id
     WHERE zone.is_approved = TRUE AND zone.archived_at IS NULL
+      AND (${illustrative}::boolean IS NULL OR (zone.is_demo_data OR parameters.is_demo_data) = ${illustrative})
       AND (${zoneId}::uuid IS NULL OR zone.id = ${zoneId}::uuid)
     ORDER BY zone.zone_name ASC, zone.id ASC
   `;
@@ -62,6 +69,9 @@ async function getVillageActivity(
   historical: boolean,
 ): Promise<VillageActivityRow[]> {
   const from = filters.range?.from ?? null;
+  const illustrative = filters.dataset
+    ? filters.dataset === "simulation"
+    : null;
 
   return prisma.$queryRaw<VillageActivityRow[]>`
     SELECT
@@ -92,6 +102,7 @@ async function getVillageActivity(
       ORDER BY snapshot.captured_at DESC, snapshot.id DESC LIMIT 1
     ) AS zone_at_cutoff ON TRUE
     WHERE (${from}::timestamptz IS NULL OR report.captured_at >= ${from})
+      AND (${illustrative}::boolean IS NULL OR report.is_demo_sample = ${illustrative})
       AND report.captured_at < ${end} AND report.created_at < ${end}
     GROUP BY 1
     ORDER BY 1 ASC
@@ -134,10 +145,10 @@ export async function getMrvDashboard(
     new Date(end.getTime() - 1),
   ];
   const [zones, activity, history, readinessRows] = await Promise.all([
-    getApprovedZoneValues(null),
+    getApprovedZoneValues(null, filters.dataset),
     getVillageActivity(filters, end, historical),
-    getCarbonHistory(dates),
-    getReadinessRows(readinessFrom, end),
+    getCarbonHistory(dates, null, filters.dataset),
+    getReadinessRows(readinessFrom, end, filters.dataset),
   ]);
   const dashboard = buildMrvDashboard(zones, activity, filters, now);
   const cutoff = history[months.length];
@@ -194,7 +205,8 @@ export async function getMrvDashboard(
   };
 }
 
-function getReadinessRows(from: Date, end: Date) {
+function getReadinessRows(from: Date, end: Date, dataset?: MrvDataset) {
+  const illustrative = dataset ? dataset === "simulation" : null;
   return prisma.$queryRaw<
     Array<{ zoneId: string | null; eligible: boolean; timely: boolean }>
   >`
@@ -209,6 +221,7 @@ function getReadinessRows(from: Date, end: Date) {
       ) AS timely
     FROM field_reports report
     WHERE report.captured_at >= ${from} AND report.captured_at < ${end} AND report.created_at < ${end}
+      AND (${illustrative}::boolean IS NULL OR report.is_demo_sample = ${illustrative})
   `;
 }
 
